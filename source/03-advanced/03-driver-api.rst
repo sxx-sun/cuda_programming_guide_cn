@@ -3,11 +3,15 @@
 3.3. CUDA Driver API
 ====================
 
-本指南前面的章节介绍了 CUDA runtime。如 :ref:`cuda-platform-driver-and-runtime` 中所述，CUDA runtime 是在较低级别的 CUDA driver API 之上构建的。本节介绍 CUDA runtime 和 driver API 之间的一些区别，以及如何混合使用它们。大多数应用程序无需与 CUDA driver API 交互即可达到最佳性能。但是，新接口有时会更早地在 driver API 中提供，而一些高级接口（如 :doc:`../04-special-topics/virtual-memory-management` ）仅在 driver API 中公开。
+本指南前面的章节介绍了 CUDA runtime。
+如前面 :ref:`cuda-runtime-api-and-cuda-driver-api` 中所述，CUDA runtime 是在更底层的 driver API 之上构建的。
+本节将探讨这两者之间的一些区别，以及如何在代码中混合使用它们。
+对于大多数应用程序来说，即使完全不使用 Driver API，也依然能发挥出 GPU 的全部性能。
+不过，Driver API 有时候会比 Runtime 更早推出一些新接口； 而一些高级接口（如 :ref:`虚拟内存管理 <virtual-memory-management-details>` ）仅在 driver API 中提供。
 
-Driver API 在 `cuda` 动态库（`cuda.dll` 或 `cuda.so` ）中实现，该库在安装设备驱动程序时复制到系统中。其所有入口点都以 `cu` 为前缀。
+Driver API 在 ``cuda`` 动态库（ ``cuda.dll`` 或 ``cuda.so``）中提供，该库在安装设备驱动程序时复制到系统中。其所有入口函数都以 ``cu`` 为前缀。
 
-这是一个基于句柄的、命令式 API：大多数对象由不透明句柄引用，可以将这些句柄指定给函数来操作对象。
+这是一种基于句柄（handle-based）的命令式 API：大多数对象都是通过不透明的句柄来引用的，你可以将这些句柄作为参数传递给各种函数，从而操作相应的对象。
 
 Driver API 中可用的对象总结在 :numref:`driver-api-objects-available-in-cuda-driver-api` 中。
 
@@ -35,13 +39,14 @@ Driver API 中可用的对象总结在 :numref:`driver-api-objects-available-in-
      - 指向设备内存的指针
    * - CUDA array
      - CUarray
-     - 设备上一维或二维数据的不透明容器，可通过纹理或表面引用读取
+     - | 设备上的一维或二维数据的不透明容器，
+       | 可以通过纹理（texture）或表面（surface）引用进行读取。
    * - Texture object
      - CUtexref
-     - 描述如何解释纹理内存数据的对象
+     - 描述如何解读纹理内存数据的对象
    * - Surface reference
      - CUsurfref
-     - 描述如何读取或写入 CUDA 数组的对象
+     - 描述如何读写 CUDA 数组的对象
    * - Stream
      - CUstream
      - 描述 CUDA 流的对象
@@ -49,13 +54,17 @@ Driver API 中可用的对象总结在 :numref:`driver-api-objects-available-in-
      - CUevent
      - 描述 CUDA 事件的对象
 
-在调用 driver API 中的任何函数之前，必须使用 `cuInit()` 初始化 driver API。然后必须创建一个 CUDA context，并将其附加到特定设备并使其成为调用主机线程的当前 context，详见 :ref:`driver-api-context`。
+在调用任何 driver API 函数之前，必须先通过 ``cuInit()`` 来初始化 driver API。
+然后，需要创建一个绑定到特定设备（GPU）的 CUDA ``Context`` （上下文），并将其设置为当前主机线程的活动上下文，具体细节可以参考 :ref:`Context<driver-api-context>` 。
 
-在 CUDA context 中，kernel 由主机代码显式加载为 PTX 或二进制对象，如 :ref:`driver-api-module` 中所述。因此，用 C++ 编写的 kernel 必须单独编译为 *PTX* 或二进制对象。使用 API 入口点启动 kernel，如 :ref:`driver-api-kernel-execution` 中所述。
+在 CUDA context 中，kernels 以 PTX 或二进制对象的形式被主机代码显示加载，见 :ref:`driver-api-module` 。
+因此，用 C++ 编写的 kernel 必须被编译为 **PTX** 或二进制对象。 
+Kernel 执行则使用 :ref:`driver-api-kernel-execution` 提供的 API。
 
-任何希望在未来设备架构上运行的应用程序都必须加载 *PTX*，而不是二进制代码。这是因为二进制代码是特定于架构的，因此与未来架构不兼容，而 *PTX* 代码在加载时由设备驱动程序编译为二进制代码。
+任何希望在未来设备架构上运行的应用程序，都应该使用 **PTX** 代码，而不是二进制代码。
+这是因为二进制代码是特定于具体硬件架构的，因此无法兼容未来的新架构；而 **PTX** 代码则会在加载时，由设备驱动程序实时编译成适配当前硬件的二进制代码。
 
-以下是使用 driver API 编写的 :ref:`kernels` 示例的主机代码：
+以下是使用 driver API 编写的 :ref:`kernels` 章节示例中的主机代码部分。
 
 .. code-block:: cuda
 
@@ -122,24 +131,43 @@ Driver API 中可用的对象总结在 :numref:`driver-api-objects-available-in-
        ...
    }
 
-完整代码可以在 `vectorAddDrv` CUDA 示例中找到。
+完整代码可以在 ``vectorAddDrv`` CUDA 示例中找到。
 
 .. _driver-api-context:
 
 3.3.1. Context
---------------
+----------------
 
-CUDA context 类似于 CPU 进程。在 driver API 中执行的所有资源和操作都封装在 CUDA context 内，当 context 被销毁时，系统会自动清理这些资源。除了模块和纹理或表面引用等对象外，每个 context 都有自己的独立地址空间。因此，来自不同 context 的 `CUdeviceptr` 值引用不同的内存位置。
+CUDA Context （上下文） 类似于 CPU 进程。
+在 driver API 中执行的所有操作以及使用的所有资源，都被封装进一个 CUDA context 中；当这个 context 被销毁时，系统会自动清理掉这些资源。
+除了模块、纹理或表面引用等对象之外，每个 context 还拥有自己独立的地址空间。
+因此，来自不同 context 的 ``CUdeviceptr`` 指向的是完全不同的内存位置。
 
-主机线程一次只能有一个设备 context 为当前 context。当使用 `cuCtxCreate()` 创建 context 时，它成为调用主机线程的当前 context。在 context 中操作的 CUDA 函数（大多数不涉及设备枚举或 context 管理的函数）如果线程没有有效的当前 context，将返回 `CUDA_ERROR_INVALID_CONTEXT`。
+一个主机线程在同一时刻只能有一个处于当前状态的设备上下文 （device context current）。
+当使用 ``cuCtxCreate()`` 创建一个 context 时，它会自动成为调用该函数的主机线程的当前 context。
+绝大多数需要在 context 中运行的 CUDA 函数（除了那些用来枚举设备或管理上下文的函数之外），
+如果当前线程没有绑定一个有效的 context，将会返回 ``CUDA_ERROR_INVALID_CONTEXT`` 错误。
 
-每个主机线程都有一个当前 context 的栈。`cuCtxCreate()` 将新 context 推入栈顶。可以调用 `cuCtxPopCurrent()` 将 context 从主机线程分离。然后 context 处于「浮动」状态，可以作为任何主机线程的当前 context 推入。`cuCtxPopCurrent()` 还会恢复之前的当前 context（如果有的话）。
+每个主机线程内部都维护着一个 **当前上下文** 的栈（stack）。
+当你调用 ``cuCtxCreate()`` 时，新创建的 context 会被压入到这个栈的顶端。
+你可以使用 ``cuCtxPopCurrent()`` 来将 context 从主机线程中剥离出来。
+此时，这个 context 就变成了一个 **游离状态（floating）**，随后它可以被压入到任意其他主机线程的栈顶，成为那个线程的当前上下文。
+此外， ``cuCtxPopCurrent()`` 还会自动恢复之前处于栈中的上一个当前上下文（如果有的话）。
 
-每个 context 还维护一个使用计数。`cuCtxCreate()` 创建使用计数为 1 的 context。`cuCtxAttach()` 增加使用计数，`cuCtxDetach()` 减少使用计数。当调用 `cuCtxDetach()` 或 `cuCtxDestroy()` 时使用计数变为 0 时，context 被销毁。
+每个上下文都会维护一个使用计数。
+``cuCtxCreate()`` 在创建上下文时，将使用计数初始化为 `1` 。
+``cuCtxAttach()`` 会让这个使用计数加 `1` ，而 ``cuCtxDetach()`` 则会使其减 `1` 。
+只有当调用 ``cuCtxDetach()`` 或 ``cuCtxDestroy()`` 导致使用计数降为 `0` 时，这个上下文才会被真正销毁。
 
-Driver API 与 runtime 可互操作，可以通过 `cuDevicePrimaryCtxRetain()` 从 driver API 访问 runtime 管理的 primary context（参见 :ref:`intro-cpp-runtime-initialization` ）。
+Driver API 与 Runtime API 是可以互相兼容（互操作）的。
+Runtime API 管理的那个主上下文（ 见 :ref:`intro-cpp-runtime-initialization` ）可以通过 Driver API 中的函数 ``cuDevicePrimaryCtxRetain()`` 来访问。
 
-使用计数便于在同一个 context 中运行的第三方代码之间的互操作。例如，如果加载三个库使用同一个 context，每个库都会调用 `cuCtxAttach()` 增加使用计数，并在库使用完 context 时调用 `cuCtxDetach()` 减少使用计数。对于大多数库，预期应用程序会在加载或初始化库之前创建 context；这样，应用程序可以使用自己的启发式方法创建 context，库只需操作传递给它的 context。希望创建自己 context 的库——其 API 客户端可能不知道或可能没有创建自己的 context——将使用 `cuCtxPushCurrent()` 和 `cuCtxPopCurrent()`，如下图所示。
+使用计数机制极大地方便了多个第三方代码库在同一个 context 中协同工作。
+举个例子，假设应用程序有三个库需要使用 context ，那么每个库都可以通过 ``cuCtxAttach()`` 来增加使用计数，并在该库不再需要时通过 ``cuCtxDetach()`` 来减少计数。
+对于大多数库来说，通常预期应用程序会在加载或初始化这些库之前，就已经创建好了一个 context 。
+这样，应用程序可以按照自己的策略来创建 context ，而库只需要直接使用传递给它的 context 即可。
+不过，如果某些库想要创建独立的 context （而且不希望被调用者感知，毕竟调用者可能创建、也可能没创建），
+那么这些库就需要使用 ``cuCtxPushCurrent()`` 和 ``cuCtxPopCurrent()`` 来管理，具体操作就像下图所示的那样。
 
 .. _library-context-management:
 .. figure:: /_static/images/library-context-management.png
@@ -152,9 +180,11 @@ Driver API 与 runtime 可互操作，可以通过 `cuDevicePrimaryCtxRetain()` 
 3.3.2. Module
 -------------
 
-Module 是设备代码和数据的动态可加载包，类似于 Windows 中的 DLL，由 nvcc 输出（参见 :ref:`compilation-with-nvcc` ）。所有符号的名称，包括函数、全局变量以及纹理或表面引用，都在 module 范围内维护，以便由独立的第三方编写的 module 可以在同一个 CUDA context 中互操作。
+Module 是动态可加载的设备侧代码和数据的集合包，类似于 Windows 系统中的 DLL ，由 nvcc 编译生成（参见 :ref:`compilation-with-nvcc` ）。
+所有的符号名称——包括函数、全局变量以及纹理或表面引用，都保持在模块的作用域范围内。
+这样一来，由不同第三方独立编写的模块就可以在同一个 CUDA context 中互相协作了。
 
-此代码示例加载一个 module 并检索某个 kernel 的句柄：
+以下示例展示加载一个 module 并检索某个 kernel 的句柄：
 
 .. code-block:: cuda
 
@@ -163,7 +193,7 @@ Module 是设备代码和数据的动态可加载包，类似于 Windows 中的 
    CUfunction myKernel;
    cuModuleGetFunction(&myKernel, cuModule, "MyKernel");
 
-此代码示例从 PTX 代码编译并加载新 module，并解析编译错误：
+以下示例展示使用 PTX 代码编译并加载新 module，并解析编译错误：
 
 .. code-block:: cuda
 
@@ -184,7 +214,7 @@ Module 是设备代码和数据的动态可加载包，类似于 Windows 中的 
    if (err != CUDA_SUCCESS)
        printf("Link error:\n%s\n", error_log);
 
-此代码示例从多个 PTX 代码编译、链接并加载新 module，并解析链接和编译错误：
+以下示例展示从多个 PTX 代码编译、链接并加载新 module，并解析链接和编译错误：
 
 .. code-block:: cuda
 
@@ -226,7 +256,8 @@ Module 是设备代码和数据的动态可加载包，类似于 Windows 中的 
    cuModuleLoadData(cuModule, cubin);
    cuLinkDestroy(linkState);
 
-可以使用多线程加速 module 链接/加载过程的某些部分，包括加载 cubin 时。此代码示例使用 `CU_JIT_BINARY_LOADER_THREAD_COUNT` 加速 module 加载。
+可以使用多线程加速 module 链接/加载过程的某些部分，包括加载 cubin 时。
+此代码示例使用 ``CU_JIT_BINARY_LOADER_THREAD_COUNT`` 加速 module 加载。
 
 .. code-block:: cuda
 
@@ -247,24 +278,31 @@ Module 是设备代码和数据的动态可加载包，类似于 Windows 中的 
    if (err != CUDA_SUCCESS)
        printf("Link error:\n%s\n", error_log);
 
-完整代码可以在 `ptxjit` CUDA 示例中找到。
+完整代码可以在 ``ptxjit`` CUDA 示例中找到。
 
 .. _driver-api-kernel-execution:
 
 3.3.3. Kernel 执行
 ------------------
 
-`cuLaunchKernel()` 以给定的执行配置启动 kernel。
+``cuLaunchKernel()`` 以给定的执行配置启动 kernel。
 
-参数可以作为指针数组（`cuLaunchKernel()` 的倒数第二个参数）传递，其中第 n 个指针对应第 n 个参数并指向从中复制参数的内存区域，或作为额外选项之一（`cuLaunchKernel()` 的最后一个参数）传递。
+参数的传递方式有两种：
+一种是通过一个指针数组来传递（对应 ``cuLaunchKernel()`` 函数的倒数第二个参数），在这个数组中，第 n 个指针对应着第 n 个参数，并且指向一块内存区域，参数值就是从这块区域拷贝过去的；
+另一种则是作为 **额外选项** 之一来传递（对应 ``cuLaunchKernel()`` 函数的最后一个参数）。
 
-当参数作为额外选项传递（`CU_LAUNCH_PARAM_BUFFER_POINTER` 选项）时，它们作为指向单个缓冲区的指针传递，其中假设参数根据设备代码中每种参数类型的对齐要求彼此正确偏移。
+当参数作为额外选项（即 ``CU_LAUNCH_PARAM_BUFFER_POINTER`` 选项）来传递时，它们会被当作一个指向缓冲区的指针。
+在这个缓冲区中，各个参数需要满足设备端代码中对应参数类型的内存对齐要求，彼此之间保持正确的偏移量。
 
-设备代码中内建向量类型的对齐要求列在 :numref:`vector-types-alignment-requirements-in-device-code` 中。对于所有其他基本类型，设备代码中的对齐要求与主机代码中的对齐要求匹配，因此可以使用 `__alignof()` 获得。唯一的例外是当主机编译器在单字边界而不是双字边界上对齐 `double` 和 `long long`（以及 64 位系统上的 `long` ）时（例如，使用 `gcc` 的编译标志 `-mno-align-double` ），因为在设备代码中这些类型始终在双字边界上对齐。
+内置向量类型在设备端代码中的对齐要求已在 :ref:`表格 43<built-in-types>` 中列出。
+对于所有其他的基本类型，它们在设备端代码中的对齐要求与主机端代码的对齐要求是一致的，因此可以直接使用 ``__alignof()`` 来获取。
+唯一的例外情况是：当主机编译器将 ``double``、  ``long long`` （以及 64 位系统上的 ``long`` ）按照单字（one-word）而不是双字（two-word）对齐时（例如使用了 ``gcc`` 编译选项 ``-mno-align-double`` ）。
+因为无论什么情况，这些类型在设备端代码中始终是按照双字边界来对齐的。
 
-`CUdeviceptr` 是整数，但表示指针，因此其对齐要求是 `__alignof(void*)`。
+``CUdeviceptr`` 虽然是整数，但它用来表示指针，所以它的内存其对齐要求是 ``__alignof(void*)``。
 
-以下代码示例使用宏（`ALIGN_UP()` ）调整每个参数的偏移以满足其对齐要求，并使用另一个宏（`ADD_TO_PARAM_BUFFER()` ）将每个参数添加到传递给 `CU_LAUNCH_PARAM_BUFFER_POINTER` 选项的参数缓冲区。
+下面的代码示例使用了两个宏：一个是 ``ALIGN_UP()`` ，用来调整每个参数的偏移量，使其满足各自的内存对齐要求；
+另一个是 ``ADD_TO_PARAM_BUFFER()`` ，用来把每个参数添加到传给 ``CU_LAUNCH_PARAM_BUFFER_POINTER`` 选项的参数缓冲区中。
 
 .. code-block:: cuda
 
@@ -305,7 +343,12 @@ Module 是设备代码和数据的动态可加载包，类似于 Windows 中的 
                   gridWidth, gridHeight, gridDepth,
                   0, 0, 0, extra);
 
-结构的对齐要求等于其字段对齐要求的最大值。因此，包含内建向量类型、`CUdeviceptr` 或非对齐的 `double` 和 `long long` 的结构，在设备代码和主机代码之间可能有不同的对齐要求。这种结构也可能有不同的填充。例如，以下结构在主机代码中根本没有填充，但在设备代码中在字段 `f` 之后填充了 12 个字节，因为字段 `f4` 的对齐要求是 16。
+结构的对齐要求等于其字段对齐要求的最大值。因此，包含内建向量类型、``CUdeviceptr`` 或非对齐的 ``double`` 和 ``long long`` 的结构，在设备代码和主机代码之间可能有不同的对齐要求。这种结构也可能有不同的填充。例如，以下结构在主机代码中根本没有填充，但在设备代码中在字段 ``f`` 之后填充了 12 个字节，因为字段 ``f4`` 的对齐要求是 16。
+
+一个结构体的对齐要求，等于其所有字段中对齐要求的最大值。
+因此，如果一个结构体里包含了内置向量类型、 ``CUdeviceptr`` 或者未对齐的 ``double`` 和 ``long long`` ，那么它在设备端代码和主机端代码中的对齐要求可能会有所不同。
+这种结构体的填充方式（ ``padding`` ）也可能不一样。
+比如下面这个结构体，在主机端代码中是完全不需要填充的；但在设备端代码中，由于字段 ``f4`` 的对齐要求是 ``16`` 字节，所以会在字段 ``f`` 后面额外填充 12 个字节。
 
 .. code-block:: cuda
 
@@ -314,20 +357,22 @@ Module 是设备代码和数据的动态可加载包，类似于 Windows 中的 
        float4 f4;
    } myStruct;
 
-.. _driver-api-interop-with-runtime: 
+
+.. _driver-api-interop-with-runtime:
 
 3.3.4. Runtime 和 Driver API 之间的互操作性
 --------------------------------------------
 
-应用程序可以混合使用 runtime API 代码和 driver API 代码。
+应用程序可以混合使用 runtime API 和 driver API 。
 
-如果通过 driver API 创建并设置为当前 context，后续的 runtime 调用将使用此 context 而不是创建新的 context。
+如果通过 Driver API 创建 context 并设为当前的，那么后续调用 Runtime API 时就会直接使用这个现有的 context ，而不会再创建一个新的。
 
-如果 runtime 已初始化，可以使用 `cuCtxGetCurrent()` 检索初始化期间创建的 context。此 context 可以被后续的 driver API 调用使用。
+同样如果 Runtime 已经被初始化，就可以使用 Driver API ``cuCtxGetCurrent()`` 来获取在 runtime 初始化期间创建的 context，并被后续的 driver API 使用。
 
-从 runtime 隐式创建的 context 称为 primary context（参见 :ref:`intro-cpp-runtime-initialization` ）。可以使用 `Primary Context Management <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__PRIMARY__CTX.html>`__ 函数从 driver API 管理它。
+由 Runtime （ :ref:`初始化<intro-cpp-runtime-initialization>` 时）隐式创建的 context ，被称为主上下文（primary context）。
+它可以通过 Driver API 中的 `Primary Context Management <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__PRIMARY__CTX.html>`__ 进行管理。
 
-可以使用任一 API 分配和释放设备内存。`CUdeviceptr` 可以转换为常规指针，反之亦然：
+设备内存可以使用任意一套 API（Driver API 或 Runtime API）来进行分配和释放。 ``CUdeviceptr`` 可以被强制转换为普通的指针，反之亦然。
 
 .. code-block:: cuda
 
@@ -342,6 +387,6 @@ Module 是设备代码和数据的动态可加载包，类似于 Windows 中的 
    cudaMalloc(&d_data, size);
    devPtr = (CUdeviceptr)d_data;
 
-特别是，这意味着使用 driver API 编写的应用程序可以调用使用 runtime API 编写的库（如 cuFFT、cuBLAS 等）。
+特别是，这意味着使用 Driver API 编写的应用程序，可以调用那些使用 Runtime API 编写的库（例如 cuFFT、cuBLAS 等）。
 
-参考手册的设备和版本管理部分中的所有函数可以互换使用。
+参考手册中“设备管理”和“版本管理”章节里的所有函数，都可以互相替换使用。
