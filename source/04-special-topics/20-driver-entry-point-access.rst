@@ -272,7 +272,7 @@ cuGetProcAddress 中编译时与运行时版本使用的影响
        // pfn_cuDeviceGetUuid points to ???
    }
 
-在此示例中，假设用户正在使用 CUDA 11.3 进行编译。用户会使用获取 ``cuDeviceGetUuid``（不是 _v2 版本）的已知行为来调试、测试和部署此应用程序。由于 CUDA 保证了次版本之间的 ABI 兼容性，在 driver 升级到 CUDA 11.4 后（无需更新 toolkit 和 runtime），此应用程序应该可以运行而无需重新编译。但这将产生未定义行为，因为现在 ``PFN_cuDeviceGetUuid`` 的 typedef 仍然是原始版本的签名，但由于 ``cudaVersion`` 现在是 11040 (CUDA 11.4)， ``cuGetProcAddress`` 将返回 _v2 版本的函数指针，这意味着调用它可能会产生未定义行为。
+在此示例中，假设用户正在使用 CUDA 11.3 进行编译。用户会使用获取 ``cuDeviceGetUuid`` （不是 _v2 版本）的已知行为来调试、测试和部署此应用程序。由于 CUDA 保证了次版本之间的 ABI 兼容性，在 driver 升级到 CUDA 11.4 后（无需更新 toolkit 和 runtime），此应用程序应该可以运行而无需重新编译。但这将产生未定义行为，因为现在 ``PFN_cuDeviceGetUuid`` 的 typedef 仍然是原始版本的签名，但由于 ``cudaVersion`` 现在是 11040 (CUDA 11.4)， ``cuGetProcAddress`` 将返回 _v2 版本的函数指针，这意味着调用它可能会产生未定义行为。
 
 注意在这种情况下，原始（不是 _v2 版本）typedef 看起来像：
 

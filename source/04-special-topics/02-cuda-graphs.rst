@@ -964,6 +964,224 @@ CUDA 可以在多个图之间重用相同的物理内存进行分配，根据 GP
 
 当使用流捕获创建图内存节点时，节点在捕获图中创建，就像使用图 API 显式创建它们一样。生成的图具有相同的 GPU 有序生命周期语义。
 
+.. _cuda-graphs-accessing-and-freeing-graph-memory-outside:
+
+4.2.5.2.3. 在分配图之外访问和释放图内存
+`````````````````````````````````````````
+
+图分配不必由分配它的图来释放。当图没有释放分配时，该分配会在图执行完成后持续存在，并且可以被后续的 CUDA 操作访问。这些分配可以在另一个图中访问，也可以直接使用流操作访问，只要访问操作通过 CUDA 事件和其他流排序机制在分配之后排序即可。分配随后可以通过常规的 ``cudaFree`` 、 ``cudaFreeAsync`` 调用，或通过启动另一个具有相应释放节点的图，或分配图的后续启动（如果它使用 ``cudaGraphInstantiateFlagAutoFreeOnLaunch`` 标志实例化）来释放。在内存被释放后访问它是非法的——释放操作必须使用图依赖、CUDA 事件和其他流排序机制在所有访问内存的操作之后排序。
+
+.. note::
+
+   由于图分配可能共享底层物理内存，释放操作必须在所有设备操作完成后排序。带外同步（如计算内核中基于内存的同步）不足以在内存写入和释放操作之间排序。更多信息，请参阅虚拟别名支持中关于一致性和相干性的规则。
+
+以下三个代码片段演示了通过以下方式建立正确排序来在分配图之外访问图分配：使用单个流、使用流之间的事件，以及使用烘焙到分配和释放图中的事件。
+
+**首先，通过使用单个流建立排序：**
+
+.. code-block:: c++
+
+   // 分配图的内容
+   void *dptr;
+   cudaGraphNodeParams params = { cudaGraphNodeTypeMemAlloc };
+   params.alloc.poolProps.allocType = cudaMemAllocationTypePinned;
+   params.alloc.poolProps.location.type = cudaMemLocationTypeDevice;
+   params.alloc.bytesize = size;
+   cudaGraphAddNode(&allocNode, allocGraph, NULL, NULL, 0, &params);
+   dptr = params.alloc.dptr;
+
+   cudaGraphInstantiate(&allocGraphExec, allocGraph, NULL, NULL, 0);
+
+   cudaGraphLaunch(allocGraphExec, stream);
+   kernel<<< ..., stream >>>(dptr, ...);
+   cudaFreeAsync(dptr, stream);
+
+**其次，通过记录和等待 CUDA 事件建立排序：**
+
+.. code-block:: c++
+
+   // 分配图的内容
+   void *dptr;
+   cudaGraphAddNode(&allocNode, allocGraph, NULL, NULL, 0, &allocNodeParams);
+   dptr = allocNodeParams.alloc.dptr;
+
+   // 消费/释放图的内容
+   kernelNodeParams.kernel.kernelParams[0] = allocNodeParams.alloc.dptr;
+   cudaGraphAddNode(&freeNode, freeGraph, NULL, NULL, 1, dptr);
+
+   cudaGraphInstantiate(&allocGraphExec, allocGraph, NULL, NULL, 0);
+   cudaGraphInstantiate(&freeGraphExec, freeGraph, NULL, NULL, 0);
+
+   cudaGraphLaunch(allocGraphExec, allocStream);
+
+   // 建立 stream2 对分配节点的依赖
+   cudaEventRecord(allocEvent, allocStream);
+   cudaStreamWaitEvent(stream2, allocEvent);
+
+   kernel<<< ..., stream2 >>> (dptr, ...);
+
+   // 建立 stream3 和分配使用之间的依赖
+   cudaStreamRecordEvent(streamUseDoneEvent, stream2);
+   cudaStreamWaitEvent(stream3, streamUseDoneEvent);
+
+   // 现在可以安全地启动释放图，它也可以访问内存
+   cudaGraphLaunch(freeGraphExec, stream3);
+
+**第三，通过使用图外部事件节点建立排序：**
+
+.. code-block:: c++
+
+   // 分配图的内容
+   void *dptr;
+   cudaEvent_t allocEvent;  // 指示分配何时可供使用的事件
+   cudaEvent_t streamUseDoneEvent;  // 指示流操作完成的事件
+
+   // 带有事件记录节点的分配图内容
+   cudaGraphAddNode(&allocNode, allocGraph, NULL, NULL, 0, &allocNodeParams);
+   dptr = allocNodeParams.alloc.dptr;
+   // 注意：此事件记录节点依赖于分配节点
+
+   cudaGraphNodeParams allocEventNodeParams = { cudaGraphNodeTypeEventRecord };
+   allocEventNodeParams.eventRecord.event = allocEvent;
+   cudaGraphAddNode(&recordNode, allocGraph, &allocNode, NULL, 1, allocEventNodeParams);
+   cudaGraphInstantiate(&allocGraphExec, allocGraph, NULL, NULL, 0);
+
+   // 带有事件等待节点的消费/释放图内容
+   cudaGraphNodeParams streamWaitEventNodeParams = { cudaGraphNodeTypeEventWait };
+   streamWaitEventNodeParams.eventWait.event = streamUseDoneEvent;
+   cudaGraphAddNode(&streamUseDoneEventNode, waitAndFreeGraph, NULL, NULL, 0, streamWaitEventNodeParams);
+
+   cudaGraphNodeParams allocWaitEventNodeParams = { cudaGraphNodeTypeEventWait };
+   allocWaitEventNodeParams.eventWait.event = allocEvent;
+   cudaGraphAddNode(&allocReadyEventNode, waitAndFreeGraph, NULL, NULL, 0, allocWaitEventNodeParams);
+
+   kernelNodeParams->kernelParams[0] = allocNodeParams.alloc.dptr;
+
+   // allocReadyEventNode 为消费图中的分配节点提供排序
+   cudaGraphAddNode(&kernelNode, waitAndFreeGraph, &allocReadyEventNode, NULL, 1, &kernelNodeParams);
+
+   // 释放节点必须在外部和内部用户之后排序
+   dependencies[0] = kernelNode;
+   dependencies[1] = streamUseDoneEventNode;
+
+   cudaGraphNodeParams freeNodeParams = { cudaGraphNodeTypeMemFree };
+   freeNodeParams.free.dptr = dptr;
+   cudaGraphAddNode(&freeNode, waitAndFreeGraph, &dependencies, NULL, 2, freeNodeParams);
+   cudaGraphInstantiate(&waitAndFreeGraphExec, waitAndFreeGraph, NULL, NULL, 0);
+
+   cudaGraphLaunch(allocGraphExec, allocStream);
+
+   // 建立 stream2 对事件节点的依赖以满足排序要求
+   cudaStreamWaitEvent(stream2, allocEvent);
+   kernel<<< ..., stream2 >>> (dptr, ...);
+   cudaStreamRecordEvent(streamUseDoneEvent, stream2);
+
+   // waitAndFreeGraphExec 中的事件等待节点建立了对所需事件的依赖
+   cudaGraphLaunch(waitAndFreeGraphExec, stream3);
+
+.. _cuda-graphs-auto-free-on-launch:
+
+4.2.5.2.4. cudaGraphInstantiateFlagAutoFreeOnLaunch
+````````````````````````````````````````````````````
+
+在正常情况下，如果图有未释放的内存分配，CUDA 会阻止图被重新启动，因为同一地址的多次分配会导致内存泄漏。使用 ``cudaGraphInstantiateFlagAutoFreeOnLaunch`` 标志实例化图允许图在仍有未释放分配的情况下重新启动。在这种情况下，启动会自动插入未释放分配的异步释放。
+
+启动时自动释放对于单生产者多消费者算法很有用。在每次迭代中，生产者图创建多个分配，并且根据运行时条件，不同的消费者集合访问这些分配。这种可变执行序列意味着消费者无法释放分配，因为后续消费者可能需要访问。启动时自动释放意味着启动循环不需要跟踪生产者的分配——相反，该信息保持隔离在生产者的创建和销毁逻辑中。一般来说，启动时自动释放简化了原本需要在每次重新启动前释放图拥有的所有分配的算法。
+
+.. note::
+
+   ``cudaGraphInstantiateFlagAutoFreeOnLaunch`` 标志不会改变图销毁的行为。应用程序必须显式释放未释放的内存以避免内存泄漏，即使对于使用此标志实例化的图也是如此。
+
+以下代码展示了使用 ``cudaGraphInstantiateFlagAutoFreeOnLaunch`` 来简化单生产者/多消费者算法：
+
+.. code-block:: c++
+
+   // 创建分配内存并用数据填充的生产者图
+   cudaStreamBeginCapture(cudaStreamPerThread, cudaStreamCaptureModeGlobal);
+   cudaMallocAsync(&data1, blocks * threads, cudaStreamPerThread);
+   cudaMallocAsync(&data2, blocks * threads, cudaStreamPerThread);
+   produce<<<blocks, threads, 0, cudaStreamPerThread>>>(data1, data2);
+   ...
+   cudaStreamEndCapture(cudaStreamPerThread, &graph);
+   cudaGraphInstantiateWithFlags(&producer,
+                                 graph,
+                                 cudaGraphInstantiateFlagAutoFreeOnLaunch);
+   cudaGraphDestroy(graph);
+
+   // 通过捕获异步库调用创建第一个消费者图
+   cudaStreamBeginCapture(cudaStreamPerThread, cudaStreamCaptureModeGlobal);
+   consumerFromLibrary(data1, cudaStreamPerThread);
+   cudaStreamEndCapture(cudaStreamPerThread, &graph);
+   cudaGraphInstantiateWithFlags(&consumer1, graph, 0);  // 常规实例化
+   cudaGraphDestroy(graph);
+
+   // 创建第二个消费者图
+   cudaStreamBeginCapture(cudaStreamPerThread, cudaStreamCaptureModeGlobal);
+   consume2<<<blocks, threads, 0, cudaStreamPerThread>>>(data2);
+   ...
+   cudaStreamEndCapture(cudaStreamPerThread, &graph);
+   cudaGraphInstantiateWithFlags(&consumer2, graph, 0);
+   cudaGraphDestroy(graph);
+
+   // 在循环中启动
+   bool launchConsumer2 = false;
+   do {
+       cudaGraphLaunch(producer, myStream);
+       cudaGraphLaunch(consumer1, myStream);
+       if (launchConsumer2) {
+           cudaGraphLaunch(consumer2, myStream);
+       }
+   } while (determineAction(&launchConsumer2));
+
+   cudaFreeAsync(data1, myStream);
+   cudaFreeAsync(data2, myStream);
+
+   cudaGraphExecDestroy(producer);
+   cudaGraphExecDestroy(consumer1);
+   cudaGraphExecDestroy(consumer2);
+
+.. _cuda-graphs-memory-nodes-in-child-graphs:
+
+4.2.5.2.5. 子图中的内存节点
+````````````````````````````
+
+CUDA 12.9 引入了将子图所有权移动到父图的能力。移动到父图的子图允许包含内存分配和释放节点。这允许包含分配或释放节点的子图在添加到父图之前独立构建。
+
+以下限制适用于移动后的子图：
+
+- 不能独立实例化或销毁。
+- 不能作为单独父图的子图添加。
+- 不能用作 ``cuGraphExecUpdate`` 的参数。
+- 不能添加额外的内存分配或释放节点。
+
+.. code-block:: c++
+
+   // 创建子图
+   cudaGraphCreate(&child, 0);
+
+   // 基本分配的参数
+   cudaGraphNodeParams allocNodeParams = { cudaGraphNodeTypeMemAlloc };
+   allocNodeParams.alloc.poolProps.allocType = cudaMemAllocationTypePinned;
+   allocNodeParams.alloc.poolProps.location.type = cudaMemLocationTypeDevice;
+   // 指定设备 0 为驻留设备
+   allocNodeParams.alloc.poolProps.location.id = 0;
+   allocNodeParams.alloc.bytesize = size;
+
+   cudaGraphAddNode(&allocNode, child, NULL, NULL, 0, &allocNodeParams);
+   // 可以在此处添加使用该分配的其他节点
+   cudaGraphNodeParams freeNodeParams = { cudaGraphNodeTypeMemFree };
+   freeNodeParams.free.dptr = allocNodeParams.alloc.dptr;
+   cudaGraphAddNode(&freeNode, child, &allocNode, NULL, 1, freeNodeParams);
+
+   // 创建父图
+   cudaGraphCreate(&parent, 0);
+
+   // 将子图移动到父图
+   cudaGraphNodeParams childNodeParams = { cudaGraphNodeTypeGraph };
+   childNodeParams.graph.graph = child;
+   childNodeParams.graph.ownership = cudaGraphChildGraphOwnershipMove;
+   cudaGraphAddNode(&parentNode, parent, NULL, NULL, 0, &childNodeParams);
+
 4.2.5.3. 图内存节点要求
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -989,21 +1207,69 @@ CUDA 可以在多个图之间重用相同的物理内存进行分配，根据 GP
 - 图分配的生命周期在 GPU 执行到达分配节点时开始。
 - 图分配的生命周期在 GPU 执行到达释放节点、cudaFreeAsync 流调用或 cudaFree 调用时结束。
 
-4.2.5.4. 图内存重用
-~~~~~~~~~~~~~~~~~~~
+4.2.5.4. 优化内存重用
+~~~~~~~~~~~~~~~~~~~~~
 
 CUDA 可以在图内和跨图重用图分配的物理内存。这使得可以更有效地使用 GPU 内存，并减少内存碎片。
 
-**图内重用：**
+.. _cuda-graphs-address-reuse-within-a-graph:
 
-在图内，如果两个分配的 GPU 有序生命周期不重叠，CUDA 可以为它们分配相同的物理内存。这可以减少图的总内存使用量。
+4.2.5.4.1. 图内地址重用
+````````````````````````
 
-**跨图重用：**
+CUDA 可以通过将相同的虚拟地址范围分配给生命周期不重叠的不同分配来在图内重用内存。由于虚拟地址可能被重用，因此不保证具有不相交生命周期的不同分配的指针是唯一的。
 
-CUDA 可以在不同图之间重用物理内存，前提是分配具有兼容的生命周期语义。例如，如果两个图启动到同一流中，并且它们具有单图生命周期的分配，CUDA 可以为它们分配相同的物理内存。
+下图展示了添加一个新的分配节点（2），它可以重用依赖节点（1）释放的地址。
 
-4.2.5.5. 图内存节点更新
-~~~~~~~~~~~~~~~~~~~~~~~~~
+.. figure:: /_static/images/new-alloc-node.png
+   :alt: Adding New Alloc Node 2
+   :width: 400px
+
+   添加新的分配节点 2
+
+下图展示了添加一个新的分配节点（4）。新的分配节点不依赖于释放节点（2），因此无法重用关联分配节点（2）的地址。如果分配节点（2）使用了释放节点（1）释放的地址，则新的分配节点 3 将需要一个新地址。
+
+.. figure:: /_static/images/adding-new-alloc-nodes.png
+   :alt: Adding New Alloc Node 3
+   :width: 400px
+
+   添加新的分配节点 3
+
+.. _cuda-graphs-physical-memory-management-and-sharing:
+
+4.2.5.4.2. 物理内存管理和共享
+``````````````````````````````
+
+CUDA 负责在 GPU 顺序中到达分配节点之前将物理内存映射到虚拟地址。作为内存占用和映射开销的优化，如果多个图不会同时运行，它们可以为不同的分配使用相同的物理内存；但是，如果物理页面同时绑定到多个正在执行的图，或绑定到仍未释放的图分配，则无法重用。
+
+CUDA 可以在图实例化、启动或执行期间的任何时候更新物理内存映射。CUDA 还可能在未来的图启动之间引入同步，以防止活动的图分配引用相同的物理内存。对于任何分配-释放-分配模式，如果程序在分配生命周期之外访问指针，错误的访问可能会静默读取或写入另一个分配拥有的实时数据（即使分配的虚拟地址是唯一的）。使用计算清理工具可以捕获此错误。
+
+下图展示了在同一流中顺序启动的图。在此示例中，每个图释放它分配的所有内存。由于同一流中的图永远不会同时运行，CUDA 可以并且应该使用相同的物理内存来满足所有分配。
+
+.. figure:: /_static/images/sequentially-launched-graphs.png
+   :alt: Sequentially Launched Graphs
+   :width: 400px
+
+   顺序启动的图
+
+.. _cuda-graphs-performance-considerations:
+
+4.2.5.5. 性能考虑
+~~~~~~~~~~~~~~~~~
+
+.. _cuda-graphs-first-launch-cuda-graph-upload:
+
+4.2.5.5.1. 首次启动 / cudaGraphUpload
+``````````````````````````````````````
+
+在图实例化期间无法分配或映射物理内存，因为图将在其中执行的流是未知的。映射改为在图启动期间完成。调用 ``cudaGraphUpload`` 可以通过立即执行该图的所有映射并将图与上传流关联来将分配成本与启动分离。如果然后将图启动到同一流中，它将无需任何额外重新映射即可启动。
+
+对图上传和图启动使用不同的流的行为类似于切换流，可能会导致重新映射操作。此外，不相关的内存池管理允许从空闲流中提取内存，这可能会抵消上传的影响。
+
+.. _cuda-graphs-updating-graph-memory-nodes:
+
+4.2.5.6. 图内存节点更新
+~~~~~~~~~~~~~~~~~~~~~~~
 
 图内存节点可以使用图更新机制更新。但是，更新图内存节点有一些限制：
 
@@ -1013,5 +1279,476 @@ CUDA 可以在不同图之间重用物理内存，前提是分配具有兼容的
 
 有关图更新的更多信息，请参阅 4.2.3 节。
 
-.. note::
-   有关图内存节点的更多详细信息，请参阅 `CUDA 官方文档 <https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/cuda-graphs.html>`_。
+.. _cuda-graphs-peer-access:
+
+4.2.5.7. 对等访问
+~~~~~~~~~~~~~~~~~
+
+图分配可以配置为从多个 GPU 访问，在这种情况下，CUDA 将根据需要将分配映射到对等 GPU。CUDA 允许需要不同映射的图分配重用相同的虚拟地址。当这种情况发生时，地址范围会映射到不同分配所需的所有 GPU。这意味着分配有时可能允许比创建期间请求的更多对等访问；但是，依赖这些额外映射仍然是错误的。
+
+.. _cuda-graphs-peer-access-with-graph-node-apis:
+
+4.2.5.7.1. 使用图节点 API 的对等访问
+`````````````````````````````````````
+
+``cudaGraphAddNode`` API 在分配节点参数结构的 ``accessDescs`` 数组字段中接受映射请求。 ``poolProps.location`` 嵌入结构指定分配的驻留设备。假定需要从分配 GPU 访问，因此应用程序不需要在 ``accessDescs`` 数组中为驻留设备指定条目。
+
+.. code-block:: c++
+
+   cudaGraphNodeParams allocNodeParams = { cudaGraphNodeTypeMemAlloc };
+   allocNodeParams.alloc.poolProps.allocType = cudaMemAllocationTypePinned;
+   allocNodeParams.alloc.poolProps.location.type = cudaMemLocationTypeDevice;
+   // 指定设备 1 为驻留设备
+   allocNodeParams.alloc.poolProps.location.id = 1;
+   allocNodeParams.alloc.bytesize = size;
+
+   // 分配一个驻留在设备 1 上、可从设备 1 访问的分配
+   cudaGraphAddNode(&allocNode, graph, NULL, NULL, 0, &allocNodeParams);
+
+   accessDescs[2];
+   // 访问描述的样板代码（添加节点 API 仅支持 ReadWrite 和 Device 访问）
+   accessDescs[0].flags = cudaMemAccessFlagsProtReadWrite;
+   accessDescs[0].location.type = cudaMemLocationTypeDevice;
+   accessDescs[1].flags = cudaMemAccessFlagsProtReadWrite;
+   accessDescs[1].location.type = cudaMemLocationTypeDevice;
+
+   // 请求设备 0 和 2 的访问。设备 1 的访问需求保持隐式。
+   accessDescs[0].location.id = 0;
+   accessDescs[1].location.id = 2;
+
+   // 访问请求数组有 2 个条目。
+   allocNodeParams.accessDescCount = 2;
+   allocNodeParams.accessDescs = accessDescs;
+
+   // 分配一个驻留在设备 1 上、可从设备 0、1 和 2 访问的分配。
+   // （0 和 2 来自描述，1 来自它是驻留设备）。
+   cudaGraphAddNode(&allocNode, graph, NULL, NULL, 0, &allocNodeParams);
+
+.. _cuda-graphs-peer-access-with-stream-capture:
+
+4.2.5.7.2. 使用流捕获的对等访问
+````````````````````````````````
+
+对于流捕获，分配节点记录捕获时分配池的对等可访问性。在 ``cudaMallocFromPoolAsync`` 调用被捕获后更改分配池的对等可访问性不会影响图将为分配进行的映射。
+
+.. code-block:: c++
+
+   // 访问描述的样板代码（添加节点 API 仅支持 ReadWrite 和 Device 访问）
+   accessDesc.flags = cudaMemAccessFlagsProtReadWrite;
+   accessDesc.location.type = cudaMemLocationTypeDevice;
+   accessDesc.location.id = 1;
+
+   // 让 memPool 驻留在设备 0 上并可从设备 0 访问
+
+   cudaStreamBeginCapture(stream);
+   cudaMallocAsync(&dptr1, size, memPool, stream);
+   cudaStreamEndCapture(stream, &graph1);
+
+   cudaMemPoolSetAccess(memPool, &accessDesc, 1);
+
+   cudaStreamBeginCapture(stream);
+   cudaMallocAsync(&dptr2, size, memPool, stream);
+   cudaStreamEndCapture(stream, &graph2);
+
+   // 分配 dptr1 的图节点将只有设备 0 的可访问性，即使
+   // memPool 现在具有设备 1 的可访问性。
+   // 分配 dptr2 的图节点将具有设备 0 和设备 1 的可访问性，因为那是
+   // cudaMallocAsync 调用时的池可访问性。
+
+.. _cuda-graphs-device-graph-launch:
+
+4.2.6. 设备图启动
+-----------------
+
+有许多工作流需要在运行时进行数据相关的决策，并根据这些决策执行不同的操作。与其将此决策过程卸载到主机（可能需要从设备往返），用户可能更希望在设备上执行它。为此，CUDA 提供了一种从设备启动图的机制。
+
+设备图启动提供了一种从设备进行动态控制流的便捷方式，无论是简单的循环还是复杂的设备端工作调度器。
+
+可以从设备启动的图将被称为设备图，不能从设备启动的图将称为主机图。
+
+设备图可以从主机和设备启动，而主机图只能从主机启动。与主机启动不同，在前一次图启动仍在运行时从设备启动设备图将导致错误，返回 ``cudaErrorInvalidValue`` ；因此，设备图不能同时从设备启动两次。同时从主机和设备启动设备图将导致未定义行为。
+
+.. _cuda-graphs-device-graph-creation:
+
+4.2.6.1. 设备图创建
+~~~~~~~~~~~~~~~~~~~
+
+为了使图能够从设备启动，必须显式为设备启动实例化它。这是通过将 ``cudaGraphInstantiateFlagDeviceLaunch`` 标志传递给 ``cudaGraphInstantiate()`` 调用来实现的。与主机图一样，设备图结构在实例化时固定，无法在不重新实例化的情况下更新，并且实例化只能在主机上执行。为了使图能够为设备启动实例化，它必须遵守各种要求。
+
+.. _cuda-graphs-device-graph-requirements:
+
+4.2.6.1.1. 设备图要求
+``````````````````````
+
+一般要求：
+
+- 图的节点必须全部驻留在单个设备上。
+- 图只能包含内核节点、memcpy 节点、memset 节点和子图节点。
+
+内核节点：
+
+- 不允许图中的内核使用 CUDA 动态并行。
+- 只要不使用 MPS，就允许协作启动。
+
+Memcpy 节点：
+
+- 只允许涉及设备内存和/或固定设备映射主机内存的拷贝。
+- 不允许涉及 CUDA 数组的拷贝。
+- 两个操作数在实例化时必须可从当前设备访问。请注意，即使拷贝操作针对另一个设备上的内存，拷贝操作也将从图驻留的设备执行。
+
+.. _cuda-graphs-device-graph-upload:
+
+4.2.6.1.2. 设备图上传
+``````````````````````
+
+为了在设备上启动图，必须首先将图上传到设备以填充必要的设备资源。这可以通过以下两种方式之一实现。
+
+首先，可以通过 ``cudaGraphUpload()`` 显式上传图，或者通过 ``cudaGraphInstantiateWithParams()`` 在实例化时请求上传。
+
+或者，可以先从主机启动图，这将作为启动的一部分隐式执行此上传步骤。
+
+所有三种方法的示例：
+
+.. code-block:: c++
+
+   // 实例化后显式上传
+   cudaGraphInstantiate(&deviceGraphExec1, deviceGraph1, cudaGraphInstantiateFlagDeviceLaunch);
+   cudaGraphUpload(deviceGraphExec1, stream);
+
+   // 作为实例化的一部分显式上传
+   cudaGraphInstantiateParams instantiateParams = {0};
+   instantiateParams.flags = cudaGraphInstantiateFlagDeviceLaunch | cudaGraphInstantiateFlagUpload;
+   instantiateParams.uploadStream = stream;
+   cudaGraphInstantiateWithParams(&deviceGraphExec2, deviceGraph2, &instantiateParams);
+
+   // 通过主机启动隐式上传
+   cudaGraphInstantiate(&deviceGraphExec3, deviceGraph3, cudaGraphInstantiateFlagDeviceLaunch);
+   cudaGraphLaunch(deviceGraphExec3, stream);
+
+.. _cuda-graphs-device-graph-update:
+
+4.2.6.1.3. 设备图更新
+``````````````````````
+
+设备图只能从主机更新，并且在可执行图更新后必须重新上传到设备才能使更改生效。这可以使用设备图上传中概述的相同方法实现。与主机图不同，在应用更新时从设备启动设备图将导致未定义行为。
+
+.. _cuda-graphs-device-launch:
+
+4.2.6.2. 设备启动
+~~~~~~~~~~~~~~~~~
+
+设备图可以通过 ``cudaGraphLaunch()`` 从主机和设备启动，该函数在设备上与主机上具有相同的签名。设备图通过主机和设备上的相同句柄启动。设备图从设备启动时必须从另一个图启动。
+
+设备端图启动是每线程的，多个启动可能同时从不同线程发生，因此用户需要选择单个线程来启动给定的图。
+
+与主机启动不同，设备图不能启动到常规 CUDA 流中，只能启动到不同的命名流中，每个流表示特定的启动模式。下表列出了可用的启动模式。
+
+.. table:: 仅设备的图启动流
+
+   ========================================= ==================
+   流                                        启动模式
+   ========================================= ==================
+   ``cudaStreamGraphFireAndForget``          即发即忘启动
+   ``cudaStreamGraphTailLaunch``             尾部启动
+   ``cudaStreamGraphFireAndForgetAsSibling`` 兄弟启动
+   ========================================= ==================
+
+.. _cuda-graphs-fire-and-forget-launch:
+
+4.2.6.2.1. 即发即忘启动
+````````````````````````
+
+顾名思义，即发即忘启动立即提交到 GPU，并且它独立于启动图运行。在即发即忘场景中，启动图是父图，启动的图是子图。
+
+.. figure:: /_static/images/fire-and-forget-simple.png
+   :alt: Fire and forget launch
+   :width: 400px
+
+   即发即忘启动
+
+示例代码：
+
+.. code-block:: c++
+
+   __global__ void launchFireAndForgetGraph(cudaGraphExec_t graph) {
+       cudaGraphLaunch(graph, cudaStreamGraphFireAndForget);
+   }
+
+   void graphSetup() {
+       cudaGraphExec_t gExec1, gExec2;
+       cudaGraph_t g1, g2;
+
+       // 创建、实例化和上传设备图。
+       create_graph(&g2);
+       cudaGraphInstantiate(&gExec2, g2, cudaGraphInstantiateFlagDeviceLaunch);
+       cudaGraphUpload(gExec2, stream);
+
+       // 创建和实例化启动图。
+       cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+       launchFireAndForgetGraph<<<1, 1, 0, stream>>>(gExec2);
+       cudaStreamEndCapture(stream, &g1);
+       cudaGraphInstantiate(&gExec1, g1);
+
+       // 启动主机图，它将依次启动设备图。
+       cudaGraphLaunch(gExec1, stream);
+   }
+
+一个图在其执行过程中最多可以有 120 个即发即忘图。此总数在同一父图的启动之间重置。
+
+.. _cuda-graphs-graph-execution-environments:
+
+4.2.6.2.1.1. 图执行环境
+************************
+
+为了完全理解设备端同步模型，首先需要理解执行环境的概念。
+
+当图从设备启动时，它被启动到自己的执行环境中。给定图的执行环境封装了图中的所有工作以及所有生成的即发即忘工作。当图完成执行并且所有生成的子工作完成时，可以认为图已完成。
+
+这些环境也是分层的，因此图环境可以包含来自即发即忘启动的多级子环境。
+
+.. figure:: /_static/images/fire-and-forget-environments.png
+   :alt: Fire and forget launch, with execution environments
+   :width: 400px
+
+   即发即忘启动，带有执行环境
+
+.. figure:: /_static/images/fire-and-forget-nested-environments.png
+   :alt: Nested fire and forget environments
+   :width: 400px
+
+   嵌套的即发即忘环境
+
+当图从主机启动时，存在一个流环境，它是启动图的执行环境的父环境。流环境封装了作为整体启动一部分生成的所有工作。当整体流环境标记为完成时，流启动完成（即下游依赖工作现在可以运行）。
+
+.. figure:: /_static/images/device-graph-stream-environment.png
+   :alt: The stream environment, visualized
+   :width: 400px
+
+   流环境可视化
+
+.. _cuda-graphs-tail-launch:
+
+4.2.6.2.2. 尾部启动
+````````````````````
+
+与主机不同，无法通过传统方法（如 ``cudaDeviceSynchronize()`` 或 ``cudaStreamSynchronize()`` ）从 GPU 与设备图同步。相反，为了启用串行工作依赖，提供了不同的启动模式——尾部启动——以提供类似的功能。
+
+尾部启动在图的环境被认为完成时执行——即当图及其所有子图完成时。当图完成时，尾部启动列表中下一个图的环境将替换已完成的环境作为父环境的子环境。与即发即忘启动一样，一个图可以有多个图排队进行尾部启动。
+
+.. figure:: /_static/images/tail-launch-simple.png
+   :alt: A simple tail launch
+   :width: 400px
+
+   简单的尾部启动
+
+示例代码：
+
+.. code-block:: c++
+
+   __global__ void launchTailGraph(cudaGraphExec_t graph) {
+       cudaGraphLaunch(graph, cudaStreamGraphTailLaunch);
+   }
+
+   void graphSetup() {
+       cudaGraphExec_t gExec1, gExec2;
+       cudaGraph_t g1, g2;
+
+       // 创建、实例化和上传设备图。
+       create_graph(&g2);
+       cudaGraphInstantiate(&gExec2, g2, cudaGraphInstantiateFlagDeviceLaunch);
+       cudaGraphUpload(gExec2, stream);
+
+       // 创建和实例化启动图。
+       cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+       launchTailGraph<<<1, 1, 0, stream>>>(gExec2);
+       cudaStreamEndCapture(stream, &g1);
+       cudaGraphInstantiate(&gExec1, g1);
+
+       // 启动主机图，它将依次启动设备图。
+       cudaGraphLaunch(gExec1, stream);
+   }
+
+由给定图排队的尾部启动将按它们排队的顺序一次执行一个。因此第一个排队的图将首先运行，然后是第二个，依此类推。
+
+.. figure:: /_static/images/tail-launch-ordering-simple.png
+   :alt: Tail launch ordering
+   :width: 400px
+
+   尾部启动排序
+
+由尾部图排队的尾部启动将在尾部启动列表中先前图排队的尾部启动之前执行。这些新的尾部启动将按它们排队的顺序执行。
+
+.. figure:: /_static/images/tail-launch-ordering-complex.png
+   :alt: Tail launch ordering when enqueued from multiple graphs
+   :width: 400px
+
+   从多个图排队时的尾部启动排序
+
+一个图最多可以有 255 个待处理的尾部启动。
+
+.. _cuda-graphs-tail-self-launch:
+
+4.2.6.2.2.1. 尾部自启动
+************************
+
+设备图可以将自己排队进行尾部启动，尽管给定的图一次只能有一个自启动排队。为了查询当前正在运行的设备图以便重新启动，添加了一个新的设备端函数：
+
+.. code-block:: c++
+
+   cudaGraphExec_t cudaGetCurrentGraphExec();
+
+如果当前运行的图是设备图，此函数返回当前运行图的句柄。如果当前执行的内核不是设备图中的节点，此函数将返回 NULL。
+
+展示重新发布循环用法的示例代码：
+
+.. code-block:: c++
+
+   __device__ int relaunchCount = 0;
+
+   __global__ void relaunchSelf() {
+       int relaunchMax = 100;
+
+       if (threadIdx.x == 0) {
+           if (relaunchCount < relaunchMax) {
+               cudaGraphLaunch(cudaGetCurrentGraphExec(), cudaStreamGraphTailLaunch);
+           }
+
+           relaunchCount++;
+       }
+   }
+
+.. _cuda-graphs-sibling-launch:
+
+4.2.6.2.3. 兄弟启动
+````````````````````
+
+兄弟启动是即发即忘启动的变体，其中图不是作为启动图执行环境的子图启动，而是作为启动图父环境的子图启动。兄弟启动等同于从启动图父环境进行的即发即忘启动。
+
+.. figure:: /_static/images/sibling-launch-simple.png
+   :alt: A simple sibling launch
+   :width: 400px
+
+   简单的兄弟启动
+
+示例代码：
+
+.. code-block:: c++
+
+   __global__ void launchSiblingGraph(cudaGraphExec_t graph) {
+       cudaGraphLaunch(graph, cudaStreamGraphFireAndForgetAsSibling);
+   }
+
+   void graphSetup() {
+       cudaGraphExec_t gExec1, gExec2;
+       cudaGraph_t g1, g2;
+
+       // 创建、实例化和上传设备图。
+       create_graph(&g2);
+       cudaGraphInstantiate(&gExec2, g2, cudaGraphInstantiateFlagDeviceLaunch);
+       cudaGraphUpload(gExec2, stream);
+
+       // 创建和实例化启动图。
+       cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+       launchSiblingGraph<<<1, 1, 0, stream>>>(gExec2);
+       cudaStreamEndCapture(stream, &g1);
+       cudaGraphInstantiate(&gExec1, g1);
+
+       // 启动主机图，它将依次启动设备图。
+       cudaGraphLaunch(gExec1, stream);
+   }
+
+由于兄弟启动不是启动到启动图的执行环境中，它们不会阻止由启动图排队的尾部启动。
+
+.. _cuda-graphs-using-graph-apis:
+
+4.2.7. 使用图 API
+-----------------
+
+``cudaGraph_t`` 对象不是线程安全的。用户有责任确保多个线程不会同时访问同一个 ``cudaGraph_t`` 。
+
+``cudaGraphExec_t`` 不能与自身同时运行。 ``cudaGraphExec_t`` 的启动将在同一可执行图的前次启动之后排序。
+
+图执行在流中完成，以便与其他异步工作排序。但是，流仅用于排序；它不限制图的内部并行性，也不影响图节点执行的位置。
+
+请参阅 `图 API <https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__GRAPH.html#group__CUDART__GRAPH>`_ 。
+
+.. _cuda-graphs-cuda-user-objects:
+
+4.2.8. CUDA 用户对象
+--------------------
+
+CUDA 用户对象可用于帮助管理 CUDA 中异步工作使用的资源的生命周期。特别是，此功能对 CUDA Graphs 和流捕获很有用。
+
+各种资源管理方案与 CUDA graphs 不兼容。例如，考虑基于事件的池或同步创建、异步销毁方案。
+
+.. code-block:: c++
+
+   // 具有池分配的库 API
+   void libraryWork(cudaStream_t stream) {
+       auto &resource = pool.claimTemporaryResource();
+       resource.waitOnReadyEventInStream(stream);
+       launchWork(stream, resource);
+       resource.recordReadyEvent(stream);
+   }
+
+   // 具有异步资源删除的库 API
+   void libraryWork(cudaStream_t stream) {
+       Resource *resource = new Resource(...);
+       launchWork(stream, resource);
+       cudaLaunchHostFunc(
+           stream,
+           [](void *resource) {
+               delete static_cast<Resource *>(resource);
+           },
+           resource,
+           0);
+       // 未显示错误处理考虑
+   }
+
+这些方案与 CUDA graphs 难以配合，因为资源的非固定指针或句柄需要间接引用或图更新，以及每次提交工作时所需的同步 CPU 代码。如果这些考虑对库的调用者隐藏，它们也不适用于流捕获，并且因为在捕获期间使用了不允许的 API。存在各种解决方案，例如将资源暴露给调用者。CUDA 用户对象提供了另一种方法。
+
+CUDA 用户对象将用户指定的析构函数回调与内部引用计数关联，类似于 C++ ``shared_ptr`` 。引用可以由 CPU 上的用户代码和 CUDA graphs 拥有。请注意，对于用户拥有的引用，与 C++ 智能指针不同，没有表示引用的对象；用户必须手动跟踪用户拥有的引用。典型用例是在创建用户对象后立即将唯一的用户拥有引用移动到 CUDA graph。
+
+当引用与 CUDA graph 关联时，CUDA 将自动管理图操作。克隆的 ``cudaGraph_t`` 保留源 ``cudaGraph_t`` 拥有的每个引用的副本，具有相同的重数。实例化的 ``cudaGraphExec_t`` 保留源 ``cudaGraph_t`` 中每个引用的副本。当 ``cudaGraphExec_t`` 在未同步的情况下被销毁时，引用将保留直到执行完成。
+
+使用示例：
+
+.. code-block:: c++
+
+   cudaGraph_t graph;  // 预先存在的图
+
+   Object *object = new Object;  // 具有可能非平凡析构函数的 C++ 对象
+   cudaUserObject_t cuObject;
+   cudaUserObjectCreate(
+       &cuObject,
+       object,  // 这里我们使用 CUDA 提供的此 API 的模板包装器，
+                // 它提供一个回调来删除 C++ 对象指针
+       1,  // 初始引用计数
+       cudaUserObjectNoDestructorSync  // 确认回调无法通过 CUDA 等待
+   );
+   cudaGraphRetainUserObject(
+       graph,
+       cuObject,
+       1,  // 引用数量
+       cudaGraphUserObjectMove  // 转移调用者拥有的引用（不
+                                // 修改总引用计数）
+   );
+   // 此线程不再拥有引用；无需调用释放 API
+   cudaGraphExec_t graphExec;
+   cudaGraphInstantiate(&graphExec, graph, nullptr, nullptr, 0);  // 将保留
+                                                                  // 新引用
+   cudaGraphDestroy(graph);  // graphExec 仍然拥有一个引用
+   cudaGraphLaunch(graphExec, 0);  // 异步启动可以访问用户对象
+   cudaGraphExecDestroy(graphExec);  // 启动未同步；如果需要，释放
+                                     // 将被延迟
+   cudaStreamSynchronize(0);  // 在启动同步后，剩余的
+                              // 引用被释放，析构函数将
+                              // 执行。请注意这是异步发生的。
+   // 如果析构函数回调发出了同步对象信号，此时
+   // 等待它是安全的。
+
+子图节点中图拥有的引用与子图关联，而不是与父图关联。如果子图被更新或删除，引用会相应更改。如果使用 ``cudaGraphExecUpdate`` 或 ``cudaGraphExecChildGraphNodeSetParams`` 更新可执行图或子图，新源图中的引用将被克隆并替换目标图中的引用。在任何一种情况下，如果先前的启动未同步，任何将被释放的引用将保留直到启动完成执行。
+
+目前没有机制通过 CUDA API 等待用户对象析构函数。用户可以从析构函数代码手动发出同步对象信号。此外，从析构函数调用 CUDA API 是非法的，类似于 ``cudaLaunchHostFunc`` 的限制。这是为了避免阻塞 CUDA 内部共享线程并阻止前进进度。如果依赖是单向的并且执行调用的线程不能阻塞 CUDA 工作的前进进度，则可以发出信号让另一个线程执行 API 调用。
+
+用户对象使用 ``cudaUserObjectCreate`` 创建，这是浏览相关 API 的良好起点。

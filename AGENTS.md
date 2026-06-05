@@ -25,8 +25,8 @@ make latexpdf                       # Build PDF documentation
 make html latexpdf                  # Build all formats
 make help                           # View all build targets
 make clean                          # Clean build directory
-sphinx-build -M html source build   # Direct sphinx-build command
-sphinx-autobuild source build/html  # Live reload during development
+sphinx-build -M html source _build   # Direct sphinx-build command
+sphinx-autobuild source _build/html  # Live reload during development
 ```
 
 ## Lint and Validation Commands
@@ -34,8 +34,8 @@ sphinx-autobuild source build/html  # Live reload during development
 ```bash
 rstcheck source/                          # Check RST syntax
 doc8 source/                              # Check with doc8
-sphinx-build -M html source build -W      # Validate (treat warnings as errors)
-sphinx-build -M linkcheck source build    # Check for broken links
+sphinx-build -M html source _build -W      # Validate (treat warnings as errors)
+sphinx-build -M linkcheck source _build    # Check for broken links
 ```
 
 ## Test Commands
@@ -43,8 +43,8 @@ sphinx-build -M linkcheck source build    # Check for broken links
 This is a documentation project without traditional unit tests. Verify with:
 
 ```bash
-sphinx-build -M html source build -W      # Build must succeed without warnings
-rstcheck source/ && doc8 source/ && sphinx-build -M html source build -W  # Full validation
+sphinx-build -M html source _build -W      # Build must succeed without warnings
+rstcheck source/ && doc8 source/ && sphinx-build -M html source _build -W  # Full validation
 ```
 
 ## Project Structure
@@ -52,7 +52,7 @@ rstcheck source/ && doc8 source/ && sphinx-build -M html source build -W  # Full
 ```
 cuda_guide_cn/
 ├── source/                    # Source files (conf.py, index.rst, _static/, _templates/)
-├── build/                     # Generated documentation (gitignored)
+├── _build/                    # Generated documentation (gitignored)
 ├── Makefile                   # Build commands (Unix/Linux/macOS)
 ├── make.bat                   # Build commands (Windows)
 └── requirements.txt          # Python dependencies
@@ -139,6 +139,7 @@ release = '0.1'
 - **Example**: `CUDA 是 NVIDIA 开发的并行计算平台，支持 C++ 和 Python。`
 - **Translation**: Translate prose to Chinese but keep code in English
 - **Technical terms**: Keep original English terms for API names, function names
+- **Do not translate**: tile
 
 ## Naming Conventions
 
@@ -162,6 +163,7 @@ release = '0.1'
 4. **Indentation**: Use 3 spaces for RST content indentation (not tabs)
 5. **Version Control**: Commit source files only, not build artifacts
 6. **Build Verification**: Always verify build succeeds after changes
+7. **Inline Code Spacing**: Add spaces before and after inline code blocks, e.g., ``add`` , ``sub``
 
 ## Common Tasks
 
@@ -169,6 +171,6 @@ release = '0.1'
 
 **Update Configuration**: Edit `source/conf.py` for theme changes, extensions, custom settings
 
-**Check for Issues**: `rstcheck source/ && doc8 source/ && sphinx-build -M html source build -W --keep-going`
+**Check for Issues**: `rstcheck source/ && doc8 source/ && sphinx-build -M html source _build -W --keep-going`
 
-**Fix Broken References**: `sphinx-build -M html source build -W 2>&1 | grep -i "reference"`
+**Fix Broken References**: `sphinx-build -M html source _build -W 2>&1 | grep -i "reference"`

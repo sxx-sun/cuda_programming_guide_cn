@@ -208,13 +208,13 @@ CUDA 提供了两种不同的编程模型：:ref:`SIMT <warps-and-simt>` 和 :re
 
 - ``cuda.gridDim.[xyz]`` 给出 grid 的维度，这是在 kernel 启动时的执行配置中指定的。
 
-这些变量中的每一个都是一个 3 分量向量，具有 ``.x``、``.y`` 和 ``.z`` 成员。
+这些变量中的每一个都是一个 3 分量向量，具有 ``.x`` 、 ``.y`` 和 ``.z`` 成员。
 如果在 kernel 启动时的执行配置中未指定某个维度，则维度默认值为 1，索引默认值为 0。
 
 ``cuda.threadIdx`` 和 ``cuda.blockIdx`` 从零开始索引。
 也就是说， ``cuda.threadIdx.x`` 的值将从 0 到 ``cuda.blockDim.x - 1`` （含）。 ``.y`` 和 ``.z`` 在各自维度上的范围相同。
 
-下面展示了一个简单的向量加法 kernel 的代码，该 kernel 将两个向量逐元素相加。此函数接受三个数组 ``A``、``B`` 和 ``C``，实现逐元素向量加法 ``C = A + B``。
+下面展示了一个简单的向量加法 kernel 的代码，该 kernel 将两个向量逐元素相加。此函数接受三个数组 ``A`` 、 ``B`` 和 ``C`` ，实现逐元素向量加法 ``C = A + B`` 。
 
 .. code-block:: python
 
@@ -241,8 +241,8 @@ kernel 首先计算线程在 grid 中的唯一索引。
 
    idx = cuda.grid(1)
 
-此 kernel 的一个值得注意的方面是它不检查对 ``A``、 ``B`` 或 ``C`` 的越界访问。
-在本章中，我们假设这些是由 cuPy 创建的 ``ndarray``，将在 :ref:`intro-cuda-python-ndarray` 中介绍。
+此 kernel 的一个值得注意的方面是它不检查对 ``A`` 、 ``B`` 或 ``C`` 的越界访问。
+在本章中，我们假设这些是由 cuPy 创建的 ``ndarray`` ，将在 :ref:`intro-cuda-python-ndarray` 中介绍。
 使用 cuPy ``ndarray`` 时，边界检查由数组类型隐式实现。
 
 

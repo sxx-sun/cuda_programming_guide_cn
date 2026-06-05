@@ -136,7 +136,7 @@ CUDA 可以在设备之间执行内存传输，并在可能进行点对点内存
 
 ``cudaMemcpy`` 可以与复制类型 ``cudaMemcpyDeviceToDevice`` 或 ``cudaMemcpyDefault`` 一起使用。
 
-否则，必须使用 ``cudaMemcpyPeer()``、``cudaMemcpyPeerAsync()``、``cudaMemcpy3DPeer()`` 或 ``cudaMemcpy3DPeerAsync()`` 执行复制，如下面的代码示例所示。
+否则，必须使用 ``cudaMemcpyPeer()`` 、 ``cudaMemcpyPeerAsync()`` 、 ``cudaMemcpy3DPeer()`` 或 ``cudaMemcpy3DPeerAsync()`` 执行复制，如下面的代码示例所示。
 
 .. code-block:: cuda
 

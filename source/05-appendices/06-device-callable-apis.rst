@@ -33,8 +33,8 @@
    void __mbarrier_init(__mbarrier_t* bar, uint32_t expected_count);
 
 - ``bar`` 必须是指向 ``__shared__`` 内存的指针。
-- ``expected_count <= __mbarrier_maximum_count()``。
-- 初始化 ``*bar`` 当前和下一阶段的预期到达计数为 ``expected_count``。
+- ``expected_count <= __mbarrier_maximum_count()`` 。
+- 初始化 ``*bar`` 当前和下一阶段的预期到达计数为 ``expected_count`` 。
 
 .. code-block:: c++
 
@@ -66,21 +66,21 @@
    bool __mbarrier_test_wait(__mbarrier_t* bar, __mbarrier_token_t token);
 
 - ``token`` 必须与 ``*bar`` 的紧接前一阶段或当前阶段关联。
-- 如果 ``token`` 与 ``*bar`` 的紧接前一阶段关联，则返回 ``true``，否则返回 ``false``。
+- 如果 ``token`` 与 ``*bar`` 的紧接前一阶段关联，则返回 ``true`` ，否则返回 ``false`` 。
 
 .. code-block:: c++
 
    bool __mbarrier_test_wait_parity(__mbarrier_t* bar, bool phase_parity);
 
 - ``phase_parity`` 必须指示 ``*bar`` 的当前阶段或紧接前一阶段的奇偶性。值 ``true`` 对应于奇数编号的阶段，值 ``false`` 对应于偶数编号的阶段。
-- 如果 ``phase_parity`` 指示 ``*bar`` 的紧接前一阶段的整数奇偶性，则返回 ``true``，否则返回 ``false``。
+- 如果 ``phase_parity`` 指示 ``*bar`` 的紧接前一阶段的整数奇偶性，则返回 ``true`` ，否则返回 ``false`` 。
 
 .. code-block:: c++
 
    bool __mbarrier_try_wait(__mbarrier_t* bar, __mbarrier_token_t token, uint32_t max_sleep_nanosec);
 
 - ``token`` 必须与 ``*bar`` 的紧接前一阶段或当前阶段关联。
-- 如果 ``token`` 与 ``*bar`` 的紧接前一阶段关联，则返回 ``true``。否则，执行的线程可能会被挂起。挂起的线程在指定阶段完成时恢复执行（返回 ``true``），或者在阶段完成之前达到系统相关的时间限制（返回 ``false``）。
+- 如果 ``token`` 与 ``*bar`` 的紧接前一阶段关联，则返回 ``true`` 。否则，执行的线程可能会被挂起。挂起的线程在指定阶段完成时恢复执行（返回 ``true`` ），或者在阶段完成之前达到系统相关的时间限制（返回 ``false`` ）。
 - ``max_sleep_nanosec`` 指定时间限制（以纳秒为单位），可用于替代系统相关的时间限制。
 
 .. code-block:: c++
@@ -88,7 +88,7 @@
    bool __mbarrier_try_wait_parity(__mbarrier_t* bar, bool phase_parity, uint32_t max_sleep_nanosec);
 
 - ``phase_parity`` 必须指示 ``*bar`` 的当前阶段或紧接前一阶段的奇偶性。值 ``true`` 对应于奇数编号的阶段，值 ``false`` 对应于偶数编号的阶段。
-- 如果 ``phase_parity`` 指示 ``*bar`` 的紧接前一阶段的整数奇偶性，则返回 ``true``。否则，执行的线程可能会被挂起。挂起的线程在指定阶段完成时恢复执行（返回 ``true``），或者在阶段完成之前达到系统相关的时间限制（返回 ``false``）。
+- 如果 ``phase_parity`` 指示 ``*bar`` 的紧接前一阶段的整数奇偶性，则返回 ``true`` 。否则，执行的线程可能会被挂起。挂起的线程在指定阶段完成时恢复执行（返回 ``true`` ），或者在阶段完成之前达到系统相关的时间限制（返回 ``false`` ）。
 - ``max_sleep_nanosec`` 指定时间限制（以纳秒为单位），可用于替代系统相关的时间限制。
 
 .. _pipeline-primitives-interface:
@@ -127,13 +127,13 @@
   - ``dst_shared`` 必须是指向 ``memcpy_async`` 共享内存目的地的指针。
   - ``src_global`` 必须是指向 ``memcpy_async`` 全局内存源的指针。
   - ``size_and_align`` 必须是 4、8 或 16。
-  - ``zfill <= size_and_align``。
+  - ``zfill <= size_and_align`` 。
   - ``size_and_align`` 必须是 ``dst_shared`` 和 ``src_global`` 的对齐。
 
 - 在等待 ``memcpy_async`` 操作完成之前，任何线程修改源内存或观察目标内存都是竞争条件。在提交 ``memcpy_async`` 操作和等待其完成之间，以下任何操作都会引入竞争条件：
   
   - 从 ``dst_shared`` 加载。
-  - 存储到 ``dst_shared`` 或 ``src_global``。
+  - 存储到 ``dst_shared`` 或 ``src_global`` 。
   - 对 ``dst_shared`` 或 ``src_global`` 应用原子更新。
 
 .. _commit-primitive:
@@ -169,7 +169,7 @@
    void __pipeline_arrive_on(__mbarrier_t* bar);
 
 - ``bar`` 指向共享内存中的屏障。
-- 当此调用之前排序的所有 memcpy_async 操作完成时，屏障到达计数递增一，到达计数递减一，因此对到达计数的净效果为零。用户有责任确保到达计数的递增不超过 ``__mbarrier_maximum_count()``。
+- 当此调用之前排序的所有 memcpy_async 操作完成时，屏障到达计数递增一，到达计数递减一，因此对到达计数的净效果为零。用户有责任确保到达计数的递增不超过 ``__mbarrier_maximum_count()`` 。
 
 .. _cooperative-groups-api:
 
@@ -186,7 +186,7 @@
 5.6.3.1.1. thread_block 类
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-任何 CUDA 程序员都已经熟悉一组线程：线程块。Cooperative Groups 扩展引入了一种新数据类型 ``thread_block``，以在内核中显式表示此概念。
+任何 CUDA 程序员都已经熟悉一组线程：线程块。Cooperative Groups 扩展引入了一种新数据类型 ``thread_block`` ，以在内核中显式表示此概念。
 
 .. code-block:: c++
 
@@ -200,27 +200,27 @@
 
 **公共成员函数：**
 
-``static void sync()``：同步组中命名的线程，等效于 ``g.barrier_wait(g.barrier_arrive())``。
+``static void sync()`` ：同步组中命名的线程，等效于 ``g.barrier_wait(g.barrier_arrive())`` 。
 
-``thread_block::arrival_token barrier_arrive()``：到达 thread_block 屏障，返回需要传递给 ``barrier_wait()`` 的令牌。
+``thread_block::arrival_token barrier_arrive()`` ：到达 thread_block 屏障，返回需要传递给 ``barrier_wait()`` 的令牌。
 
-``void barrier_wait(thread_block::arrival_token&& t)``：等待 thread_block 屏障，将 ``barrier_arrive()`` 返回的到达令牌作为右值引用。
+``void barrier_wait(thread_block::arrival_token&& t)`` ：等待 thread_block 屏障，将 ``barrier_arrive()`` 返回的到达令牌作为右值引用。
 
-``static unsigned int thread_rank()``：调用线程在 [0, num_threads) 范围内的秩。
+``static unsigned int thread_rank()`` ：调用线程在 [0, num_threads) 范围内的秩。
 
-``static dim3 group_index()``：块在启动 grid 中的 3 维索引。
+``static dim3 group_index()`` ：块在启动 grid 中的 3 维索引。
 
-``static dim3 thread_index()``：线程在启动块中的 3 维索引。
+``static dim3 thread_index()`` ：线程在启动块中的 3 维索引。
 
-``static dim3 dim_threads()``：启动块以线程为单位的维度。
+``static dim3 dim_threads()`` ：启动块以线程为单位的维度。
 
-``static unsigned int num_threads()``：组中线程的总数。
+``static unsigned int num_threads()`` ：组中线程的总数。
 
 **遗留成员函数（别名）：**
 
-``static unsigned int size()``：组中线程的总数（``num_threads()`` 的别名）。
+``static unsigned int size()`` ：组中线程的总数（ ``num_threads()`` 的别名）。
 
-``static dim3 group_dim()``：启动块的维度（``dim_threads()`` 的别名）。
+``static dim3 group_dim()`` ：启动块的维度（ ``dim_threads()`` 的别名）。
 
 **示例：**
 
@@ -263,29 +263,29 @@
 
 **公共成员函数：**
 
-``static void sync()``：同步组中命名的线程，等效于 ``g.barrier_wait(g.barrier_arrive())``。
+``static void sync()`` ：同步组中命名的线程，等效于 ``g.barrier_wait(g.barrier_arrive())`` 。
 
-``static cluster_group::arrival_token barrier_arrive()``：到达集群屏障，返回需要传递给 ``barrier_wait()`` 的令牌。
+``static cluster_group::arrival_token barrier_arrive()`` ：到达集群屏障，返回需要传递给 ``barrier_wait()`` 的令牌。
 
-``static void barrier_wait(cluster_group::arrival_token&& t)``：等待集群屏障，将 ``barrier_arrive()`` 返回的到达令牌作为右值引用。
+``static void barrier_wait(cluster_group::arrival_token&& t)`` ：等待集群屏障，将 ``barrier_arrive()`` 返回的到达令牌作为右值引用。
 
-``static unsigned int thread_rank()``：调用线程在 [0, num_threads) 范围内的秩。
+``static unsigned int thread_rank()`` ：调用线程在 [0, num_threads) 范围内的秩。
 
-``static unsigned int block_rank()``：调用块在 [0, num_blocks) 范围内的秩。
+``static unsigned int block_rank()`` ：调用块在 [0, num_blocks) 范围内的秩。
 
-``static unsigned int num_threads()``：组中线程的总数。
+``static unsigned int num_threads()`` ：组中线程的总数。
 
-``static unsigned int num_blocks()``：组中块的总数。
+``static unsigned int num_blocks()`` ：组中块的总数。
 
-``static dim3 dim_threads()``：启动集群以线程为单位的维度。
+``static dim3 dim_threads()`` ：启动集群以线程为单位的维度。
 
-``static dim3 dim_blocks()``：启动集群以块为单位的维度。
+``static dim3 dim_blocks()`` ：启动集群以块为单位的维度。
 
-``static dim3 block_index()``：调用块在启动集群中的 3 维索引。
+``static dim3 block_index()`` ：调用块在启动集群中的 3 维索引。
 
-``static unsigned int query_shared_rank(const void *addr)``：获取共享内存地址所属的块秩。
+``static unsigned int query_shared_rank(const void *addr)`` ：获取共享内存地址所属的块秩。
 
-``static T* map_shared_rank(T *addr, int rank)``：获取集群中另一个块的共享内存变量地址。
+``static T* map_shared_rank(T *addr, int rank)`` ：获取集群中另一个块的共享内存变量地址。
 
 .. _class-grid-group:
 
@@ -306,33 +306,33 @@
 
 **公共成员函数：**
 
-``bool is_valid() const``：返回 grid_group 是否可以同步。
+``bool is_valid() const`` ：返回 grid_group 是否可以同步。
 
-``void sync() const``：同步组中命名的线程，等效于 ``g.barrier_wait(g.barrier_arrive())``。
+``void sync() const`` ：同步组中命名的线程，等效于 ``g.barrier_wait(g.barrier_arrive())`` 。
 
-``grid_group::arrival_token barrier_arrive()``：到达 grid 屏障，返回需要传递给 ``barrier_wait()`` 的令牌。
+``grid_group::arrival_token barrier_arrive()`` ：到达 grid 屏障，返回需要传递给 ``barrier_wait()`` 的令牌。
 
-``void barrier_wait(grid_group::arrival_token&& t)``：等待 grid 屏障，将 ``barrier_arrive()`` 返回的到达令牌作为右值引用。
+``void barrier_wait(grid_group::arrival_token&& t)`` ：等待 grid 屏障，将 ``barrier_arrive()`` 返回的到达令牌作为右值引用。
 
-``static unsigned long long thread_rank()``：调用线程在 [0, num_threads) 范围内的秩。
+``static unsigned long long thread_rank()`` ：调用线程在 [0, num_threads) 范围内的秩。
 
-``static unsigned long long block_rank()``：调用块在 [0, num_blocks) 范围内的秩。
+``static unsigned long long block_rank()`` ：调用块在 [0, num_blocks) 范围内的秩。
 
-``static unsigned long long cluster_rank()``：调用集群在 [0, num_clusters) 范围内的秩。
+``static unsigned long long cluster_rank()`` ：调用集群在 [0, num_clusters) 范围内的秩。
 
-``static unsigned long long num_threads()``：组中线程的总数。
+``static unsigned long long num_threads()`` ：组中线程的总数。
 
-``static unsigned long long num_blocks()``：组中块的总数。
+``static unsigned long long num_blocks()`` ：组中块的总数。
 
-``static unsigned long long num_clusters()``：组中集群的总数。
+``static unsigned long long num_clusters()`` ：组中集群的总数。
 
-``static dim3 dim_blocks()``：启动 grid 以块为单位的维度。
+``static dim3 dim_blocks()`` ：启动 grid 以块为单位的维度。
 
-``static dim3 dim_clusters()``：启动 grid 以集群为单位的维度。
+``static dim3 dim_clusters()`` ：启动 grid 以集群为单位的维度。
 
-``static dim3 block_index()``：块在启动 grid 中的 3 维索引。
+``static dim3 block_index()`` ：块在启动 grid 中的 3 维索引。
 
-``static dim3 cluster_index()``：集群在启动 grid 中的 3 维索引。
+``static dim3 cluster_index()`` ：集群在启动 grid 中的 3 维索引。
 
 .. _class-thread-block-tile:
 
@@ -359,33 +359,33 @@
 
 **公共成员函数：**
 
-``void sync() const``：同步组中命名的线程。
+``void sync() const`` ：同步组中命名的线程。
 
-``unsigned long long num_threads() const``：组中线程的总数。
+``unsigned long long num_threads() const`` ：组中线程的总数。
 
-``unsigned long long thread_rank() const``：调用线程在 [0, num_threads) 范围内的秩。
+``unsigned long long thread_rank() const`` ：调用线程在 [0, num_threads) 范围内的秩。
 
-``unsigned long long meta_group_size() const``：返回父组分区时创建的组数。
+``unsigned long long meta_group_size() const`` ：返回父组分区时创建的组数。
 
-``unsigned long long meta_group_rank() const``：组在从父组分区的 tile 集合中的线性秩（由 meta_group_size 限定）。
+``unsigned long long meta_group_rank() const`` ：组在从父组分区的 tile 集合中的线性秩（由 meta_group_size 限定）。
 
-``T shfl(T var, unsigned int src_rank) const``：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，**注意：对于大于 32 的大小，组中的所有线程必须指定相同的 src_rank，否则行为未定义。**
+``T shfl(T var, unsigned int src_rank) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，**注意：对于大于 32 的大小，组中的所有线程必须指定相同的 src_rank，否则行为未定义。**
 
-``T shfl_up(T var, int delta) const``：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，仅适用于小于或等于 32 的大小。
+``T shfl_up(T var, int delta) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，仅适用于小于或等于 32 的大小。
 
-``T shfl_down(T var, int delta) const``：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，仅适用于小于或等于 32 的大小。
+``T shfl_down(T var, int delta) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，仅适用于小于或等于 32 的大小。
 
-``T shfl_xor(T var, int delta) const``：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，仅适用于小于或等于 32 的大小。
+``T shfl_xor(T var, int delta) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，仅适用于小于或等于 32 的大小。
 
-``int any(int predicate) const``：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
+``int any(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
 
-``int all(int predicate) const``：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
+``int all(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
 
-``unsigned int ballot(int predicate) const``：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__，仅适用于小于或等于 32 的大小。
+``unsigned int ballot(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__，仅适用于小于或等于 32 的大小。
 
-``unsigned int match_any(T val) const``：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__，仅适用于小于或等于 32 的大小。
+``unsigned int match_any(T val) const`` ：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__，仅适用于小于或等于 32 的大小。
 
-``unsigned int match_all(T val, int &pred) const``：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__，仅适用于小于或等于 32 的大小。
+``unsigned int match_all(T val, int &pred) const`` ：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__，仅适用于小于或等于 32 的大小。
 
 **示例：**
 
@@ -432,31 +432,31 @@
 
 **公共成员函数：**
 
-``void sync() const``：同步组中命名的线程。
+``void sync() const`` ：同步组中命名的线程。
 
-``unsigned long long num_threads() const``：组中线程的总数。
+``unsigned long long num_threads() const`` ：组中线程的总数。
 
-``unsigned long long thread_rank() const``：调用线程在 [0, num_threads) 范围内的秩。
+``unsigned long long thread_rank() const`` ：调用线程在 [0, num_threads) 范围内的秩。
 
-``unsigned long long meta_group_size() const``：返回父组分区时创建的组数。如果此组是通过查询活动线程集创建的，例如 ``coalesced_threads()``，则 ``meta_group_size()`` 的值将为 1。
+``unsigned long long meta_group_size() const`` ：返回父组分区时创建的组数。如果此组是通过查询活动线程集创建的，例如 ``coalesced_threads()`` ，则 ``meta_group_size()`` 的值将为 1。
 
-``unsigned long long meta_group_rank() const``：组在从父组分区的 tile 集合中的线性秩（由 meta_group_size 限定）。如果此组是通过查询活动线程集创建的，例如 ``coalesced_threads()``，则 ``meta_group_rank()`` 的值将始终为 0。
+``unsigned long long meta_group_rank() const`` ：组在从父组分区的 tile 集合中的线性秩（由 meta_group_size 限定）。如果此组是通过查询活动线程集创建的，例如 ``coalesced_threads()`` ，则 ``meta_group_rank()`` 的值将始终为 0。
 
-``T shfl(T var, unsigned int src_rank) const``：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__。
+``T shfl(T var, unsigned int src_rank) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__。
 
-``T shfl_up(T var, int delta) const``：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__。
+``T shfl_up(T var, int delta) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__。
 
-``T shfl_down(T var, int delta) const``：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__。
+``T shfl_down(T var, int delta) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__。
 
-``int any(int predicate) const``：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
+``int any(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
 
-``int all(int predicate) const``：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
+``int all(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
 
-``unsigned int ballot(int predicate) const``：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
+``unsigned int ballot(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
 
-``unsigned int match_any(T val) const``：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__。
+``unsigned int match_any(T val) const`` ：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__。
 
-``unsigned int match_all(T val, int &pred) const``：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__。
+``unsigned int match_all(T val, int &pred) const`` ：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__。
 
 **示例：**
 
@@ -485,7 +485,7 @@
 5.6.3.2.1. ``memcpy_async``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``memcpy_async`` 是组范围的集体 memcpy，利用硬件加速支持从全局内存到共享内存的非阻塞内存事务。给定组中命名的一组线程，``memcpy_async`` 将通过单个流水线阶段移动指定数量的字节或输入类型的元素。此外，为了在使用 ``memcpy_async`` API 时实现最佳性能，共享内存和全局内存都需要 16 字节的对齐。重要的是要注意，虽然这通常是一个 memcpy，但只有当源是全局内存且目标是共享内存并且两者都可以用 16、8 或 4 字节对齐寻址时，它才是异步的。异步复制的数据只能在调用 wait 或 wait_prior 后读取，这表示相应阶段已完成将数据移动到共享内存。
+``memcpy_async`` 是组范围的集体 memcpy，利用硬件加速支持从全局内存到共享内存的非阻塞内存事务。给定组中命名的一组线程， ``memcpy_async`` 将通过单个流水线阶段移动指定数量的字节或输入类型的元素。此外，为了在使用 ``memcpy_async`` API 时实现最佳性能，共享内存和全局内存都需要 16 字节的对齐。重要的是要注意，虽然这通常是一个 memcpy，但只有当源是全局内存且目标是共享内存并且两者都可以用 16、8 或 4 字节对齐寻址时，它才是异步的。异步复制的数据只能在调用 wait 或 wait_prior 后读取，这表示相应阶段已完成将数据移动到共享内存。
 
 必须等待所有未完成的请求可能会失去一些灵活性（但获得简单性）。为了有效地重叠数据传输和执行，重要的是能够在等待和操作请求 **N** 的同时启动 **N+1** 个 ``memcpy_async`` 请求。为此，使用 ``memcpy_async`` 并使用基于阶段的集体 ``wait_prior`` API 等待它。有关更多详细信息，请参阅 `wait 和 wait_prior <#cg-api-async-wait>`__。
 
@@ -516,11 +516,11 @@
      const TySrcLayout &srcLayout
    );
 
-执行 **``min(dstLayout, srcLayout)`` 元素**的复制。如果布局类型为 ``cuda::aligned_size_t<N>``，两者必须指定相同的对齐。
+执行 **``min(dstLayout, srcLayout)`` 元素**的复制。如果布局类型为 ``cuda::aligned_size_t<N>`` ，两者必须指定相同的对齐。
 
-**勘误** CUDA 11.1 中引入的带有 src 和 dst 输入布局的 ``memcpy_async`` API 期望布局以元素而不是字节提供。元素类型从 ``TyElem`` 推断，大小为 ``sizeof(TyElem)``。如果使用 ``cuda::aligned_size_t<N>`` 类型作为布局，则指定的元素数量乘以 ``sizeof(TyElem)`` 必须是 N 的倍数，建议使用 ``std::byte`` 或 ``char`` 作为元素类型。
+**勘误** CUDA 11.1 中引入的带有 src 和 dst 输入布局的 ``memcpy_async`` API 期望布局以元素而不是字节提供。元素类型从 ``TyElem`` 推断，大小为 ``sizeof(TyElem)`` 。如果使用 ``cuda::aligned_size_t<N>`` 类型作为布局，则指定的元素数量乘以 ``sizeof(TyElem)`` 必须是 N 的倍数，建议使用 ``std::byte`` 或 ``char`` 作为元素类型。
 
-如果指定的复制形状或布局类型为 ``cuda::aligned_size_t<N>``，则对齐将保证至少为 ``min(16, N)``。在这种情况下，``dst`` 和 ``src`` 指针都需要对齐到 N 字节，复制的字节数需要是 N 的倍数。
+如果指定的复制形状或布局类型为 ``cuda::aligned_size_t<N>`` ，则对齐将保证至少为 ``min(16, N)`` 。在这种情况下， ``dst`` 和 ``src`` 指针都需要对齐到 N 字节，复制的字节数需要是 N 的倍数。
 
 **代码生成要求：** 最低计算能力 5.0，计算能力 8.0 以实现异步，C++11
 
@@ -567,7 +567,7 @@
    template <unsigned int NumStages, typename TyGroup>
    void wait_prior(TyGroup & group);
 
-``wait`` 和 ``wait_prior`` 集体操作允许等待 memcpy_async 复制完成。``wait`` 阻塞调用线程直到所有先前的复制完成。``wait_prior`` 允许最新的 NumStages 可能仍未完成，并等待所有先前的请求。因此，对于总共请求的 N 个复制，它等待直到前 N-NumStages 个完成，最后 NumStages 可能仍在进行中。``wait`` 和 ``wait_prior`` 都将同步命名的组。
+``wait`` 和 ``wait_prior`` 集体操作允许等待 memcpy_async 复制完成。 ``wait`` 阻塞调用线程直到所有先前的复制完成。 ``wait_prior`` 允许最新的 NumStages 可能仍未完成，并等待所有先前的请求。因此，对于总共请求的 N 个复制，它等待直到前 N-NumStages 个完成，最后 NumStages 可能仍在进行中。 ``wait`` 和 ``wait_prior`` 都将同步命名的组。
 
 **代码生成要求：** 最低计算能力 5.0，计算能力 8.0 以实现异步，C++11
 

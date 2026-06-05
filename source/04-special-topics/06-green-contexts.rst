@@ -133,13 +133,13 @@ Green Context 的核心是与特定 GPU 设备关联的设备资源 (``cudaDevRe
         };
     };
 
-支持的有效资源类型是 ``cudaDevResourceTypeSm``、``cudaDevResourceTypeWorkqueueConfig`` 和 ``cudaDevResourceTypeWorkqueue``，而 ``cudaDevResourceTypeInvalid`` 标识无效的资源类型。
+支持的有效资源类型是 ``cudaDevResourceTypeSm`` 、 ``cudaDevResourceTypeWorkqueueConfig`` 和 ``cudaDevResourceTypeWorkqueue`` ，而 ``cudaDevResourceTypeInvalid`` 标识无效的资源类型。
 
 有效的设备资源可以与以下内容关联：
 
-- 特定的一组流式多处理器 (SM)（资源类型 ``cudaDevResourceTypeSm``）
-- 特定的工作队列配置（资源类型 ``cudaDevResourceTypeWorkqueueConfig``）
-- 预先存在的工作队列资源（资源类型 ``cudaDevResourceTypeWorkqueue``）
+- 特定的一组流式多处理器 (SM)（资源类型 ``cudaDevResourceTypeSm`` ）
+- 特定的工作队列配置（资源类型 ``cudaDevResourceTypeWorkqueueConfig`` ）
+- 预先存在的工作队列资源（资源类型 ``cudaDevResourceTypeWorkqueue`` ）
 
 可以使用 ``cudaExecutionCtxGetDevResource`` 和 ``cudaStreamGetDevResource`` API 分别查询给定的执行上下文或 CUDA 流是否与给定类型的 ``cudaDevResource`` 资源关联。执行上下文可以关联不同类型的设备资源（例如 SM 和工作队列），而流只能与 SM 类型的资源关联。
 
@@ -151,18 +151,18 @@ Green Context 的核心是与特定 GPU 设备关联的设备资源 (``cudaDevRe
 
 - **SM 类型设备资源** (``cudaDevSmResource``) 有以下相关字段：
 
-  - ``unsigned int smCount``：此资源中可用的 SM 数量
-  - ``unsigned int minSmPartitionSize``：分配此资源所需的最小 SM 数量
-  - ``unsigned int smCoscheduledAlignment``：保证在同一 GPU 处理集群上共同调度的 SM 数量，与线程块集群相关。当 ``flags`` 为零时，``smCount`` 是此值的倍数。
-  - ``unsigned int flags``：支持的标志是 0（默认）和 ``cudaDevSmResourceGroupBackfill``
+  - ``unsigned int smCount`` ：此资源中可用的 SM 数量
+  - ``unsigned int minSmPartitionSize`` ：分配此资源所需的最小 SM 数量
+  - ``unsigned int smCoscheduledAlignment`` ：保证在同一 GPU 处理集群上共同调度的 SM 数量，与线程块集群相关。当 ``flags`` 为零时， ``smCount`` 是此值的倍数。
+  - ``unsigned int flags`` ：支持的标志是 0（默认）和 ``cudaDevSmResourceGroupBackfill``
 
-  这些字段将通过用于创建此 SM 类型资源的适当分割 API（``cudaDevSmResourceSplitByCount`` 或 ``cudaDevSmResourceSplit``）设置，或者由检索给定 GPU 设备 SM 资源的 ``cudaDeviceGetDevResource`` API 填充。这些字段不应由用户直接设置。
+  这些字段将通过用于创建此 SM 类型资源的适当分割 API（ ``cudaDevSmResourceSplitByCount`` 或 ``cudaDevSmResourceSplit`` ）设置，或者由检索给定 GPU 设备 SM 资源的 ``cudaDeviceGetDevResource`` API 填充。这些字段不应由用户直接设置。
 
 - **工作队列配置设备资源** (``cudaDevWorkqueueConfigResource``) 有以下相关字段：
 
-  - ``int device``：工作队列资源可用的设备
-  - ``unsigned int wqConcurrencyLimit``：预期避免错误依赖的流排序工作负载数量
-  - ``enum cudaDevWorkqueueConfigScope sharingScope``：工作队列资源的共享范围。支持的值是：``cudaDevWorkqueueConfigScopeDeviceCtx``（默认）和 ``cudaDevWorkqueueConfigScopeGreenCtxBalanced``。使用默认选项，所有工作队列资源在所有上下文中共享，而使用平衡选项，驱动程序尽可能尝试在 Green Contexts 之间使用非重叠的工作队列资源，使用用户指定的 ``wqConcurrencyLimit`` 作为提示。
+  - ``int device`` ：工作队列资源可用的设备
+  - ``unsigned int wqConcurrencyLimit`` ：预期避免错误依赖的流排序工作负载数量
+  - ``enum cudaDevWorkqueueConfigScope sharingScope`` ：工作队列资源的共享范围。支持的值是： ``cudaDevWorkqueueConfigScopeDeviceCtx`` （默认）和 ``cudaDevWorkqueueConfigScopeGreenCtxBalanced`` 。使用默认选项，所有工作队列资源在所有上下文中共享，而使用平衡选项，驱动程序尽可能尝试在 Green Contexts 之间使用非重叠的工作队列资源，使用用户指定的 ``wqConcurrencyLimit`` 作为提示。
 
   这些字段需要由用户设置。
 
@@ -191,9 +191,9 @@ Green Context 创建的第一步是获取可用的设备资源并填充 ``cudaDe
 
 相关 CUDA 运行时 API 函数签名如下：
 
-- 对于 **设备**：``cudaError_t cudaDeviceGetDevResource(int device, cudaDevResource* resource, cudaDevResourceType type)``
-- 对于 **执行上下文**：``cudaError_t cudaExecutionCtxGetDevResource(cudaExecutionContext_t ctx, cudaDevResource* resource, cudaDevResourceType type)``
-- 对于 **流**：``cudaError_t cudaStreamGetDevResource(cudaStream_t hStream, cudaDevResource* resource, cudaDevResourceType type)``
+- 对于 **设备**： ``cudaError_t cudaDeviceGetDevResource(int device, cudaDevResource* resource, cudaDevResourceType type)``
+- 对于 **执行上下文**： ``cudaError_t cudaExecutionCtxGetDevResource(cudaExecutionContext_t ctx, cudaDevResource* resource, cudaDevResourceType type)``
+- 对于 **流**： ``cudaError_t cudaStreamGetDevResource(cudaStream_t hStream, cudaDevResource* resource, cudaDevResourceType type)``
 
 所有这些 API 都允许所有有效的 ``cudaDevResourceType`` 类型，但 ``cudaStreamGetDevResource`` 除外，它仅支持 SM 类型资源。
 
@@ -302,12 +302,12 @@ Green Context 创建后，您可以创建属于该 Green Context 的 CUDA 流。
 
 以下是与 Green Contexts 相关的一些额外 API：
 
-- ``cudaGreenCtxDestroy``：销毁 Green Context
-- ``cudaExecutionCtxGetDevResource``：获取执行上下文的设备资源
-- ``cudaStreamGetDevResource``：获取 CUDA 流的设备资源
-- ``cudaDevSmResourceSplitByCount``：通过计数分割 SM 资源
-- ``cudaDevSmResourceSplit``：分割 SM 资源为异构组
-- ``cudaDevResourceGenerateDesc``：生成资源描述符
+- ``cudaGreenCtxDestroy`` ：销毁 Green Context
+- ``cudaExecutionCtxGetDevResource`` ：获取执行上下文的设备资源
+- ``cudaStreamGetDevResource`` ：获取 CUDA 流的设备资源
+- ``cudaDevSmResourceSplitByCount`` ：通过计数分割 SM 资源
+- ``cudaDevSmResourceSplit`` ：分割 SM 资源为异构组
+- ``cudaDevResourceGenerateDesc`` ：生成资源描述符
 
 .. _green-contexts-example:
 

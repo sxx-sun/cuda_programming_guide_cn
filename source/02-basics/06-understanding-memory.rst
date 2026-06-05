@@ -45,7 +45,7 @@ CUDA 提供了一些功能和特性，旨在简化不同物理内存之间的数
 2.6.1. 统一虚拟地址空间
 ------------------------
 
-在单个操作系统进程内，所有主机内存和系统中所有 GPU 上的所有全局内存使用单个虚拟地址空间。主机和所有设备上的所有内存分配都位于此虚拟地址空间中。无论使用 CUDA API（如 ``cudaMalloc``、``cudaMallocHost`` ）还是系统分配 API（如 ``new``、``malloc``、``mmap`` ）进行分配，这都是成立的。CPU 和每个 GPU 在统一虚拟地址空间中都有唯一的范围。
+在单个操作系统进程内，所有主机内存和系统中所有 GPU 上的所有全局内存使用单个虚拟地址空间。主机和所有设备上的所有内存分配都位于此虚拟地址空间中。无论使用 CUDA API（如 ``cudaMalloc`` 、 ``cudaMallocHost`` ）还是系统分配 API（如 ``new`` 、 ``malloc`` 、 ``mmap`` ）进行分配，这都是成立的。CPU 和每个 GPU 在统一虚拟地址空间中都有唯一的范围。
 
 这意味着：
 
@@ -290,7 +290,7 @@ ATS 提供 :ref:`HMM <memory-heterogeneous-memory-management>`  （Heterogeneous
 
 在 :ref:`介绍性代码示例 <intro-cuda-cpp-all-together>` 中，使用 ``cudaMallocHost`` 在 CPU 上分配内存。
 这在主机上分配 *页锁定 （Page-Locked Host Memory）* 内存（也称为 *固定* 内存）。
-通过传统分配机制（如 ``malloc``、``new`` 或 ``mmap`` ）进行的主机分配不是页锁定的，这意味着它们可能被交换到磁盘或被操作系统物理重定位。
+通过传统分配机制（如 ``malloc`` 、 ``new`` 或 ``mmap`` ）进行的主机分配不是页锁定的，这意味着它们可能被交换到磁盘或被操作系统物理重定位。
 
 页锁定主机内存是 :ref:`CPU 和 GPU 之间异步拷贝 <async-execution-memory-transfers>` 所必需的。
 页锁定主机内存也提高同步拷贝的性能。页锁定内存可以 :ref:`映射 <memory-mapped-memory>` 到 GPU 以便从 GPU kernel 直接访问。
