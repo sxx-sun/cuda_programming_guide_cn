@@ -1315,7 +1315,9 @@ Tile 代码支持多种原子内存操作，它们的区别在于写入值与内
 
 - ``atomic_cas`` — 在内存中的值和作为参数传递的期望值之间执行逐元素比较。如果匹配，内存中的值被替换为期望值
 
-有关所有支持的原子内存操作的完整文档，请参阅 `CUDA Tile C++ API 参考 <https://docs.nvidia.com/cuda/cuda-tile-cpp-api-reference/memory_operations.html>`_ 或 `cuTile Python API 参考 <https://docs.nvidia.com/cuda/cutile-python/operations.html#atomic>`_ 的内存操作部分。
+有关所有支持的原子内存操作的完整文档，请参阅 
+`CUDA Tile C++ API 参考 <https://docs.nvidia.com/cuda/cuda-tile-cpp-api-reference/memory_operations.html>`_ 或 
+`cuTile Python API 参考 <https://docs.nvidia.com/cuda/cutile-python/operations.html#atomic>`_ 的内存操作部分。
 
 
 .. _writing-tile-kernels-optimization-hints:
@@ -1323,13 +1325,16 @@ Tile 代码支持多种原子内存操作，它们的区别在于写入值与内
 2.4.11. 优化提示
 ------------------
 
-优化提示是附加到源构造（tile kernel 函数、加载/存储调用站点等）的元数据，用于指导编译器的代码生成。提示不改变程序的语义：kernel 有无提示都编译和运行相同，因此可以自由添加、删除或调整而不影响正确性。编译器也可能忽略任何提示。
+优化提示（optimization hint）是一种附加在源代码结构（如 Tile kernel 函数、Load/Store 调用点等）上的元数据，用于指导编译器的代码生成。
+这些提示不会改变程序的语义：无论是否包含它们， kernel 的编译和运行结果都完全相同。
+因此，开发者可以自由地添加、移除或调整这些提示，而不会影响程序的正确性。
+此外，编译器也可能会选择忽略任何给定的提示。
 
-提示共享两个一般属性：
+优化提示具有两个普遍的特性：
 
-- **提示是按构造的。** 提示适用于它所附加的特定 kernel 函数或特定调用表达式，而非周围代码。
+- **针对特定代码结构（per-construct）** 。一个提示仅作用于它所附加的那个特定的 kernel 函数或调用表达式，而不会影响其周围的代码。
 
-- **提示可以按架构指定。** 每个提示可以为不同的 GPU 架构设置为不同的值，或设置为适用于所有目标的单个值。
+- **可以按硬件架构分别指定**。 针对不同的 GPU 架构，同一个提示可以被设置为不同的值；或者也可以只设置一个统一的值，使其适用于所有目标架构。
 
 两种语言以不同方式暴露提示：
 
@@ -1337,27 +1342,33 @@ Tile 代码支持多种原子内存操作，它们的区别在于写入值与内
 
 - Python 使用 kernel 装饰器和各个内存操作调用站点上的关键字参数。
 
-提示种类集以及每个提示实际控制的内容在两种语言之间共享，记录在 :ref:`提示种类 <writing-tile-kernels-optimization-hints-kinds>` 部分中。
-
+优化提示的种类及其各自实际控制的内容，在 C++ 和 Python 这两种语言中是共享（通用）的，具体请参阅 :ref:`提示种类 <writing-tile-kernels-optimization-hints-kinds>` 相关文档。
 
 2.4.11.1. C++ — ``cutile::hint`` 属性
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 在 C++ 中，提示通过 C++ 属性 ``cutile::hint`` 表达：
 
-.. code-block:: text
+.. code-block:: cuda
 
    [[ cutile::hint(arch, kind1=value1, kind2=value2, ...) ]]
 
-第一个参数是目标架构，使用与 ``__CUDA_ARCH__`` 宏相同的约定编码为整数（例如 ``900`` 表示 ``sm_90`` ， ``1000`` 表示 ``sm_100`` ）。特殊值 ``0`` 表示 *架构无关* 提示，适用于每个目标架构。每个剩余参数是指定提示种类及其值的 ``kind=value`` 对。
+第一个参数是目标架构，它采用与 ``__CUDA_ARCH__`` 宏相同的约定编码为一个整数（例如，sm_90 对应 900，sm_100 对应 1000）。
+特殊值 ``0`` 表示这是一个与架构无关的提示，适用于所有目标架构。
+其余的每个参数均为‘种类=值’（ ``kind=value`` ）对，用于指定某种提示种类及其对应的值。
 
-``cutile::hint`` 属性适用于它前面的构造：
+``cutile::hint`` 属性作用于其前方（即紧随其后）的代码结构：
 
-- 对于 tile kernel 函数，将属性放在函数声明上。
+- 对于 tile kernel 函数，请将该属性放置在函数的声明处。
 
-- 对于内存操作如 ``ct::load`` 、 ``ct::store`` 和 ``ct::partition_view`` 加载/存储，将其放在包含调用的表达式语句上。
+- 对于诸如 ``ct::load`` 、 ``ct::store`` 以及 ``ct::partition_view`` 的加载/存储等内存操作，请将该属性放置在包含该函数调用的表达式语句上。
 
-下面的 kernel 同时说明了两种放置方式：一个为 ``sm_90`` 和 ``sm_100`` 设置不同 ``num_cta_in_cga`` 的 kernel 级提示，以及将特定加载标记为带宽密集型的表达式语句提示。
+将属性放置在其他位置存在一定的限制；
+有关完整的规则集，请参阅 `CUDA Tile C++ 提示规范 <https://docs.nvidia.com/cuda/cuda-tile-cpp-api-reference/optimization_hints.html#hint-specification>`_ 。
+
+下面的 kernel 示例展示了这两种放置方式：
+一个是作用于整个 kernel 的提示，针对 sm_90 和 sm_100 架构分别设置了不同的 ``num_cta_in_cga`` （每个 CGA 中的 CTA 数量）；
+另一个是作用于表达式语句的提示，用于将某次特定的加载操作标记为带宽密集型。
 
 .. code-block:: c++
 
@@ -1386,19 +1397,42 @@ Tile 代码支持多种原子内存操作，它们的区别在于写入值与内
        outView.store(tile, bx);
    }
 
-当同一种类的多个提示适用于同一构造时，架构特定的提示覆盖架构无关的提示。
+当多个相同种类的提示同时作用于同一个代码结构时，针对特定架构的提示会覆盖与架构无关的提示。
 
 
-2.4.11.2. Python — 装饰器参数和调用站点关键字
+2.4.11.2. Python —— 装饰器参数与调用点关键字
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Python 以两种方式暴露提示：
+Python 提供了两种方式来使用优化提示：
 
-- **Kernel 级提示** 是 ``@ct.kernel(...)`` 装饰器的关键字参数。编译的 kernel 对象还有 ``.replace_hints(**hints)`` 方法，返回具有覆盖提示的新 kernel；新 kernel 有自己的 JIT 缓存，使 ``replace_hints`` 成为自动调优循环的自然构建块。
+- **Kernel 级提示** 以关键字参数的形式传递给 ``@ct.kernel(...)`` 装饰器。
+  此外，编译后的 kernel 对象还提供了一个 ``.replace_hints(**hints)`` 方法，该方法会返回一个覆盖/替换了指定提示的新内核；
+  这个新内核拥有自己独立的即时编译（JIT）缓存，这使得 ``replace_hints`` 成为构建自动调优循环的天然基础模块。
+- **逐次调用的提示（Per-call hints）** 以关键字参数的形式，直接写在内存操作的调用处。
+  这些内存操作包括： ``ct.load`` / ``ct.store`` 、 ``TiledView.load`` / ``TiledView.store`` 以及 ``ct.gather`` / ``ct.scatter`` 。
 
-- **每次调用提示** 是内存操作调用站点上的关键字参数： ``ct.load`` / ``ct.store`` 、 ``TiledView.load`` / ``TiledView.store`` 和 ``ct.gather`` / ``ct.scatter`` 。
+对于需要针对不同架构进行设置的值，请使用 ``cuda.tile.ByTarget(*, default=..., sm_XXX=..., sm_YYY=...)`` 来包装该值。
+其中的架构键必须是符合 `sm_<major><minor>` 格式的字符串（例如 ``sm_100`` 或 ``sm_120`` ）。
+如果直接传入一个普通的值（即不使用 ByTarget 包装），则该值将适用于所有目标架构——这在 Python 中相当于 C++ 里设置了 ``arch=0`` 的与架构无关的提示。
 
-对于每架构值，将值包装在 ``cuda.tile.ByTarget(*, default=..., sm_XXX=..., sm_YYY=...)`` 中。架构键必须是 ``"sm_<major><minor>"`` 形式的字符串（例如 ``"sm_100"`` 或 ``"sm_120"`` ）。普通（非 ``ByTarget`` ）值适用于每个目标——它是 C++ 架构无关提示 ``arch=0`` 的 Python 等价物。
+下面的示例是前面 C++ 代码在 Python 中的直接对应版本：
+``ByTarget`` 用于承载内核级提示， ``latency=8`` 关键字参数用于传递逐次调用提示，
+而 ``replace_hints`` 则能在不修改源代码的情况下生成一个重新调优的内核。
+
+.. code-block:: python
+
+   @ct.kernel(num_ctas=ByTarget(sm_90=4, sm_100=8))
+   def optimization_hints(in_, out, TILE: ct.Constant[int]):
+      bid = ct.bid(0)
+
+      # Per-call hint: this particular load is bandwidth-heavy.
+      tile = ct.load(in_, index=(bid,), shape=(TILE,), latency=8)
+
+      ct.store(out, index=(bid,), tile=tile)
+
+   # Autotuning: produce a new kernel with overridden hints without editing the
+   # source. The new kernel has its own JIT cache.
+   tuned_kernel = optimization_hints.replace_hints(num_ctas=8)
 
 
 .. _writing-tile-kernels-optimization-hints-kinds:
@@ -1406,8 +1440,8 @@ Python 以两种方式暴露提示：
 2.4.11.3. 提示种类
 ~~~~~~~~~~~~~~~~~~~~
 
-以下提示在两种语言之间共享。在每个提示中，**C++ 名称** 和 **Python 名称** 条目是同一底层提示的不同拼写；其余部分相同：提示适用的位置、其值、其含义。
-
+以下提示在两种语言中是通用的。在每个提示项中， **C++** 名称与 **Python** 名称仅仅是同一个底层提示的不同拼写形式；
+除此之外，其余部分完全一致：包括该提示的适用位置、可选值以及具体含义。
 
 2.4.11.3.1. 每个 cluster 的 CTA 数
 """"""""""""""""""""""""""""""""""""
@@ -1420,9 +1454,19 @@ Python 以两种方式暴露提示：
 
 - **含义：** 编译器在启动 kernel 时应优先为每个协作组数组 (CGA) 分配的协作线程数组 (CTA) 数量。
 
+.. note::
 
-2.4.11.3.2. 占用率
-""""""""""""""""""""
+   CTA (Cooperative Thread Array) 和 Thread Block 是同一个东西。
+
+   - CTA 更多出现在底层硬件架构文档、PTX 汇编指令或高级性能调优指南中。
+     使用 CTA 是为了强调这些线程在物理硬件上的 **协作** 属性——它们不仅仅是被打包在一起的线程，更是作为一个整体被调度到 SM 上执行，并且可以共享内存。
+   
+   - Thread Block 是从最基础的 CUDA 编程模型中继承下来的标准术语。
+     在 CUDA 的分层结构中（Grid -> Block -> Thread），Block 是最早被广泛使用的概念，因此“线程块”成为了大家最熟悉的叫法。
+
+
+2.4.11.3.2. 占用率 （Occupancy）
+""""""""""""""""""""""""""""""""""""
 
 - **C++ 名称：**  ``occupancy`` （kernel 属性）。
 
@@ -1430,31 +1474,37 @@ Python 以两种方式暴露提示：
 
 - **允许值：** ``[1, 32]`` 闭范围内的任何整数。
 
-- **含义：** 每个流式多处理器 (SM) 的目标活动 CTA 数量。编译器将该值视为建议，并将在代码生成期间尝试遵循它。
+- **含义：** 每个 SM 上预期的活跃 CTA 目标数量。编译器会将该值视为一种建议，并会在代码生成阶段尽力满足这一要求。
 
 
 2.4.11.3.3. 内存访问延迟
 """"""""""""""""""""""""""
 
-- **C++ 名称：**  ``latency`` （包含调用的表达式语句上的属性）。
+- **C++ 名称：**  ``latency`` （设置该属性的表达式语句）。
 
-- **Python 名称：**  ``latency`` （调用站点上的关键字参数）。
+- **Python 名称：**  ``latency`` （调用点上的关键字参数）。
 
-- **适用于：** tile 空间加载和存储（C++ 中为 ``ct::partition_view`` ；Python 中为 ``Array.tiled_view`` 和 ``ct.load`` / ``ct.store`` ）以及 gather/scatter（C++ 中为带指针 tile 的 ``ct::load`` / ``ct::store`` ；Python 中为 ``ct.gather`` / ``ct.scatter`` ）。
+- **适用于：** tile 空间加载和存储（C++ 中为 ``ct::partition_view`` ；
+  Python 中为 ``Array.tiled_view`` 和 ``ct.load`` / ``ct.store`` ）以及 ``gather/scatter`` （C++ 中为带指针 tile 的 ``ct::load`` / ``ct::store`` ；
+  Python 中为 ``ct.gather`` / ``ct.scatter`` ）。
 
-- **允许值：** ``[1, 10]`` 闭范围内的任何整数，其中 ``1`` 表示轻量 DRAM 流量， ``10`` 表示重流量。较大的值通常导致编译器调度更大的预取深度。
+- **允许值：** 闭区间 ``[1, 10]`` 内的任意整数。
+  其中， ``1`` 表示轻微的 DRAM（显存）访问流量， ``10`` 表示繁重的访问流量。
+  通常，该值越大，编译器就会调度更深的预取深度（prefetch depth）。
 
 
 2.4.11.3.4. 允许 TMA
 """"""""""""""""""""""
 
-- **C++ 名称：**  ``allow_tma`` （包含调用的表达式语句上的属性）。
+- **C++ 名称：**  ``allow_tma`` （设置该属性的表达式语句）。
 
-- **Python 名称：**  ``allow_tma`` （调用站点上的关键字参数）。
+- **Python 名称：**  ``allow_tma`` （调用点上的关键字参数）。
 
-- **适用于：** 仅限 tile 空间加载和存储（C++ 中为 ``ct::partition_view`` ；Python 中为 ``Array.tiled_view`` 和 ``ct.load`` / ``ct.store`` ）。Gather 和 scatter 操作不接受此提示。
+- **适用于：** 仅适用于 tile-space 的加载与存储操作（在 C++ 中为 ``ct::partition_view`` ；在 Python 中为 ``Array.tiled_view`` 以及 ``ct.load / ct.store`` ）。
+  聚集和分散（ ``gather/scatter`` ）操作不支持此提示。
 
-- **允许值：** ``true`` / ``false`` (C++) 或 ``True`` / ``False`` (Python)。默认允许 TMA；将提示设置为 ``false``/``False`` 指示编译器不要将此特定加载或存储降低为支持 TMA 的硬件上的 TMA。
+- **允许值：** 允许的取值： ``true / false``（C++）或 ``True / False`` （Python）。
+  默认情况下允许使用 TMA；如果将该提示设置为 ``false / False`` ，则会指示编译器在支持该特性的硬件上，不要将此特定的加载或存储操作转译为 TMA 指令。
 
 
 .. _writing-tile-kernels-cpp-perf-tips:
@@ -1462,17 +1512,17 @@ Python 以两种方式暴露提示：
 2.4.12. C++ 性能提示
 ----------------------
 
-本指南中的 C++ kernel 都使用相同的一些注解和惯用法。本节解释它们的作用以及为什么重要。
+本指南中的所有 C++ kernel 均使用了少数几种相同的注解与惯用法。本节将解释它们的具体作用及其重要性。
 
+2.4.12.1. 对内存中的数组指针使用 ``__restrict__`` 修饰符
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-2.4.12.1. 对内存中的数组使用 ``__restrict__`` 指针
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``__restrict__`` 关键字告诉编译器，在该指针的生命周期内，通过该指针访问的内存区域仅会通过该指针被访问。参见 :ref:`restrict-pointers`。
 
-``__restrict__`` 关键字告诉编译器，通过指针访问的内存区域在指针的生命周期内将仅通过该指针访问。参见 :ref:`第 5.4.1.4 节 <restrict-pointers>`。
+在 Tile C++ 中，如果内存中的数组满足上述条件，务必使用 ``__restrict__`` 关键字来标记指向它们的指针，这是获得优异访存性能的关键前提。
 
-在 Tile C++ 中，对符合这些条件的内存中的数组使用 ``__restrict__`` 关键字标记其指针对于良好的内存操作性能至关重要。
+为了理解其中的原因，我们不妨来看一个逐元素拷贝的例子，假设其使用的数组指针没有加上 ``__restrict__`` 修饰：
 
-为了理解原因，考虑一个使用非 ``__restrict__`` 指针数组的逐元素复制：
 
 .. code-block:: c++
 
@@ -1489,15 +1539,21 @@ Python 以两种方式暴露提示：
        ct::store(outPtrs, data);       // (2)
    }
 
-编译器如何并行化 tile 操作通常可以在 CUDA Tile 程序中忽略。但是，我们将在此处考虑它以理解为什么使用非重叠数组能使编译器生成性能更好的代码。
+在 CUDA tile 编程中，通常无需关注编译器是如何对 tile 操作进行并行化的。
+不过，我们在此仍会探讨这一点，以便理解为什么使用不重叠的数组能让编译器生成性能更优的代码。
 
-考虑编译器如何并行化 ``load`` 和 ``store`` tile 操作。如果输入和输出数组不重叠， ``load`` 可以并行化为一组独立的内存读取操作。类似地， ``store`` 可以并行化为多个内存写入操作，每个操作仅依赖于为其写入数据元素的加载操作。
+我们来思考一下编译器如何并行化 ``load`` 和 ``store`` tile 操作。
+如果输入数组和输出数组互不重叠，那么 ``load`` 操作就可以被拆解为一组相互独立的内存读取操作来进行并行处理。
+同理， ``store`` 也可以被并行化为多个内存写入操作，其中每一个写入操作仅依赖于它所写入的那个（或那些）数据元素的读操作（必须先读出来才能写）。
 
-然而，如果输入和输出数组可能重叠，则编译器必须确保整个 tile 的所有内存加载操作在发出任何内存存储操作之前已完成，以确保正确的程序语义。否则，存储操作可能在加载操作读取元素之前执行并覆盖该元素，导致不正确的程序执行。这限制了编译器交错读写的能力，因为所有读取必须在任何写入可以发出之前完成。
+然而，如果输入和输出存在内存重叠，那么编译器就必须确保整个 tile 的所有内存 ``load`` 操作全部完成后，才能发出 ``store`` 操作，以此来保证程序语义的正确性。
+否则，某个存储操作可能会提前执行，在某个元素尚未被读取之前就被覆盖掉，从而导致程序运行出错。
+这会严重限制编译器交错执行读写操作的能力，因为所有的读操作都必须在任何写操作发出之前完成。
 
-简而言之，当编译器无法保证非重叠数组时，它必须生成更保守的代码。这就是为什么使用非重叠数组并使用 ``__restrict__`` 关键字将其通知编译器有助于实现最佳性能。
+简而言之，当编译器无法保证数组互不重叠时，它就必须生成更为保守的代码。
+这就是为什么使用不重叠的数组，并通过在指针上使用 ``__restrict__`` 关键字将这一信息告知编译器，能够帮助我们实现最佳性能的原因。
 
-当内存区域可以被另一个指针访问时，将指针标记为 ``__restrict__`` 将导致未定义行为。
+如果内存区域实际上可以被另一个指针访问，而你却给指向它的指针加上了 ``__restrict__`` 修饰符，这将导致未定义行为。
 
 
 2.4.12.2. 将数组指针标记为 16 字节对齐
@@ -1519,7 +1575,7 @@ Python 以两种方式暴露提示：
        // ...
    }
 
-此对齐保证是 ``ct::partition_view`` 使用张量内存加速器 (TMA) 所必需的。使用此技术时必须在运行时提供 16 字节对齐的指针，否则行为是未定义的。
+此对齐保证是 ``ct::partition_view`` 使用张量内存加速器 (TMA) 所必需的。使用此技术时必须在运行时提供 16 字节对齐的指针，否则将导致未定义行为。
 
 由 CUDA 内存分配器（如 ``cudaMalloc`` ）返回的指针保证至少 16 字节对齐。
 
@@ -1527,13 +1583,16 @@ Python 以两种方式暴露提示：
 2.4.12.3. 优先使用 ``ct::partition_view`` 进行内存访问
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-对于结构化内存访问，优先使用 ``ct::partition_view`` 而非 gather 和 scatter 形式的 ``ct::load`` 和 ``ct::store`` 。基于视图的形式可以在支持的硬件上降低为张量内存加速器 (TMA)，这比逐元素 gather 快得多。有关 gather/scatter 上下文，请参见 :ref:`Gather 和 Scatter <writing-tile-kernels-gather-and-scatter>`。
+对于结构化内存访问，优先使用 ``ct::partition_view`` 而非 ``gather`` 和 ``scatter`` 形式的 ``ct::load`` 和 ``ct::store`` 。
+基于视图的形式在支持的硬件上可以被转换为 TMA 指令，这比逐元素 ``gather`` 快得多。
+有关 ``gather/scatter`` 上下文，请参见 :ref:`Gather 和 Scatter <writing-tile-kernels-gather-and-scatter>`。
 
 
 2.4.12.4. 对有界循环使用 ``ct::irange``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-当迭代固定范围时，使用 ``ct::irange`` 而非普通 ``for`` 循环。结构化形式允许编译器应用诸如流水线和向量化等优化，这些优化在循环边界和步长是不透明整数表达式时不可用（参见 :ref:`控制流 <writing-tile-kernels-control-flow>`）：
+当迭代固定范围时，使用 ``ct::irange`` 而非普通 ``for`` 循环。
+这种结构化形式允许编译器应用诸如流水线和向量化等优化，这些优化在循环边界和步长不是透明整数表达式时不可用（参见 :ref:`控制流 <writing-tile-kernels-control-flow>`）：
 
 .. code-block:: c++
 

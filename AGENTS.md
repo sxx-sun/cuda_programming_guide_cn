@@ -139,7 +139,7 @@ release = '0.1'
 - **Example**: `CUDA 是 NVIDIA 开发的并行计算平台，支持 C++ 和 Python。`
 - **Translation**: Translate prose to Chinese but keep code in English
 - **Technical terms**: Keep original English terms for API names, function names
-- **Do not translate**: tile
+- **Do not translate**: tile, kernel
 
 ## Naming Conventions
 
