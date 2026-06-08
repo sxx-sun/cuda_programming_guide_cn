@@ -62,7 +62,7 @@ cuda_guide_cn/
 
 ### reStructuredText (RST) Files
 
-**Headings** - Use consistent hierarchy: `=` (title), `-` (section), `^` (subsection), `~` (sub-subsection)
+**Headings** - Use consistent hierarchy: `=` (title), `-` (section), `^` (subsection), `~` (sub-subsection), `"` (sub-sub-subsection). **Every heading must have a numbered prefix** matching its position in the document hierarchy (e.g., `1.2.`, `1.2.3.`, `4.10.1.`). The numbering must be consistent with the file's top-level section number and the heading's nesting depth. Part-level files (`part*.rst`) use Chinese ordinal prefixes (e.g., `第一部分：`). The root `index.rst` title and `notices.rst` are exceptions.
 
 **Directives**:
 ```rst

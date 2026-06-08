@@ -19,8 +19,8 @@ CUDA C++ 编程语言是 C++ 编程语言的扩展。本节记录了对当前 `I
 
 .. _cuda-cpp-execution-model-host-threads:
 
-第 5.8.1 节 主机线程
---------------------
+5.8.1. 主机线程
+---------------
 
 由主机实现创建的执行线程用于执行 `main <https://en.cppreference.com/w/cpp/language/main_function>`__、`std::thread <https://en.cppreference.com/w/cpp/thread/thread>`__ 和 `std::jthread <https://en.cppreference.com/w/cpp/thread/jthread>`__ 所提供的前进保证是主机实现 `[intro.progress] <https://eel.is/c++draft/intro.progress>`__ 的实现定义行为。通用主机实现应提供并发前进保证。
 
@@ -28,8 +28,8 @@ CUDA C++ 编程语言是 C++ 编程语言的扩展。本节记录了对当前 `I
 
 .. _cuda-cpp-execution-model-device-threads:
 
-第 5.8.2 节 设备线程
---------------------
+5.8.2. 设备线程
+---------------
 
 一旦设备线程取得进展：
 
@@ -128,8 +128,8 @@ CUDA C++ 编程语言是 C++ 编程语言的扩展。本节记录了对当前 `I
 
 .. _cuda-cpp-execution-model-cuda-apis:
 
-第 5.8.3 节 CUDA API
---------------------
+5.8.3. CUDA API
+---------------
 
 CUDA API 调用应最终返回或确保至少一个设备线程取得进展。
 
@@ -214,8 +214,8 @@ CUDA 查询函数（例如 `cudaStreamQuery <https://docs.nvidia.com/cuda/cuda-r
 
 .. _cuda-cpp-execution-model-dependencies:
 
-第 5.8.3.1 节 依赖关系
-^^^^^^^^^^^^^^^^^^^^^^
+5.8.3.1. 依赖关系
+^^^^^^^^^^^^^^^^^
 
 设备线程在其所有依赖项完成之前不应启动。
 

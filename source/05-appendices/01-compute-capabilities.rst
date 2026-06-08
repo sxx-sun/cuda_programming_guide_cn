@@ -11,8 +11,8 @@
 
 .. _compute-capabilities-querying:
 
-获取 GPU 计算能力
-------------------
+5.1.1. 获取 GPU 计算能力
+------------------------
 
 `CUDA GPU 计算能力 <https://developer.nvidia.com/cuda-gpus>`__ 页面提供了 NVIDIA GPU 型号与其计算能力之间的完整映射。
 
@@ -49,29 +49,29 @@
 
 .. _compute-capabilities-feature-availability:
 
-功能可用性
-----------
+5.1.2. 功能可用性
+-----------------
 
 大多数随计算架构引入的计算功能都旨在后续所有架构上可用。这在 :ref:`compute-capabilities-table-features-and-technical-specifications-feature-support-per-compute-capability` 中通过功能在其引入后的计算能力上标记「Yes」来表示。
 
 .. _compute-capabilities-architecture-specific-features:
 
-架构特定功能
-~~~~~~~~~~~~
+5.1.2.1. 架构特定功能
+~~~~~~~~~~~~~~~~~~~~~
 
 从计算能力 9.0 的设备开始，随架构引入的专用计算功能可能无法保证在所有后续计算能力上都可用。这些功能称为*架构特定*（architecture-specific）功能，旨在加速专用操作，如 Tensor Core 操作，这些操作并非适用于所有类型的计算能力，或者可能在未来的代次中发生重大变化。代码必须使用架构特定的编译器目标编译（参见 :ref:`compute-capabilities-feature-set-compiler-targets` ）才能启用架构特定功能。使用架构特定编译器目标编译的代码只能在其编译的目标计算能力上运行。
 
 .. _compute-capabilities-family-specific-features:
 
-系列特定功能
-~~~~~~~~~~~~
+5.1.2.2. 系列特定功能
+~~~~~~~~~~~~~~~~~~~~~
 
 从计算能力 10.0 的设备开始，某些架构特定功能对于多个计算能力的设备是通用的。包含这些功能的设备属于同一个系列（family），这些功能也可以称为*系列特定*（family-specific）功能。系列特定功能保证在同一系列的所有设备上可用。需要系列特定的编译器目标才能启用系列特定功能。参见 :ref:`compute-capabilities-feature-set-compiler-targets`。为系列特定目标编译的代码只能在该系列成员的 GPU 上运行。
 
 .. _compute-capabilities-feature-set-compiler-targets:
 
-功能集编译器目标
-~~~~~~~~~~~~~~~~
+5.1.2.3. 功能集编译器目标
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 编译器可以针对三组计算功能：
 
@@ -116,8 +116,8 @@
 
 .. _compute-capabilities-features-and-technical-specifications:
 
-功能和技术规格
---------------
+5.1.3. 功能和技术规格
+---------------------
 
 .. _compute-capabilities-table-features-and-technical-specifications-feature-support-per-compute-capability:
 
