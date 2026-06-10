@@ -1,4 +1,4 @@
-.. _lazy-loading:
+.. _lazy-loading-details:
 
 4.7. Lazy Loading
 =================

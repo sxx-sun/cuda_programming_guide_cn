@@ -78,6 +78,8 @@ CUDA 12.3 在 CUDA Graphs 中引入了边数据（edge data）。目前，非默
 
 图可以通过两种机制创建：使用显式图 API 和通过流捕获。
 
+.. _cuda-graphs-graph-api:
+
 4.2.2.1.1. 图 API
 `````````````````
 
@@ -107,6 +109,8 @@ CUDA 12.3 在 CUDA Graphs 中引入了边数据（edge data）。目前，非默
 
 上面的示例展示了四个内核节点及其之间的依赖关系，以说明非常简单图的创建。在典型的用户应用程序中，还需要为内存操作添加节点，例如 cudaGraphAddMemcpyNode() 等。有关添加节点的所有图 API 函数的完整参考，请参阅 CUDA Runtime API 文档。
 
+.. _cuda-graphs-stream-capture:
+
 4.2.2.1.2. 流捕获
 `````````````````
 
@@ -132,6 +136,8 @@ CUDA 12.3 在 CUDA Graphs 中引入了边数据（edge data）。目前，非默
 可以使用 cudaStreamIsCapturing() 查询流是否正在被捕获。
 
 可以使用 cudaStreamBeginCaptureToGraph() 将工作捕获到现有图中。工作不是捕获到内部图，而是捕获到用户提供的图。
+
+.. _cuda-graphs-cross-stream-dependencies-and-events:
 
 4.2.2.1.2.1. 跨流依赖和事件
 ***************************
@@ -174,6 +180,8 @@ CUDA 12.3 在 CUDA Graphs 中引入了边数据（edge data）。目前，非默
 .. note::
    当流退出捕获模式时，流中的下一个非捕获项（如果有）仍将依赖于最近的先前非捕获项，尽管中间项已被移除。
 
+.. _cuda-graphs-prohibited-and-unhandled-operations:
+
 4.2.2.1.2.2. 禁止和未处理的操作
 *******************************
 
@@ -190,15 +198,21 @@ CUDA 12.3 在 CUDA Graphs 中引入了边数据（edge data）。目前，非默
 
 少数将异步操作入队到流中的 API 当前不支持图，如果使用正在被捕获的流调用它们将返回错误，例如 cudaStreamAttachMemAsync()。
 
+.. _cuda-graphs-invalidation:
+
 4.2.2.1.2.3. 失效
 *****************
 
 当在流捕获期间尝试无效操作时，任何关联的捕获图都将失效。当捕获图失效时，任何正在被捕获的流或捕获事件的进一步使用都是无效的，并将返回错误，直到使用 cudaStreamEndCapture() 结束流捕获。此调用将使关联的流退出捕获模式，但也将返回错误值和 NULL 图。
 
+.. _cuda-graphs-capture-introspection:
+
 4.2.2.1.2.4. 捕获内省
 *********************
 
 可以使用 cudaStreamGetCaptureInfo() 检查活动流捕获操作。这允许用户获取捕获状态、捕获的唯一（每进程）ID、底层图对象，以及流中要捕获的下一个节点的依赖关系/边数据。此依赖关系信息可用于获取上一个捕获在流中的节点的句柄。
+
+.. _cuda-graphs-comprehensive-example:
 
 4.2.2.1.3. 综合示例
 ```````````````````

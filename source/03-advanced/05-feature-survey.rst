@@ -3,119 +3,161 @@
 3.5. CUDA 功能概览
 ==================
 
-本编程指南的第 1-3 章介绍了 CUDA 和 GPU 编程，涵盖了基础概念和简单的代码示例。本指南第 4 部分中描述特定 CUDA 功能的章节假设读者已了解第 1-3 章中涵盖的概念。
+本编程指南的第 1-3 章介绍了 CUDA 与 GPU 编程，涵盖了基础概念并辅以简单的代码示例。
+本指南第 4 部分在介绍具体的 CUDA 特性时，假定读者已经掌握了前 1-3 章所涵盖的概念。
 
-CUDA 拥有许多适用于不同问题的功能。并非所有功能都适用于每个用例。本章旨在介绍每个功能，描述其预期用途以及它可能帮助解决的问题。功能按其旨在解决的问题类型粗略分类。某些功能（如 CUDA Graphs）可能适合多个类别。
+CUDA 包含众多特性，用于解决不同类型的问题，但并非所有特性都适用于每一种应用场景。
+本章旨在逐一介绍这些特性，阐述其用途以及期望解决的问题。
+根据问题类型，我们对这些特性进行了粗略的分类。
+需要注意的是，某些特性（如 CUDA Graphs）可能会同时归属于多个类别。
 
-:numref:`Section 4` 更详细地介绍了这些 CUDA 功能。
+我们将在 :ref:`part4` 更详细地介绍这些 CUDA 功能。
 
 .. _improving-kernel-performance:
 
 3.5.1. 提升 Kernel 性能
 ------------------------
 
-本节概述的功能旨在帮助 kernel 开发者最大化其 kernel 的性能。
+本节概述的各项特性，旨在帮助开发者最大限度地提升 kernel 性能。
 
 .. _feature-survey-asynchronous-barriers:
 
 3.5.1.1. 异步屏障
 ^^^^^^^^^^^^^^^^^
 
-:ref:`异步屏障 <asynchronous-barriers>` 在 :numref:`Section 3.2.4.2` 中介绍，允许对线程间的同步进行更精细的控制。异步屏障将屏障的到达和等待分开。这使应用程序能够在等待其他线程到达时执行不依赖于屏障的工作。可以为不同的 :ref:`线程作用域 <advanced-kernels-thread-scopes>` 指定异步屏障。:numref:`Section 4.9` 详细介绍了异步屏障。
+异步屏障（Asynchronous barriers）在 :ref:`asynchronous-barriers` 中有所介绍，它允许对线程间的同步进行更细粒度的控制。
+异步屏障将屏障的到达（arrival）与等待（wait）这两个阶段分离开来。
+这使得应用程序在等待其他线程到达的同时，能够继续执行不依赖于该屏障的其他工作。
+此外，还可以针对不同的 :ref:`线程作用域 <thread-scopes>` 来指定异步屏障。
+关于异步屏障的完整详细信息，请参阅 :ref:`async-barriers-details` 。
 
 .. _asynchronous-data-copies-and-the-tensor-memory-accelerator-tma:
 
 3.5.1.2. 异步数据拷贝和 Tensor Memory Accelerator (TMA)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-CUDA kernel 代码中的 :ref:`异步数据拷贝 <async-copies>` 指的是在共享内存和 GPU DRAM 之间移动数据的同时仍在进行计算的能力。这不应与 CPU 和 GPU 之间的异步内存拷贝混淆。此功能使用异步屏障。:numref:`Section 4.11` 详细介绍了异步拷贝的使用。
+在 kernel 代码中，异步数据拷贝（asynchronous data copies）是指在执行计算任务的同时，能够在共享内存与 GPU 显存（DRAM）之间进行数据搬运。
+请注意，在这里不要将其与 CPU 和 GPU 之间的异步内存拷贝相混淆。
+该特性利用了前文提到的异步屏障机制。关于异步拷贝的具体使用方法，将在 :ref:`async-copies-details` 中进行详细讲解。
 
 .. _feature-survey-pipelines:
 
 3.5.1.3. 流水线
 ^^^^^^^^^^^^^^^
 
-:ref:`流水线 <pipelines>` 是一种用于分阶段工作和协调多缓冲区生产者-消费者模式的机制，通常用于将计算与 :ref:`异步数据拷贝 <async-copies>` 重叠。:numref:`Section 4.10` 提供了在 CUDA 中使用流水线的详细信息和示例。
+流水线（Pipelines）是一种用于暂存任务以及协调多缓冲生产-消费模式的机制，通常被用来实现计算与 :ref:`异步数据拷贝 <async-copies-details>` 的重叠执行。
+关于在 CUDA 中使用流水线的详细说明与示例，请参阅 :ref:`pipelines-details` 。
 
 .. _work-stealing-with-cluster-launch-control:
 
 3.5.1.4. 使用 Cluster Launch Control 的工作窃取
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-工作窃取是一种在负载不均时保持利用率的技术，已完成工作的工作线程可以从其他工作线程"窃取"任务。Cluster launch control 是计算能力 10.0 (Blackwell) 中引入的功能，使 kernel 能够直接控制正在执行的 block 调度，从而可以实时适应不均的负载。线程块可以取消尚未启动的其他线程块或 cluster 的启动，声明其索引，并立即开始执行窃取的工作。这种工作窃取流程使 SM 保持忙碌，减少了不规则数据或运行时变化下的空闲时间——在不单独依赖硬件调度器的情况下提供更细粒度的负载均衡。
+工作窃取（Work stealing）是一种在负载不均的情况下维持资源利用率的技巧，它允许已经完成自身任务的线程 `窃取` 其他线程的任务。
+集群启动控制（Cluster launch control）是计算能力 10.0 (Blackwell) 架构引入的一项特性，
+它赋予了 kernel 直接控制正在执行中的块调度（in-flight block scheduling）的能力，使 kernel 能够实时适应不均匀的负载。
+具体而言，一个线程块可以取消另一个尚未启动的线程块或集群的启动，接管其索引，并立即开始执行被窃取的工作。
+这种工作窃取机制能够在数据分布不规则或运行时发生变化的情况下，保持 SMs 处于忙碌状态并减少空闲时间——它在不完全依赖硬件调度器的前提下，实现了更细粒度的负载均衡。
 
-:numref:`Section 4.12` 提供了如何使用此功能的详细信息。
+关于该特性的详细说明，请参阅 :ref:`cluster-launch-control` 。
 
 .. _improving-latencies:
 
 3.5.2. 改善延迟
 ---------------
 
-本节概述的功能有一个共同主题，即旨在减少某种类型的延迟，尽管不同功能解决的延迟类型不同。总的来说，它们专注于 kernel 启动级别或更高层的延迟。kernel 内的 GPU 内存访问延迟不在此考虑范围内。
+本节概述的各项特性有一个共同的主题，即旨在降低某种类型的延迟，尽管它们各自针对的延迟类型有所不同。
+总体而言，这些特性主要关注 kernel 启动级别或更高层级的延迟。
+而在 kernel 执行过程中访问 GPU 内存所产生的延迟，并不在本节的讨论范围之内。
 
 .. _green-contexts:
 
 3.5.2.1. Green Contexts
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-:ref:`Green contexts <green-contexts>`，也称为 *执行上下文*，是 CUDA 功能的名称，它使程序能够创建仅在 GPU 的 SM 子集上执行工作的 :ref:`CUDA 上下文 <driver-api-context>`。默认情况下，kernel 启动的线程块被分派到 GPU 内可以满足 kernel 资源要求的任何 SM。有许多因素会影响哪些 SM 可以执行线程块，包括但不限于：共享内存使用、寄存器使用、cluster 的使用以及线程块中的线程总数。
+Green 上下文（Green contexts），也称为执行上下文（execution contexts），是 CUDA 的一项特性。
+它允许应用创建特定的 :ref:`CUDA 上下文 <driver-api-context>`，从而使其任务仅在 GPU 的部分 SM 上执行。
+在默认情况下，kernel 启动时的线程块会被调度到 GPU 内任何能够满足该 kernel 资源需求的 SM 上。
+有许多因素会影响哪些 SM 能够执行某个线程块，包括但不限于：共享内存的使用量、寄存器的使用量、集群（clusters）的使用情况，以及线程块中的总线程数。
 
-执行上下文允许将 kernel 启动到专门创建的上下文中，该上下文进一步限制了可用于执行 kernel 的 SM 数量。重要的是，当程序创建使用某些 SM 集的 green context 时，GPU 上的其他上下文不会将线程块调度到分配给 green context 的 SM。这包括主上下文，即 CUDA runtime 使用的默认上下文。这允许为高优先级或延迟敏感的工作负载保留这些 SM。
+执行上下文允许将 kernel 下发到一个专门创建的上下文中，从而限制可执行该 kernel 的 SM 的数量。
+重要的是，当应用创建一个使用了特定 SM 集合的 Green 上下文后，GPU 上的其他上下文将不能把线程块调度到已分配给该 Green 上下文的 SMs 上。
+这也包括主上下文（primary context），即 CUDA 运行时默认使用的上下文。
+这种机制使得这些被隔离出来的 SM 能够被保留下来，专门用于处理高优先级或对延迟敏感的工作负载。
 
-:numref:`Section 4.6` 提供了 green contexts 使用的完整详细信息。Green contexts 在 CUDA 13.1 及更高版本的 CUDA runtime 中可用。
+Green 上下文自 CUDA 13.1 及更高版本的 CUDA runtime 起正式提供支持， 在 :ref:`green-contexts-details` 给出完整细节。
 
 .. _stream-ordered-memory-allocation:
 
 3.5.2.2. 流序内存分配
 ^^^^^^^^^^^^^^^^^^^^^
 
-:ref:`流序内存分配器 <stream-ordered-memory-allocator>` 允许程序将 GPU 内存的分配和释放顺序安排到 :ref:`CUDA 流 <cuda-streams>` 中。与立即执行的 ``cudaMalloc`` 和 ``cudaFree`` 不同， ``cudaMallocAsync`` 和 ``cudaFreeAsync`` 将内存分配或释放操作插入到 CUDA 流中。:numref:`Section 4.3` 涵盖了这些 API 的所有详细信息。
+流排序内存分配器（Stream-ordered memory allocator）允许程序将 GPU 内存的分配与释放操作编排到特定的 CUDA 流中。
+与 ``cudaMalloc`` 和 ``cudaFree`` 立即执行不同， ``cudaMallocAsync`` 和 ``cudaFreeAsync`` 会将内存分配或释放操作插入到指定的 :ref:`CUDA 流 <cuda-streams>` 中。
+关于这些 API 的所有细节将在 :ref:`stream-ordered-memory-allocation-details` 中进行详细介绍。
 
 .. _cuda-graphs:
 
 3.5.2.3. CUDA Graphs
 ^^^^^^^^^^^^^^^^^^^^
 
-:ref:`CUDA Graphs <cuda-graphs>` 使应用程序能够指定一系列 CUDA 操作（如 kernel 启动或内存拷贝）以及这些操作之间的依赖关系，以便它们可以在 GPU 上高效执行。类似的行为可以通过使用 :ref:`CUDA 流 <cuda-streams>` 来实现，实际上创建 graph 的机制之一称为 :ref:`流捕获 <cuda-graphs-creating-a-graph-using-stream-capture>`，它使流上的操作能够记录到 CUDA graph 中。Graphs 也可以使用 :ref:`CUDA Graphs API <cuda-graphs-creating-a-graph-using-graph-apis>` 创建。
+CUDA 图允许应用程序预先指定一系列 CUDA 操作（如启动 kernel 或内存拷贝）及其相互之间的依赖关系，从而使这些操作能够在 GPU 上得到高效执行。
+利用 :ref:`CUDA 流 <cuda-streams>` 也能实现类似的效果，事实上，
+创建图的一种机制就叫做 :ref:`流捕获（stream capture） <cuda-graphs-stream-capture>`，它能够将流中的操作录制下来并转化为一个 CUDA 图。
+此外，开发者也可以直接使用 :ref:`CUDA 图 API <cuda-graphs-graph-api>` 来手动构建图。
 
-一旦创建了 graph，它就可以被实例化并多次执行。这对于指定将要重复的工作负载很有用。Graphs 提供了一些性能优势，减少了与调用 CUDA 操作相关的 CPU 启动成本，并使仅在预先指定整个工作负载时才可用的优化成为可能。
+一旦创建了图，就可以对其进行多次实例化和执行。
+这对于需要重复执行的工作非常有用。图在降低调用 CUDA 操作时产生的 CPU 启动开销方面具有一定的性能优势；此外，当整个工作负载被提前完整指定时，它还能启用一些专属的底层优化。
 
-:numref:`Section 4.2` 描述并演示了如何使用 CUDA Graphs。
+:ref:`cuda-graphs-details` 将描述并演示了如何使用 CUDA Graphs。
 
 .. _programmatic-dependent-launch:
 
 3.5.2.4. 程序化依赖启动
 ^^^^^^^^^^^^^^^^^^^^^^^
+程序化依赖启动（Programmatic dependent launch）是 CUDA 的一项特性。
+它允许一个依赖型 kernel （即需要依赖前序 kernel 输出结果的 kernel），在其所依赖的主 kernel 尚未完成时就开始执行。
+该依赖型 kernel 可以提前执行一些初始化代码和不相关的任务，直到真正需要主 kernel 的数据时才在此处阻塞等待。
+当主 kernel 准备好所需数据后，会发出信号通知，从而解除阻塞，让依赖型 kernel 继续执行。
+这种机制实现了多个 kernel 之间的部分重叠执行，不仅有助于保持较高的 GPU 利用率，还能最大限度地缩短关键数据路径上的延迟。
 
-:ref:`程序化依赖启动 <programmatic-dependent-launch-and-synchronization>` 是一种 CUDA 功能，允许依赖 kernel（即依赖于前一个 kernel 输出的 kernel）在其所依赖的主 kernel 完成之前开始执行。依赖 kernel 可以执行设置代码和无关工作，直到它需要来自主 kernel 的数据并在那里阻塞。主 kernel 可以在依赖 kernel 所需的数据准备好时发出信号，这将释放依赖 kernel 继续执行。这使 kernel 之间能够有一些重叠，可以帮助保持高 GPU 利用率，同时最小化关键数据路径的延迟。:numref:`Section 4.5` 介绍了程序化依赖启动。
+更多详细内容，请参阅 :ref:`programmatic-dependent-launch-details` 。
 
 .. _lazy-loading:
 
 3.5.2.5. 延迟加载
 ^^^^^^^^^^^^^^^^^
 
-:ref:`延迟加载 <lazy-loading>` 是一种允许控制 JIT 编译器在应用程序启动时如何操作的功能。有许多 kernel 需要从 PTX JIT 编译为 cubin 的应用程序，如果在应用程序启动期间所有 kernel 都进行 JIT 编译，可能会经历较长的启动时间。默认行为是模块在需要之前不会被编译。这可以通过使用 :ref:`环境变量 <cuda-environment-variables>` 来更改，如 :numref:`Section 4.7` 中详细介绍的那样。
+延迟加载（Lazy loading）是一项允许开发者控制 JIT 编译器在应用程序启动时如何运行的特性。
+如果包含大量需要从 PTX 即时编译为 cubin 的应用程序在启动时进行全量编译，可能会导致漫长的启动时间。
+系统的默认行为是：模块只有在被实际调用时才会进行编译。
+不过，开发者可以通过设置 :ref:`环境变量 <module-loading>` 来更改这一默认行为，具体细节请参阅 :ref:`lazy-loading-details` 。
 
 .. _functionality-features:
 
 3.5.3. 功能性特性
 -----------------
 
-这里描述的功能有一个共同特点，即它们旨在启用额外的能力或功能。
+本节介绍的特性有一个共同点：它们旨在赋予程序额外的能力或功能。
 
 .. _extended-gpu-memory:
 
 3.5.3.1. 扩展 GPU 内存
 ^^^^^^^^^^^^^^^^^^^^^^
 
-:ref:`扩展 GPU 内存 <extended-gpu-memory>` 是 NVLink-C2C 连接系统中可用的功能，使 GPU 能够高效访问系统内的所有内存。:numref:`Section 4.17` 详细介绍了 EGM。
+扩展 GPU 内存（Extended GPU memory, EGM）是 NVLink-C2C 连接系统中提供的一项特性，它允许从 GPU 内部高效地访问系统内的所有内存。
+关于 EGM 的详细内容，请参阅 :ref:`extended-gpu-memory-details` 。
 
 .. _dynamic-parallelism:
 
 3.5.3.2. 动态并行
 ^^^^^^^^^^^^^^^^^
 
-CUDA 应用程序最常见的是从 CPU 上运行的代码启动 kernel。也可以从 GPU 上运行的 kernel 创建新的 kernel 调用。此功能称为 :ref:`CUDA 动态并行 <cuda-dynamic-parallelism>`。:numref:`Section 4.18` 介绍了从 GPU 上运行的代码创建新 GPU kernel 启动的详细信息。
+CUDA 应用程序通常是从运行在 CPU 上的代码来启动 kernel 。
+不过，开发者也可以在 GPU 上运行的 kernel 内部创建新的 kernel 调用。
+这项特性被称为 CUDA 动态并行（CUDA dynamic parallelism）。
+
+关于如何从运行在 GPU 上的代码中启动新的 GPU kernel， 将在 :ref:`cuda-dynamic-parallelism` 详细介绍。
 
 .. _cuda-interoperability:
 
@@ -127,20 +169,31 @@ CUDA 应用程序最常见的是从 CPU 上运行的代码启动 kernel。也可
 3.5.4.1. CUDA 与其他 API 的互操作性
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-除了 CUDA 之外，还有其他在 GPU 上运行代码的机制。GPU 最初构建用于加速的应用程序——计算机图形——使用自己的一组 API，如 Direct3D 和 Vulkan。应用程序可能希望使用其中一个图形 API 进行 3D 渲染，同时在 CUDA 中执行计算。CUDA 提供了在 CUDA 上下文和 3D API 使用的 GPU 上下文之间交换存储在 GPU 上的数据的机制。例如，应用程序可以使用 CUDA 执行模拟，然后使用 3D API 创建结果的可视化。这是通过使某些缓冲区可从 CUDA 和图形 API 同时读取和/或写入来实现的。
+除了 CUDA 之外，还有其他在 GPU 上运行代码的机制。
+GPU 最初是为了加速计算机图形应用而构建的，这类应用使用自己的一套 API（如 Direct3D 和 Vulkan）。
+应用程序可能希望在使用某种图形 API 进行 3D 渲染的同时，利用 CUDA 执行计算任务。
+为此，CUDA 提供了相应的机制，用于在 CUDA 上下文与 3D API 使用的 GPU 上下文之间交换存储在 GPU 上的数据。
+例如，应用程序可以使用 CUDA 进行物理模拟，然后使用 3D API 将结果进行可视化呈现。
+实现这一过程的方法是，让某些缓冲区（buffers）能够被 CUDA 和图形 API 同时读取和/或写入。
 
-允许与图形 API 共享缓冲区的相同机制也用于与通信机制共享缓冲区，这可以实现多节点环境中的快速、直接 GPU 到 GPU 通信。
+相同机制也被用于与通信共享缓冲区。这使得在多节点环境中，能够实现快速的、GPU 到 GPU 的直接通信。
 
-:numref:`Section 4.19` 描述了 CUDA 如何与其他 GPU API 互操作以及如何在 CUDA 和其他 API 之间共享数据，为多种不同的 API 提供了具体示例。
+:ref:`graphics-interop-details` 介绍了 CUDA 如何与其他 GPU API 进行互操作，以及如何在 CUDA 和其他 API 之间共享数据，并针对多种不同的 API 提供了具体的示例
+
 
 .. _interprocess-communication:
 
 3.5.4.2. 进程间通信
 ^^^^^^^^^^^^^^^^^^^
 
-对于非常大的计算，通常一起使用多个 GPU 来利用更多内存和更多协同处理问题的计算资源。在单个系统内，或集群计算术语中的节点内，多个 GPU 可以在单个主机进程中使用。这在 :numref:`Section 3.4` 中有描述。
+对于超大规模的计算任务，通常会联合使用多个 GPU，以便在处理特定问题时能够调用更多的显存和计算资源。
+在单个系统内（在集群计算术语中称为 **节点** ），可以在同一个主机进程中使用多个 GPU。 这在 :ref:`multi-gpu-introduction` 有过介绍。
 
-也常见使用跨越单台计算机或多台计算机的独立主机进程。当多个进程协同工作时，它们之间的通信称为进程间通信。CUDA 进程间通信 (CUDA IPC) 提供了在不同进程之间共享 GPU 缓冲区的机制。:numref:`Section 4.15` 解释并演示了如何使用 CUDA IPC 在不同主机进程之间进行协调和通信。
+此外，使用跨越单台或多台计算机的独立主机进程也是非常常见的做法。
+当多个进程协同工作时，它们之间的通信被称为进程间通信（interprocess communication, IPC）。
+CUDA 进程间通信（CUDA IPC）提供了在不同进程之间共享 GPU 缓冲区的机制。
+:ref:`interprocess-communication-details` 将详细解释并演示如何使用 CUDA IPC 在不同的主机进程之间进行协调与通信。
+
 
 .. _fine-grained-control:
 
@@ -152,20 +205,28 @@ CUDA 应用程序最常见的是从 CPU 上运行的代码启动 kernel。也可
 3.5.5.1. 虚拟内存管理
 ^^^^^^^^^^^^^^^^^^^^^
 
-如 :numref:`Section 2.4.1` 所述，系统中的所有 GPU 以及 CPU 内存共享一个统一的虚拟地址空间。大多数应用程序可以使用 CUDA 提供的默认内存管理，而无需更改其行为。然而，:ref:`CUDA 驱动 API <driver-api>` 为需要的人提供了对这个虚拟内存空间布局的高级和详细控制。这主要适用于控制在 GPU 之间共享缓冲区的行为，无论是在系统内还是跨多个系统。
+正如 :ref:`memory-unified-virtual-address-space` 所述，系统中的所有 GPU 以及 CPU 内存共享一个统一的虚拟地址空间。
+大多数应用程序可以直接使用 CUDA 提供的默认内存管理机制，而无需更改其行为。
+然而，对于有更高需求的开发者， :ref:`CUDA 驱动 API <driver-api>` 提供了针对该虚拟内存空间布局的高级且精细的控制手段。
+这种高级控制主要适用于需要跨系统或在系统内部的多 GPU 之间共享缓冲区时，用于控制这些缓冲区的行为。
 
-:numref:`Section 4.16` 介绍了 CUDA 驱动 API 提供的控制、它们如何工作以及开发者何时可能发现它们有用。
+:ref:`virtual-memory-management-details` 详细讲解 CUDA 驱动 API 所提供的各项控制手段，解释了它们的工作原理，以及开发者在何种情况下会发现这些功能大有裨益。
 
 .. _driver-entry-point-access:
 
 3.5.5.2. 驱动入口点访问
-^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-:ref:`驱动入口点访问 <driver-entry-point-access>` 指的是从 CUDA 11.3 开始，能够检索 CUDA Driver 和 CUDA Runtime API 的函数指针。它还允许开发者检索特定驱动函数变体的函数指针，并访问比 CUDA toolkit 中可用驱动更新的驱动中的驱动函数。:numref:`Section 4.20` 介绍了驱动入口点访问。
+驱动入口点访问（Driver entry point access）是指从 CUDA 11.3 开始提供的一种能力，它允许开发者检索指向 CUDA 驱动 API 和 CUDA 运行时 API 的函数指针。
+此外，它还允许开发者获取特定驱动函数的变体版本的函数指针，并能够调用比当前安装的 CUDA 工具包更新的驱动程序中所包含的驱动函数。
+关于驱动入口点访问的详细内容，请参阅 :ref:`driver-entry-point-access` 。
 
 .. _error-log-management:
 
 3.5.5.3. 错误日志管理
 ^^^^^^^^^^^^^^^^^^^^^
 
-:ref:`错误日志管理 <error-log-management>` 提供了处理和记录 CUDA API 错误的工具。设置单个环境变量 ``CUDA_LOG_FILE`` 可以将 CUDA 错误直接捕获到 stderr、stdout 或文件中。错误日志管理还使应用程序能够注册在 CUDA 遇到错误时触发的回调。:numref:`Section 4.8` 提供了有关错误日志管理的更多详细信息。
+错误日志管理（Error log management）提供了一系列实用工具，用于处理和记录来自 CUDA API 的错误。
+只需设置一个环境变量 ``CUDA_LOG_FILE`` ，即可将捕获到的 CUDA 错误直接输出到标准错误流（stderr）、标准输出流（stdout）或写入文件中。
+此外，错误日志管理还允许应用程序注册一个回调函数，当 CUDA 遇到错误时便会触发该回调。
+关于错误日志管理的更多详细信息，请参阅 :ref:`error-log-management-details` 。
