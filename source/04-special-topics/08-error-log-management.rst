@@ -17,7 +17,8 @@
 4.8.2. 激活
 ------------------
 
-设置 ``CUDA_LOG_FILE`` 环境变量。可接受的值为 ``stdout`` 、 ``stderr`` 或系统中用于写入文件的有效路径。即使程序执行前未设置 ``CUDA_LOG_FILE`` ，也可以通过 API 转储日志缓冲区。
+设置 ``CUDA_LOG_FILE`` 环境变量。可接受的值为 ``stdout`` 、 ``stderr`` 或系统中用于写入文件的有效路径。
+即使程序执行前未设置 ``CUDA_LOG_FILE`` ，也可以通过 API 转储日志缓冲区。
 
 .. note::
    无错误的执行可能不会打印任何日志。
@@ -39,7 +40,7 @@
 
    [22:21:32.099][25642][CUDA][E][cuLogsDumpToMemory] buffer cannot be NULL
 
-而在之前，开发者只能从返回代码中获得 ``CUDA_ERROR_INVALID_VALUE`` ，如果调用 ``cuGetErrorString`` 可能会得到"invalid argument"。
+而在之前，开发者只能从返回代码中获得 ``CUDA_ERROR_INVALID_VALUE`` ，如果调用 ``cuGetErrorString`` 可能会得到 `invalid argument` 。
 
 .. _error-log-management-api-description:
 
@@ -58,9 +59,11 @@ CUDA Driver 提供两类 API 用于与错误日志管理功能交互。
 
 .. code-block:: c++
 
-   CUresult cuLogsRegisterCallback(CUlogsCallback callbackFunc, void *userData, CUlogsCallbackHandle *callback_out)
+   CUresult cuLogsRegisterCallback(CUlogsCallback callbackFunc,
+                                   void *userData,
+                                   CUlogsCallbackHandle *callback_out)
 
-其中 ``userData`` 不经修改地传递给回调函数。 ``callback_out`` 应由调用者存储，以便在 ``cuLogsUnregisterCallback`` 中使用。
+其中 ``userData`` 不经修改地传递给回调函数。 ``callback_out`` 应由调用者保存，以便在 ``cuLogsUnregisterCallback`` 中使用。
 
 .. code-block:: c++
 
@@ -81,13 +84,15 @@ CUDA Driver 提供两类 API 用于与错误日志管理功能交互。
    CUresult cuLogsDumpToFile(CUlogIterator *iterator, const char *pathToFile, unsigned int flags)
    CUresult cuLogsDumpToMemory(CUlogIterator *iterator, char *buffer, size_t *size, unsigned int flags)
 
-如果 ``iterator`` 为 NULL，则转储整个缓冲区，最多 100 条条目。如果 ``iterator`` 不为 NULL，日志将从该条目开始转储，并且 ``iterator`` 的值将更新为日志的当前末尾，就像调用了 ``cuLogsCurrent`` 一样。如果缓冲区中有超过 100 条日志条目，将在转储开头添加一条注释说明这一点。
+如果 ``iterator`` 为 NULL，则转储整个缓冲区，最多 100 条条目。
+如果 ``iterator`` 不为 NULL，日志将从该条目开始转储，并且 ``iterator`` 的值将更新为日志的当前末尾，就像调用了 ``cuLogsCurrent`` 一样。
+如果缓冲区中有超过 100 条日志条目，将在转储开头添加一条注释说明这一点。
 
-flags 参数必须为 0，其他选项保留供未来 CUDA 版本使用。
+``flags`` 参数必须为 0，其他选项保留供未来 CUDA 版本使用。
 
 ``cuLogsDumpToMemory`` 函数还有其他注意事项：
 
-#. 缓冲区本身将以 null 结尾，但每个日志条目之间仅用换行符（ ``\\n`` ）分隔。
+#. 缓冲区本身将以 null 结尾，但每个日志条目之间仅用换行符（ ``\n`` ）分隔。
 
 #. 缓冲区的最大大小为 25600 字节。
 
@@ -106,6 +111,6 @@ flags 参数必须为 0，其他选项保留供未来 CUDA 版本使用。
 
 #. 错误日志管理的日志位置（如果给定）将不会测试其有效性，直到/除非生成日志。
 
-#. 错误日志管理 API 目前仅通过 CUDA Driver 提供。等效的 API 将在未来版本中添加到 CUDA Runtime。
+#. 错误日志管理 API 目前仅通过 CUDA Driver 提供。CUDA Runtime API 将在未来版本中添加。
 
 #. 日志消息未本地化为任何语言，所有提供的日志均为美式英语。
