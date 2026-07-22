@@ -8,7 +8,11 @@
 4.7.1. 简介
 -----------
 
-延迟加载通过等待加载 CUDA 模块直到需要时才加载，从而减少程序初始化时间。延迟加载对于只使用包含的少量 kernel 的程序特别有效，这在使用库时很常见。当遵循 CUDA 编程模型时，延迟加载对用户是透明的。:ref:`lazy-loading-potential-hazards` 详细解释了这一点。从 CUDA 12.3 开始，延迟加载在所有平台上默认启用，但可以通过 ``CUDA_MODULE_LOADING`` 环境变量进行控制。
+延迟加载通过推迟 CUDA 模块加载直到需要时才加载，从而减少程序初始化时间。
+延迟加载对于只使用少量 kernel 的程序特别有效，这在使用库时很常见。
+当遵循 CUDA 编程模型时，延迟加载对用户是透明的。
+:ref:`lazy-loading-potential-hazards` 详细解释了这一点。
+从 CUDA 12.3 开始，延迟加载在所有平台上默认启用，但可以通过 ``CUDA_MODULE_LOADING`` 环境变量进行控制。
 
 .. _lazy-loading-change-history:
 
@@ -40,21 +44,26 @@
 4.7.3.1. CUDA Runtime 版本要求
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-延迟加载从 CUDA runtime 版本 11.7 开始可用。由于 CUDA runtime 通常静态链接到程序和库中，只有使用 CUDA 11.7+ toolkit 编译的程序和库才能从延迟加载中受益。使用较旧 CUDA runtime 版本编译的库将急切地加载所有模块。
+延迟加载从 CUDA runtime 版本 11.7 开始可用。
+由于 CUDA runtime 通常静态链接到程序和库中，只有使用 CUDA 11.7+ toolkit 编译的程序和库才能从延迟加载中受益。
+使用较旧 CUDA runtime 版本编译的库将立即加载所有模块。
 
 .. _cuda-driver-version-requirement:
 
 4.7.3.2. CUDA Driver 版本要求
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-延迟加载需要 driver 版本 515 或更新版本。即使使用 CUDA toolkit 11.7 或更新版本，对于早于 515 的 driver 版本，延迟加载也不可用。
+延迟加载需要 driver 版本 515 或更新版本。
+即使使用 CUDA toolkit 11.7 或更新版本，对于早于 515 的 driver 版本，延迟加载也不可用。
 
 .. _compiler-requirements:
 
 4.7.3.3. 编译器要求
 ^^^^^^^^^^^^^^^^^^^
 
-延迟加载不需要任何编译器支持。使用 11.7 之前编译器编译的 SASS 和 PTX 都可以在启用延迟加载的情况下加载，并将获得该功能的全部好处。但是，仍然需要 11.7+ 版本的 CUDA runtime，如上所述。
+延迟加载不需要任何编译器支持。
+使用 11.7 之前编译器编译的 SASS 和 PTX 都可以在启用延迟加载的情况下加载，并将获得该功能的全部好处。
+但是，仍然需要 11.7+ 版本的 CUDA runtime，如上所述。
 
 .. _kernel-requirements:
 
@@ -95,17 +104,20 @@
        assert(CUDA_SUCCESS == cuInit(0));
        assert(CUDA_SUCCESS == cuModuleGetLoadingMode(&mode));
 
-       std::cout << "CUDA Module Loading Mode is " << ((mode == CU_MODULE_LAZY_LOADING) ? "lazy" : "eager") << std::endl;
+       std::cout << "CUDA Module Loading Mode is "
+                 << ((mode == CU_MODULE_LAZY_LOADING) ? "lazy" : "eager")
+                 << std::endl;
 
        return 0;
    }
 
 .. _forcing-a-module-to-load-eagerly-at-runtime:
 
-4.7.4.3. 在运行时强制模块急切加载
+4.7.4.3. 在运行时强制模块立即加载
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-加载 kernel 和变量是自动发生的，无需显式加载。即使不执行 kernel，也可以通过以下方式显式加载 kernel：
+加载 kernel 和变量是自动发生的，无需显式加载。
+即使不执行 kernel，也可以通过以下方式显式加载 kernel：
 
 - ``cuModuleGetFunction()`` 函数将导致模块加载到设备内存中
 - ``cudaFuncGetAttributes()`` 函数将导致 kernel 加载到设备内存中
