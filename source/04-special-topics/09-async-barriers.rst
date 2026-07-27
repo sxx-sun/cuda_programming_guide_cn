@@ -33,7 +33,7 @@
              // A single thread initializes the total expected arrival count.
              init(&bar, block.size());
            }
-           block.sync();
+           block.sync(); // Can be replaced with __syncthreads()
          }
 
    .. tab-item:: CUDA C++ `cuda::ptx`
@@ -53,7 +53,7 @@
              // A single thread initializes the total expected arrival count.
              cuda::ptx::mbarrier_init(&bar, block.size());
            }
-           block.sync();
+           block.sync(); // Can be replaced with __syncthreads()
          }
 
    .. tab-item:: CUDA C 原语
@@ -73,44 +73,58 @@
              // A single thread initializes the total expected arrival count.
              __mbarrier_init(&bar, block.size());
            }
-           block.sync();
+           block.sync(); // Can be replaced with __syncthreads()
          }
 
-在任何线程参与屏障之前，必须使用 ``cuda::barrier::init()`` 友元函数初始化屏障。
+在任何线程参与屏障之前，必须使用 ``cuda`` 命名空间下的自由函数 ``init()`` 初始化屏障。
 这必须发生在线程到达屏障之前。这带来了一个引导挑战：线程必须在参与屏障之前同步，但线程创建屏障正是为了同步。
-在此示例中，将参与屏障的线程属于一个协作组，并使用 ``block.sync()`` 来引导初始化。
+在此示例中，使用屏障的线程属于一个协作组，并使用 ``block.sync()`` 来引导初始化。
 由于整个线程块都参与屏障，也可以使用 ``__syncthreads()`` 。
 
-``init()`` 的第二个参数是 *预期到达计数* （expected arrival count），即在参与线程被其 ``bar.wait(std::move(token))`` 调用解除阻塞之前，参与线程调用 ``bar.arrive()`` 的次数。
+``init()`` 的第二个参数是 *预期到达计数* （expected arrival count），即在线程被 ``bar.wait(std::move(token))`` 调用阻塞解除之前，期望参与线程调用 ``bar.arrive()`` 的次数。
 在此示例及前面的示例中，屏障使用线程块中的线程数进行初始化，即 ``cooperative_groups::this_thread_block().size()`` ，以便线程块内的所有线程都能参与屏障。
 
 异步屏障可以灵活地指定线程 *如何* 参与（分离 arrive/wait）以及 *哪些* 线程参与。相比之下， ``this_thread_block.sync()`` 或 ``__syncthreads()`` 适用于整个线程块，而 ``__syncwarp(mask)`` 适用于 warp 的指定子集。尽管如此，如果用户的意图是同步完整的线程块或完整的 warp，我们建议分别使用 ``__syncthreads()`` 和 ``__syncwarp()`` 以获得更好的性能。
 
 .. _async-barriers-phase:
 
-4.9.2. 屏障的阶段：到达、倒计时、完成和重置
--------------------------------------------
+4.9.2. 屏障的 phase ：到达、倒计时、完成和重置
+------------------------------------------------
 
-异步屏障在参与线程调用 ``bar.arrive()`` 时从预期到达计数倒数到零。当倒计时达到零时，屏障在当前阶段完成。当最后一次 ``bar.arrive()`` 调用导致倒计时达到零时，倒计时会自动且原子地重置。重置将倒计时设置为预期到达计数，并将屏障移至下一阶段。
+异步屏障在参与线程调用 ``bar.arrive()`` 时从预期到达计数倒数到零。
+当计数达到零时，屏障在当前 phase 完成。当最后一次 ``bar.arrive()`` 调用导致计数达到零时，计数会自动且原子地重置。
+重置将计数设置为预期到达计数，并将屏障移至下一 phase 。
 
-从 ``token=bar.arrive()`` 返回的 ``cuda::barrier::arrival_token`` 类的 ``token`` 对象与屏障的当前阶段相关联。调用 ``bar.wait(std::move(token))`` 会在屏障处于当前阶段时阻塞调用线程，即当与 token 关联的阶段与屏障的阶段匹配时。如果在调用 ``bar.wait(std::move(token))`` 之前阶段已推进（因为倒计时达到零），则线程不会阻塞；如果在线程阻塞于 ``bar.wait(std::move(token))`` 期间阶段推进，则线程被解除阻塞。
+从 ``token=bar.arrive()`` 返回 ``cuda::barrier::arrival_token`` 类型的 ``token`` 对象，关联（记录）屏障的当前 phase （ current phase ）。
+当屏障的 phase 与 token 关联的 phase 匹配时，调用 ``bar.wait(std::move(token))`` 会阻塞调用线程。
+如果在调用 ``bar.wait(std::move(token))`` 之前 phase 已推进（因为计数达到零），则线程不会阻塞；
+如果在线程阻塞于 ``bar.wait(std::move(token))`` 期间 phase 推进，则线程被解除阻塞。
 
-**了解重置何时可能发生或不发生至关重要，尤其是在非平凡的 arrive/wait 同步模式中。**
 
-- 线程对 ``token=bar.arrive()`` 和 ``bar.wait(std::move(token))`` 的调用必须按顺序进行，使 ``token=bar.arrive()`` 在屏障的当前阶段发生，而 ``bar.wait(std::move(token))`` 在同一阶段或下一阶段发生。
+**了解重置何时可能发生或不发生至关重要，尤其是在复杂的 arrive/wait 同步模式中。**
 
-- 线程对 ``bar.arrive()`` 的调用必须在屏障计数器非零时发生。屏障初始化后，如果线程对 ``bar.arrive()`` 的调用导致倒计时达到零，则在屏障可以重新用于后续的 ``bar.arrive()`` 调用之前，必须先调用 ``bar.wait(std::move(token))``。
+- 线程对 ``token=bar.arrive()`` 和 ``bar.wait(std::move(token))`` 的调用必须按顺序进行。
+  ``token=bar.arrive()`` 在屏障的当前 phase 发生，而 ``bar.wait(std::move(token))`` 在同一 phase 或下一 phase发生。
 
-- ``bar.wait()`` 只能使用当前阶段或紧邻的前一阶段的 ``token`` 对象调用。对于 ``token`` 对象的任何其他值，行为未定义。
+- 线程对 ``bar.arrive()`` 的调用必须在屏障计数器非零时发生。
+  屏障初始化后，如果线程调用 ``bar.arrive()`` 使屏障计数为零，则必须调用 ``bar.wait(std::move(token))`` ， 然后才可以重新调用 ``bar.arrive()`` 使屏障开始下一 phase 。
+
+- ``bar.wait()`` 只能使用当前 phase 或紧邻的前一 phase 的 ``token`` 对象调用。对于 ``token`` 对象的任何其他值，行为未定义。
+
+.. note::
+
+   ``token=bar.arrive()`` 和 ``bar.wait(std::move(token))`` 必须是先后且成对调用。
 
 对于简单的 arrive/wait 同步模式，遵守这些使用规则很简单。
+
 
 .. _async-barriers-warp-entanglement:
 
 4.9.2.1. Warp 纠缠
 ~~~~~~~~~~~~~~~~~~
 
-Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp 完全收敛，则屏障更新一次。如果调用的 warp 完全发散，则对屏障应用 32 次单独更新。
+Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp 完全收敛，则屏障更新一次。
+如果调用的 warp 完全发散，则对屏障应用 32 次单独更新（性能差）。
 
 .. note::
 
@@ -118,12 +132,20 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 
 .. _async-barriers-explicit-phase-tracking:
 
-4.9.3. 显式阶段跟踪
--------------------
+4.9.3. 显式 phase 跟踪
+---------------------------
 
-异步屏障根据用于同步线程和内存操作的次数可以有多个阶段。我们可以通过 ``cuda::ptx`` 和原语 API 提供的 ``mbarrier_try_wait_parity()`` 系列函数直接跟踪阶段，而不是使用 token 来跟踪屏障阶段翻转。
+异步屏障根据线程和内存操作的同步次数可以有多个 phase 。
+我们可以通过 ``cuda::ptx`` 和原语 API 提供的 ``mbarrier_try_wait_parity()`` 系列函数直接跟踪 phase ，而不是使用 token 来跟踪屏障 phase 翻转。
 
-在最简单的形式中， ``cuda::ptx::mbarrier_try_wait_parity(uint64_t* bar, const uint32_t& phaseParity)`` 函数等待具有特定奇偶性的阶段。 ``phaseParity`` 操作数是屏障对象当前阶段或紧邻前一阶段的整数奇偶性。偶数阶段的整数奇偶性为 0，奇数阶段的整数奇偶性为 1。初始化屏障时，其阶段的奇偶性为 0。因此 ``phaseParity`` 的有效值为 0 和 1。显式阶段跟踪在跟踪 :ref:`异步内存操作 <asynchronous-data-copies>` 时很有用，因为它只允许单个线程到达屏障并设置事务计数，而其他线程只等待基于奇偶性的阶段翻转。这比让所有线程都到达屏障并使用 token 更高效。此功能仅适用于线程块和集群作用域的共享内存屏障。
+在最简单的形式中， ``cuda::ptx::mbarrier_try_wait_parity(uint64_t* bar, const uint32_t& phaseParity)`` 函数等待具有特定奇偶性的 phase 。
+``phaseParity`` 操作数是屏障对象当前 phase 或紧邻前一 phase 的整数奇偶性。
+偶数 phase 的整数奇偶性为 0 ，奇数 phase 的整数奇偶性为 1。
+初始化屏障时，其 phase 的奇偶性为 0。
+因此 ``phaseParity`` 的有效值为 0 和 1。
+显式 phase 跟踪在跟踪 :ref:`异步内存操作 <asynchronous-data-copies>` 时很有用，因为它只允许单个线程到达屏障并设置事务计数，而其他线程只等待基于奇偶性的 phase 翻转。
+这比让所有线程都到达屏障并使用 token 更高效。
+此功能仅适用于线程块和集群作用域的共享内存屏障。
 
 .. tab-set::
 
@@ -254,7 +276,8 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 4.9.4. 提前退出
 ---------------
 
-当参与一系列同步的线程必须提前退出该序列时，该线程必须在退出前显式退出参与。剩余的参与线程可以正常进行后续的 arrive 和 wait 操作。
+当参与同步的线程需要提前退出时，该线程必须调用接口显式退出。
+剩余的参与线程可以正常进行后续的 arrive 和 wait 操作。
 
 .. tab-set::
 
@@ -336,14 +359,17 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
            }
          }
 
-``bar.arrive_and_drop()`` 操作到达屏障以履行参与线程在 **当前** 阶段到达的义务，然后递减 **下一** 阶段的预期到达计数，使该线程不再被期望到达屏障。
+``bar.arrive_and_drop()`` 操作履行参与线程在 **当前** phase 到达的义务，然后递减 **下一** phase 的预期到达计数，使该线程不再被期望到达屏障。
 
 .. _async-barriers-completion-function:
 
 4.9.5. 完成函数
 ---------------
 
-``cuda::barrier`` API 支持可选的完成函数。 ``cuda::barrier<Scope, CompletionFunction>`` 的 ``CompletionFunction`` 在每个阶段执行一次，在最后一个线程 *到达* 之后、任何线程从 ``wait`` 解除阻塞之前。在阶段期间到达 ``barrier`` 的线程执行的内存操作对执行 ``CompletionFunction`` 的线程可见，并且 ``CompletionFunction`` 内执行的所有内存操作在从 ``wait`` 解除阻塞后对所有在 ``barrier`` 等待的线程可见。
+``cuda::barrier`` API 支持可选的完成函数。
+``cuda::barrier<Scope, CompletionFunction>`` 中的 ``CompletionFunction`` 在每个 phase 执行一次，在最后一个线程 *到达* 之后、任何线程从 ``wait`` 解除阻塞之前。
+在当前 phase 期间到达 ``barrier`` 的线程执行的内存操作对执行 ``CompletionFunction`` 的线程可见，
+并且 ``CompletionFunction`` 内执行的所有内存操作对所有等待 ``barrier`` 的线程在解除阻塞后可见。
 
 .. tab-set::
 
@@ -396,7 +422,8 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
              assert(*acc == 0);
              assert(blockDim.x == blockDim.y == blockDim.y == 1);
              new (bar) barrier_t{block.size(), completion_fn};
-             /* equivalent to: init(bar, block.size(), completion_fn); */
+             // Placement New, construct bar at mem of bar_storage
+             // equivalent to: init(bar, block.size(), completion_fn);
            }
            block.sync();
 
@@ -418,9 +445,16 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 4.9.6. 跟踪异步内存操作
 -----------------------
 
-异步屏障可用于跟踪 :ref:`异步内存拷贝 <asynchronous-data-copies>`。当异步拷贝操作绑定到屏障时，该拷贝操作在启动时自动递增当前屏障阶段的预期计数，并在完成时递减它。此机制确保屏障的 ``wait()`` 操作将阻塞，直到所有关联的异步内存拷贝完成，提供了一种方便的方式来同步多个并发内存操作。
+异步屏障可用于跟踪 :ref:`异步内存拷贝 <asynchronous-data-copies>`。
+当异步拷贝操作绑定到屏障时，该拷贝操作在启动时自动递增屏障当前 phase 的预期计数，并在完成时递减它。
+此机制确保屏障的 ``wait()`` 操作阻塞直所有关联的异步内存拷贝完成，从而提供了一种方便的方式来同步多个并发内存操作。
 
-从计算能力 9.0 开始，具有线程块或集群作用域的共享内存中的异步屏障可以 **显式** 跟踪异步内存操作。我们将这些屏障称为 *异步事务屏障*（asynchronous transaction barriers）。除了预期到达计数外，屏障对象还可以接受 **事务计数**（transaction count），可用于跟踪异步事务的完成情况。事务计数跟踪尚未完成的异步事务数量，以异步内存操作指定的单位（通常是字节）。当前阶段要跟踪的事务计数可以在到达时通过 ``cuda::device::barrier_arrive_tx()`` 设置，或直接通过 ``cuda::device::barrier_expect_tx()`` 设置。当屏障使用事务计数时，它会在线程执行 wait 操作时阻塞，直到所有生产者线程执行了 arrive **并且** 所有事务计数的总和达到预期值。
+从计算能力 9.0 开始，具有线程块或集群作用域的共享内存中的异步屏障可以 **显式** 跟踪异步内存操作。
+我们将这些屏障称为 *异步事务屏障* （asynchronous transaction barriers）。
+除了预期到达计数外，屏障对象还可以接受 **事务计数** （transaction count），可用于跟踪异步事务的完成情况。
+事务计数跟踪尚未完成的异步事务数量，以异步内存操作指定的单位（通常是字节）。
+当前 phase 要跟踪的事务计数可以在到达时通过 ``cuda::device::barrier_arrive_tx()`` 设置，或直接通过 ``cuda::device::barrier_expect_tx()`` 设置。
+当屏障使用事务计数时，它会在线程执行 wait 操作时阻塞，直到所有生产者线程执行了 arrive **并且** 所有事务计数的总和达到预期值。
 
 .. tab-set::
 
@@ -470,7 +504,9 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
            while (!cuda::ptx::mbarrier_try_wait(&bar, token)) {}
          }
 
-在此示例中， ``cuda::device::barrier_arrive_tx()`` 操作构造一个与当前阶段的阶段同步点相关联的到达 token 对象。然后，将到达计数减 1 并将预期事务计数加 0。由于事务计数更新为 0，屏障不跟踪任何事务。后续关于 :ref:`使用张量内存加速器 (TMA) <async-copies-tma>` 的部分包含跟踪异步内存操作的示例。
+在此示例中， ``cuda::device::barrier_arrive_tx()`` 操作构造一个与当前 phase 的同步点相关联的到达 token 对象。
+然后，将到达计数减 1 并将预期事务计数加 0。
+由于事务计数更新为 0，屏障不跟踪任何事务。后续关于 :ref:`使用张量内存加速器 (TMA) <async-copies-tma>` 的部分包含跟踪异步内存操作的示例。
 
 .. _async-barriers-producer-consumer:
 
@@ -489,11 +525,14 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
    * - 等待缓冲区准备好被填充
      - 发出缓冲区准备好被填充的信号
    * - 产生数据并填充缓冲区
-     - 发出缓冲区已填充的信号
-   * - 等待缓冲区被填充
-     - 消费已填充缓冲区中的数据
+     -
+   * - 发出缓冲区已填充的信号
+     - 等待缓冲区被填充
+   * -
+     - 消费缓冲区中的数据
 
-生产者线程等待消费者线程发出缓冲区准备好被填充的信号；但是，消费者线程不等待此信号。消费者线程等待生产者线程发出缓冲区已填充的信号；但是，生产者线程不等待此信号。对于完整的生产者/消费者并发，此模式具有（至少）双缓冲，其中每个缓冲区需要两个屏障。
+生产者线程等待消费者线程发出缓冲区准备好被填充的信号；消费者线程等待生产者线程发出缓冲区已填充的信号。
+对于完整的生产者/消费者并发，此模式具有（至少）双缓冲，其中每个缓冲区需要两个屏障。
 
 .. tab-set::
 
@@ -665,9 +704,12 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
            { consume(bar, bar + 2, buffer, buffer_len, out, N); }
          }
 
-在此示例中，第一个 warp 特化为生产者，其余 warp 特化为消费者。所有生产者和消费者线程参与四个屏障中的每一个（调用 ``bar.arrive()`` 或 ``bar.arrive_and_wait()`` ），因此预期到达计数等于 ``block.size()``。
+在此示例中，第一个 warp 特化为生产者，其余 warp 特化为消费者。
+所有生产者和消费者线程参与四个屏障中的每一个（调用 ``bar.arrive()`` 或 ``bar.arrive_and_wait()`` ），因此预期到达计数等于 ``block.size()``。
 
-生产者线程等待消费者线程发出共享内存缓冲区可以被填充的信号。为了等待屏障，生产者线程必须先到达 ``ready[i%2].arrive()`` 以获取 token，然后使用该 token 执行 ``ready[i%2].wait(token)``。为简化起见， ``ready[i%2].arrive_and_wait()`` 合并了这些操作。
+生产者线程等待消费者线程发出共享内存缓冲区可以被填充的信号。
+为了等待屏障，生产者线程必须先到达 ``ready[i%2].arrive()`` 以获取 token，然后使用该 token 执行 ``ready[i%2].wait(token)``。
+为简化起见， ``ready[i%2].arrive_and_wait()`` 合并了这些操作。
 
 .. code-block:: cpp
 
@@ -675,6 +717,9 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
    /* is equivalent to */
    bar.wait(bar.arrive());
 
-生产者线程计算并填充就绪缓冲区，然后通过到达 filled 屏障 ``filled[i%2].arrive()`` 发出缓冲区已填充的信号。生产者线程此时不等待，而是等待下一迭代的缓冲区（双缓冲）准备好被填充。
+生产者线程计算并填充就绪缓冲区，然后通过到达 filled 屏障 ``filled[i%2].arrive()`` 发出缓冲区已填充的信号。
+生产者线程此时不等待，而是等待下一迭代的缓冲区（双缓冲）准备好被填充。
 
-消费者线程首先发出两个缓冲区都准备好被填充的信号。消费者线程此时不等待，而是等待此迭代的缓冲区被填充 ``filled[i%2].arrive_and_wait()``。消费者线程消费缓冲区后，发出缓冲区准备好再次被填充的信号 ``ready[i%2].arrive()``，然后等待下一迭代的缓冲区被填充。
+消费者线程首先发出两个缓冲区都准备好被填充的信号。
+消费者线程此时不等待，而是等待此迭代的缓冲区被填充 ``filled[i%2].arrive_and_wait()``。
+消费者线程消费缓冲区后，发出缓冲区准备好再次被填充的信号 ``ready[i%2].arrive()``，然后等待下一迭代的缓冲区被填充。
