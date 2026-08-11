@@ -3,7 +3,7 @@
 4.10. Pipelines
 ================
 
-Pipelines 在 :ref:`advanced-kernels-advanced-sync-primitives` 中介绍，是一种用于阶段化工作和协调多缓冲区生产者-消费者模式的机制，通常用于将计算与 :ref:`advanced-kernels-async-copies` 重叠执行。
+Pipelines 在 :ref:`advanced-synchronization-primitives` 中介绍过，是一种用于将工作阶段化和协调多缓冲区生产者-消费者模式的机制，通常用于将计算与 :ref:`asynchronous-data-copies` 重叠执行。
 
 本节详细介绍如何主要通过 ``cuda::pipeline`` API 使用 pipelines（在适用的地方会指向原语 API）。
 
@@ -12,7 +12,9 @@ Pipelines 在 :ref:`advanced-kernels-advanced-sync-primitives` 中介绍，是�
 4.10.1. 初始化
 --------------
 
-``cuda::pipeline`` 可以在不同的线程作用域创建。对于 ``cuda::thread_scope_thread`` 以外的作用域，需要一个 ``cuda::pipeline_shared_state<scope, count>`` 对象来协调参与的线程。该状态封装了有限的资源，允许 pipeline 处理最多 ``count`` 个并发阶段。
+``cuda::pipeline`` 可以在不同的线程作用域创建。
+对于 ``cuda::thread_scope_thread`` 以外的作用域，需要一个 ``cuda::pipeline_shared_state<scope, count>`` 对象来协调参与的线程。
+该状态封装了有限的资源，允许 pipeline 处理最多 ``count`` 个并发阶段。
 
 .. code-block:: c++
 
@@ -28,7 +30,11 @@ Pipelines 在 :ref:`advanced-kernels-advanced-sync-primitives` 中介绍，是�
    __shared__ cuda::pipeline_shared_state<scope, stages_count> shared_state;
    auto pipeline = cuda::make_pipeline(group, &shared_state);
 
-Pipelines 可以是统一（unified）或分区（partitioned）的。在统一 pipeline 中，所有参与的线程既是生产者也是消费者。在分区 pipeline 中，每个参与的线程要么是生产者要么是消费者，其角色在 pipeline 对象的生命周期内不能改变。线程局部 pipeline 不能被分区。要创建分区 pipeline，我们需要向 ``cuda::make_pipeline()`` 提供生产者数量或线程角色。
+Pipelines 可以是统一（unified）或分区（partitioned）的。
+在统一 pipeline 中，所有参与的线程既是生产者也是消费者。
+在分区 pipeline 中，每个参与的线程要么是生产者要么是消费者，其角色在 pipeline 对象的生命周期内不能改变。
+线程局部 pipeline 不能被分区。
+要创建分区 pipeline，我们需要向 ``cuda::make_pipeline()`` 提供生产者数量或线程角色。
 
 .. code-block:: c++
 
@@ -36,7 +42,9 @@ Pipelines 可以是统一（unified）或分区（partitioned）的。在统一 
    constexpr auto scope = cuda::thread_scope_block;
    constexpr auto stages_count = 2;
    __shared__ cuda::pipeline_shared_state<scope, stages_count> shared_state;
-   auto thread_role = (group.thread_rank() == 0) ? cuda::pipeline_role::producer : cuda::pipeline_role::consumer;
+   auto thread_role = (group.thread_rank() == 0)
+    ? cuda::pipeline_role::producer
+    : cuda::pipeline_role::consumer;
    auto pipeline = cuda::make_pipeline(group, &shared_state, thread_role);
 
 为了支持分区，共享的 ``cuda::pipeline`` 会产生额外的开销，包括每个阶段使用一组共享内存屏障进行同步。即使 pipeline 是统一的并且可以使用 ``__syncthreads()`` ，这些开销也会产生。因此，在可能的情况下，最好使用线程局部 pipeline 来避免这些开销。
@@ -48,9 +56,9 @@ Pipelines 可以是统一（unified）或分区（partitioned）的。在统一 
 
 将工作提交到 pipeline 阶段涉及：
 
-- 使用 ``pipeline.producer_acquire()`` 从一组生产者线程中集体获取（acquire）pipeline 头部（head）。
+- 使用 ``pipeline.producer_acquire()`` 从一组生产者线程中集体获取 pipeline 头部。
 - 向 pipeline 头部提交异步操作，例如 ``memcpy_async`` 。
-- 使用 ``pipeline.producer_commit()`` 集体提交（commit）（推进）pipeline 头部。
+- 使用 ``pipeline.producer_commit()`` 集体提交 pipeline 头部。
 
 如果所有资源都在使用中， ``pipeline.producer_acquire()`` 会阻塞生产者线程，直到消费者线程释放下一个 pipeline 阶段的资源。
 
@@ -59,21 +67,22 @@ Pipelines 可以是统一（unified）或分区（partitioned）的。在统一 
 4.10.3. 消费工作
 ----------------
 
-从先前提交的阶段消费工作涉及：
+- 集体等待阶段完成， 例如使用 ``pipeline.consumer_wait()`` 例如等待一组消费者线程完成尾部（最旧的）阶段。
+- 使用 ``pipeline.consumer_release()`` 集体释放该阶段。
 
-- 使用 ``pipeline.consumer_wait()`` 从一组消费者线程中集体等待阶段完成，例如等待尾部（最旧的）阶段。
-- 使用 ``pipeline.consumer_release()`` 集体释放（release）该阶段。
-
-对于 ``cuda::pipeline<cuda:thread_scope_thread>`` ，还可以使用 ``cuda::pipeline_consumer_wait_prior<N>()`` 友元函数等待除最后 N 个阶段外的所有阶段完成，类似于原语 API 中的 ``__pipeline_wait_prior(N)`` 。
+对于 ``cuda::pipeline<cuda:thread_scope_thread>`` ，
+可使用 ``cuda::pipeline_consumer_wait_prior<N>()`` 友元函数等待除最后 N 个阶段外的所有阶段完成，
+类似于原语 API 中的 ``__pipeline_wait_prior(N)`` 。
 
 .. _pipelines-entanglement:
 
 4.10.4. Warp 纠缠
 -----------------
 
-Pipeline 机制在同一个 warp 中的 CUDA 线程之间共享。这种共享导致提交的操作序列在一个 warp 内被纠缠，在某些情况下可能会影响性能。
+Pipeline 机制在同一个 warp 中的 CUDA 线程之间共享。
+这种共享导致提交操作序列在一个 warp 内被纠缠，在某些情况下可能会影响性能。
 
-**提交（Commit）**\ 。提交操作会被合并，使得 pipeline 的序列对于所有调用提交操作的收敛线程只递增一次，并且它们提交的操作会被批处理在一起。如果 warp 完全收敛，序列递增一，所有提交的操作将被批处理在 pipeline 的同一阶段；如果 warp 完全发散，序列递增 32，所有提交的操作将被分散到不同的阶段。
+**提交（Commit）** 。提交操作会被合并，使得 pipeline 的对于所有调用提交操作的收敛线程只递增一次，并且它们提交的操作会被批处理在一起。如果 warp 完全收敛，序列递增一，所有提交的操作将被批处理在 pipeline 的同一阶段；如果 warp 完全发散，序列递增 32，所有提交的操作将被分散到不同的阶段。
 
 - 设 *PB* 为 warp 共享 pipeline 的实际操作序列。
 
