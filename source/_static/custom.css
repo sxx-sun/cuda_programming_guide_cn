@@ -1,0 +1,6 @@
+/* 修复 list-table 单元格内行块 (| line block) 底部多出空行的问题。
+   sphinx_rtd_theme 只对表格内的 <p> 清零了 margin，
+   但 .line-block 仍保留 margin-bottom: 24px，导致多出一行空白。 */
+.rst-content table.docutils td .line-block {
+    margin-bottom: 0;
+}

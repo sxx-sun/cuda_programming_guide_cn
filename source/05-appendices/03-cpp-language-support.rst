@@ -15,6 +15,8 @@
 
 - **C++20** (ISO/IEC 14882:2020)， ``--std=c++20`` 标志。
 
+- **C++23** (ISO/IEC 14882:2024)， ``--std=c++23`` 标志。
+
 传递 ``nvcc`` ``-std=c++<version>`` 标志会启用与指定版本相关的所有 C++ 特性，并以相应的 C++ 方言选项调用主机预处理器、编译器和链接器。
 
 编译器支持所支持标准的所有语言特性，但以下章节中报告的限制除外。
@@ -98,7 +100,8 @@
      - `N2347 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2347.pdf>`__
      - ✅
    * - 枚举的前向声明
-     - `N2764 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2764.pdf>`__
+     - | `N2764 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2764.pdf>`__
+       | `DR1206 <http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1206>`__
      - ✅
    * - 标准化属性语法
      - `N2761 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2761.pdf>`__
@@ -152,7 +155,8 @@
      - `N1791 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1791.pdf>`__
      - ✅
    * - 扩展 ``sizeof``
-     - `N2253 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2253.html>`__
+     - | `N2253 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2253.html>`__
+       | `DR850 <http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#850>`__
      - ✅
    * - 内联命名空间
      - `N2535 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2535.htm>`__
@@ -167,10 +171,18 @@
      - `N2930 <http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2930.html>`__
      - ✅
    * - 显式 ``virtual`` 覆盖
-     - `N2928 <http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2928.htm>`__
+     - | `N2928 <http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2928.htm>`__
+       | `N3206 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3206.htm>`__
+       | `N3272 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2011/n3272.htm>`__
      - ✅
+   * - 垃圾回收和基于可达性的泄漏检测的最低支持
+     - `N2670 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2670.htm>`__
+     - ❌
    * - 允许移动构造函数抛出异常 [noexcept]
      - `N3050 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3050.html>`__
+     - ✅
+   * - 定义移动特殊成员函数
+     - `N3053 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3053.html>`__
      - ✅
 
 **并发**
@@ -371,6 +383,54 @@
    * - 内联变量
      - `P0386R2 <https://wg21.link/p0386r2>`__
      - ✅
+   * - 允许在模板模板参数中使用 ``typename``
+     - `N4051 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4051.html>`__
+     - ✅
+   * - 过度对齐数据的动态内存分配
+     - `P0035R4 <https://wg21.link/p0035>`__
+     - ✅
+   * - 改进惯用 C++ 的表达式求值顺序
+     - `P0145R3 <https://wg21.link/p0145>`__
+     - ✅
+   * - 类模板参数推导（补充）
+     - `P0512R0 <https://wg21.link/p0512r0>`__
+     - ✅
+   * - 使用属性命名空间时无需重复
+     - `P0028R4 <https://wg21.link/p0028>`__
+     - ✅
+   * - 忽略不支持的非标准属性
+     - `P0283R2 <https://wg21.link/p0283>`__
+     - ✅
+   * - 移除 ``register`` 关键字的弃用用法
+     - `P0001R1 <https://wg21.link/p0001>`__
+     - ✅
+   * - 移除弃用的 ``operator++(bool)``
+     - `P0002R1 <https://wg21.link/p0002>`__
+     - ✅
+   * - 使异常规范成为类型系统的一部分
+     - `P0012R1 <https://wg21.link/p0012>`__
+     - ✅
+   * - C++17 的 ``__has_include``
+     - `P0061R1 <https://wg21.link/p0061>`__
+     - ✅
+   * - 重新措辞继承构造函数（核心问题 1941 等）
+     - `P0136R1 <https://wg21.link/p0136>`__
+     - ✅
+   * - DR 150，模板模板参数的匹配
+     - `P0522R0 <https://wg21.link/p0522r0>`__
+     - ✅
+   * - 移除动态异常规范
+     - `P0003R5 <https://wg21.link/p0003r5>`__
+     - ✅
+   * - using 声明中的包扩展
+     - `P0195R2 <https://wg21.link/p0195r2>`__
+     - ✅
+   * - ``byte`` 类型定义
+     - `P0298R0 <https://wg21.link/p0298r0>`__
+     - ✅
+   * - DR 727，类内显式实例化
+     - `CWG727 <https://cplusplus.github.io/CWG/issues/727.html>`__
+     - ✅
 
 .. _c-20-language-features:
 
@@ -378,6 +438,10 @@
 ---------------------
 
 需要 GCC 版本 ≥ 10.0、Clang 版本 ≥ 10.0、Microsoft Visual Studio ≥ 2022 和 nvc++ 版本 ≥ 20.7。
+
+.. note::
+
+   以 "DR:" 为前缀的条目是缺陷报告（Defect Report）的解决方案。它们修正了标准，并同样适用于较早的 C++ 标准模式（例如 C++17）；为完整性起见在此列出，并非 C++20 特有。
 
 .. list-table:: NVCC 设备代码支持的 C++20 语言特性
    :header-rows: 1
@@ -431,10 +495,293 @@
    * - ``constinit``
      - `P1143R2 <https://wg21.link/p1143r2>`__
      - ✅
+   * - 向量的列表推导
+     - `P0702R1 <https://wg21.link/p0702r1>`__
+     - ✅
+   * - 带初始化器的基于范围的 for 语句
+     - `P0614R1 <https://wg21.link/p0614r1>`__
+     - ✅
+   * - 简化隐式 lambda 捕获
+     - `P0588R1 <https://wg21.link/p0588r1>`__
+     - ✅
+   * - ADL 和不可见的函数模板
+     - `P0846R0 <https://wg21.link/p0846r0>`__
+     - ✅
+   * - 默认拷贝构造函数的 ``const`` 不匹配
+     - `P0641R2 <https://wg21.link/p0641r2>`__
+     - ✅
+   * - 减少 ``constexpr`` 函数的急切实例化
+     - `P0859R0 <https://wg21.link/p0859r0>`__
+     - ✅
+   * - 特化的访问检查
+     - `P0692R1 <https://wg21.link/p0692r1>`__
+     - ✅
+   * - 无状态 lambda 的默认可构造和可赋值
+     - `P0624R2 <https://wg21.link/p0624r2>`__
+     - ✅
+   * - 未求值上下文中的 Lambda
+     - `P0315R4 <https://wg21.link/p0315r4>`__
+     - ✅
+   * - 空对象的语言支持
+     - `P0840R2 <https://wg21.link/p0840r2>`__
+     - ✅
+   * - 放宽 range-for 循环自定义点查找规则
+     - `P0962R1 <https://wg21.link/p0962r1>`__
+     - ✅
+   * - 允许结构化绑定访问可访问成员
+     - `P0969R0 <https://wg21.link/p0969r0>`__
+     - ✅
+   * - 放宽结构化绑定自定义点查找规则
+     - `P0961R1 <https://wg21.link/p0961r1>`__
+     - ✅
+   * - 去除 ``typename`` 的过度使用
+     - `P0634R3 <https://wg21.link/p0634r3>`__
+     - ✅
+   * - 允许在 lambda init-capture 中展开包
+     - `P0780R2 <https://wg21.link/p0780r2>`__ ， `P2095R0 <https://wg21.link/p2095r0>`__
+     - ✅
+   * - ``likely`` 和 ``unlikely`` 属性的建议措辞
+     - `P0479R5 <https://wg21.link/p0479r5>`__
+     - ✅
+   * - 弃用通过 ``[=]`` 隐式捕获 ``this``
+     - `P0806R2 <https://wg21.link/p0806r2>`__
+     - ✅
+   * - 非类型模板参数中的类类型
+     - `P0732R2 <https://wg21.link/p0732r2>`__
+     - ✅
+   * - 非类型模板参数的不一致性
+     - `P1907R1 <https://wg21.link/p1907r1>`__
+     - ✅
+   * - 带填充位的原子比较交换
+     - `P0528R3 <https://wg21.link/p0528r3>`__
+     - ✅
+   * - 可变大小类的高效带大小 ``delete``
+     - `P0722R3 <https://wg21.link/p0722r3>`__
+     - ✅
+   * - 允许在常量表达式中调用虚函数
+     - `P1064R0 <https://wg21.link/p1064r0>`__
+     - ✅
+   * - 禁止用户声明构造函数的聚合
+     - `P1008R1 <https://wg21.link/p1008r1>`__
+     - ✅
+   * - ``explicit(bool)``
+     - `P0892R2 <https://wg21.link/p0892r2>`__
+     - ✅
+   * - 有符号整数为二进制补码
+     - `P1236R1 <https://wg21.link/p1236r1>`__
+     - ✅
+   * - ``char8_t``
+     - `P0482R6 <https://wg21.link/p0482r6>`__
+     - ✅
+   * - 嵌套 ``inline`` 命名空间
+     - `P1094R2 <https://wg21.link/p1094r2>`__
+     - ✅
+   * - 聚合的括号初始化
+     - `P0960R3 <https://wg21.link/p0960r3>`__ ， `P1975R0 <https://wg21.link/p1975r0>`__
+     - ✅
+   * - DR：new 表达式中的数组大小推导
+     - `P1009R2 <https://wg21.link/p1009r2>`__
+     - ✅
+   * - DR：从 ``T*`` 到 ``bool`` 的转换应视为窄化
+     - `P1957R2 <https://wg21.link/p1957r2>`__
+     - ✅
+   * - 更强的 Unicode 要求
+     - `P1041R4 <https://wg21.link/p1041r4>`__ ， `P1139R2 <https://wg21.link/p1139r2>`__
+     - ✅
+   * - 结构化绑定扩展
+     - `P1091R3 <https://wg21.link/p1091r3>`__ ， `P1381R1 <https://wg21.link/p1381r1>`__
+     - ✅
+   * - 弃用 ``a[b,c]``
+     - `P1161R3 <https://wg21.link/p1161r3>`__
+     - ✅
+   * - 弃用 ``volatile`` 的某些用法
+     - `P1152R4 <https://wg21.link/p1152r4>`__
+     - ✅
+   * - ``[[nodiscard("with reason")]]``
+     - `P1301R4 <https://wg21.link/p1301r4>`__
+     - ✅
+   * - ``using enum``
+     - `P1099R5 <https://wg21.link/p1099r5>`__
+     - ✅
+   * - 聚合的类模板参数推导
+     - `P1816R0 <https://wg21.link/p1816r0>`__ ， `P2082R1 <https://wg21.link/p2082r1>`__
+     - ✅
+   * - 别名模板的类模板参数推导
+     - `P1814R0 <https://wg21.link/p1814r0>`__
+     - ✅
+   * - 允许转换为未知边界的数组
+     - `P0388R4 <https://wg21.link/p0388r4>`__
+     - ✅
+   * - 布局兼容性和指针可互换性特性
+     - `P0466R5 <https://wg21.link/p0466r5>`__
+     - ✅
+   * - DR：检查抽象类类型
+     - `P0929R2 <https://wg21.link/p0929r2>`__
+     - ✅
+   * - DR：更多隐式移动
+     - `P1825R0 <https://wg21.link/p1825r0>`__
+     - ✅
+   * - DR：伪析构符结束对象生命周期
+     - `P0593R6 <https://wg21.link/p0593r6>`__
+     - ✅
+
+.. _c-23-language-features:
+
+5.3.5. C++23 语言特性
+---------------------
+
+需要 GCC 版本 ≥ 14.0、Clang 版本 ≥ 18.0、Microsoft Visual Studio（不支持）和 nvc++ 版本 ≥ 24.3。
+
+.. note::
+
+   以 "DR:" 为前缀的条目是缺陷报告（Defect Report）的解决方案。它们修正了标准，并同样适用于较早的 C++ 标准模式（例如 C++17、C++20）；为完整性起见在此列出，并非 C++23 特有。
+
+.. note::
+
+   NVCC 列中的 **N/A** 表示该特性不适用于设备代码（例如，移除未使用的标准措辞，如垃圾回收支持或主机定义的行为）。
+
+.. list-table:: NVCC 设备代码支持的 C++23 语言特性
+   :header-rows: 1
+   :widths: 60 25 15
+
+   * - 语言特性
+     - C++23 提案
+     - NVCC/CUDA Toolkit
+   * - | 核心问题 411、1656 和 2333 的建议解决方案；
+       | 字符和字符串字面量中的数字和通用字符转义
+     - `P2029R4 <https://wg21.link/p2029r4>`__
+     - ✅
+   * - （有符号） ``size_t`` 的字面量后缀
+     - `P0330R8 <https://wg21.link/p0330r8>`__
+     - ✅
+   * - 使 lambda 的 ``()`` 更可选（去除 ``()`` ！）
+     - `P1102R2 <https://wg21.link/p1102r2>`__
+     - ✅
+   * - ``if consteval``
+     - `P1938R3 <https://wg21.link/p1938r3>`__
+     - ✅
+   * - 移除垃圾回收支持
+     - `P2186R2 <https://wg21.link/p2186r2>`__
+     - N/A
+   * - DR：使用 Unicode 标准附件 31 的 C++ 标识符语法
+     - `P1949R7 <https://wg21.link/p1949r7>`__
+     - ✅
+   * - DR：允许重复属性
+     - `P2156R1 <https://wg21.link/p2156r1>`__
+     - ✅
+   * - 到 ``bool`` 的窄化上下文转换
+     - `P1401R5 <https://wg21.link/p1401r5>`__
+     - ❌
+   * - 行拼接前修剪空白
+     - `P2223R2 <https://wg21.link/p2223r2>`__
+     - ✅
+   * - 强制声明顺序布局
+     - `P1847R4 <https://wg21.link/p1847r4>`__
+     - ✅
+   * - 混合字符串字面量拼接
+     - `P2201R1 <https://wg21.link/p2201r1>`__
+     - N/A
+   * - ``constexpr`` 函数中的非字面量变量（以及标签和 goto）
+     - `P2242R3 <https://wg21.link/p2242r3>`__
+     - ✅
+   * - 推导 ``this``
+     - `P0847R7 <https://wg21.link/p0847r7>`__
+     - ✅
+   * - 一致的字符字面量编码
+     - `P2316R2 <https://wg21.link/p2316r2>`__
+     - ✅
+   * - 添加对预处理指令 ``elifdef`` 和 ``elifndef`` 的支持
+     - `P2334R1 <https://wg21.link/p2334r1>`__
+     - ✅
+   * - 诊断文本的字符编码
+     - `P2246R1 <https://wg21.link/p2246r1>`__
+     - ✅
+   * - 扩展 init-statement 以允许别名声明
+     - `P2360R0 <https://wg21.link/p2360r0>`__
+     - ✅
+   * - 更改 lambda 尾随返回类型的作用域
+     - `P2036R3 <https://wg21.link/p2036r3>`__
+     - ✅
+   * - 多维下标运算符
+     - `P2128R6 <https://wg21.link/p2128r6>`__
+     - ✅
+   * - 字符集和编码
+     - `P2314R4 <https://wg21.link/p2314r4>`__
+     - ✅
+   * - ``auto(x)`` 和 ``auto {x}``
+     - `P0849R8 <https://wg21.link/p0849r8>`__
+     - ✅
+   * - C++20 核心论文缺失的特性测试宏
+     - `P2493R0 <https://wg21.link/p2493r0>`__
+     - ✅
+   * - Lambda 表达式上的属性
+     - `P2173R1 <https://wg21.link/p2173r1>`__
+     - ✅
+   * - 对 ``#warning`` 的支持
+     - `P2437R1 <https://wg21.link/p2437r1>`__
+     - ✅
+   * - 移除不可编码的宽字符字面量和多字符宽字符字面量
+     - `P2362R3 <https://wg21.link/p2362r3>`__
+     - ✅
+   * - 复合语句末尾的标签（C 兼容性）
+     - `P2324R2 <https://wg21.link/p2324r2>`__
+     - ✅
+   * - 分隔的转义序列
+     - `P2290R3 <https://wg21.link/p2290r3>`__
+     - ✅
+   * - 放宽某些 ``constexpr`` 限制
+     - `P2448R2 <https://wg21.link/p2448r2>`__
+     - ❌
+   * - 更简单的隐式移动
+     - `P2266R3 <https://wg21.link/p2266r3>`__
+     - ✅
+   * - 命名的通用字符转义
+     - `P2071R2 <https://wg21.link/p2071r2>`__
+     - ✅
+   * - ``static operator()``
+     - `P1169R4 <https://wg21.link/p1169r4>`__
+     - ✅
+   * - ``static operator[]``
+     - `P2589R1 <https://wg21.link/p2589r1>`__
+     - ✅
+   * - 扩展浮点类型和标准名称
+     - `P1467R9 <https://wg21.link/p1467r9>`__
+     - ✅
+   * - 可移植的假设 ``[[assume]]``
+     - `P1774R8 <https://wg21.link/p1774r8>`__
+     - ✅
+   * - 支持 UTF-8 作为可移植源文件编码
+     - `P2295R6 <https://wg21.link/p2295r6>`__
+     - ✅
+   * - DR： ``char8_t`` 兼容性和可移植性修复
+     - `P2513R4 <https://wg21.link/p2513r4>`__
+     - ✅
+   * - DR：取消弃用 ``volatile`` 位运算复合赋值操作
+     - `P2327R1 <https://wg21.link/p2327r1>`__
+     - ❌
+   * - DR：放宽 ``wchar_t`` 要求以匹配现有实践
+     - `P2460R2 <https://wg21.link/p2460r2>`__
+     - N/A
+   * - DR：在常量表达式中使用未知指针和引用
+     - `P2280R4 <https://wg21.link/p2280r4>`__
+     - ❌
+   * - DR：你正在寻找的相等运算符
+     - `P2468R2 <https://wg21.link/p2468r2>`__
+     - ❌
+   * - 允许 ``constexpr`` 函数中的 ``static constexpr`` 变量
+     - `P2647R1 <https://wg21.link/p2647r1>`__
+     - ✅
+   * - 延长基于范围的 for 循环初始化器中临时对象的生命周期
+     - | `P2644R1 <https://wg21.link/p2644r1>`__
+       | `P2718R0 <https://wg21.link/p2718r0>`__
+     - ✅
+   * - DR： ``consteval`` 需要向上传播
+     - `P2564R3 <https://wg21.link/p2564r3>`__
+     - ✅
 
 .. _cuda-c-standard-library:
 
-5.3.5. CUDA C++ 标准库
+5.3.6. CUDA C++ 标准库
 ----------------------
 
 CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.github.io/cccl/libcudacxx/standard_api.html>`__。该库具有以下优势：
@@ -459,12 +806,12 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 .. _c-standard-library-functions:
 
-5.3.6. C 标准库函数
+5.3.7. C 标准库函数
 -------------------
 
 .. _clock-and-clock64:
 
-5.3.6.1. ``clock()`` 和 ``clock64()``
+5.3.7.1. ``clock()`` 和 ``clock64()``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c++
@@ -482,7 +829,7 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 .. _printf:
 
-5.3.6.2. ``printf()``
+5.3.7.2. ``printf()``
 ^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c++
@@ -571,7 +918,7 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 .. _memcpy-and-memset:
 
-5.3.6.3. ``memcpy()`` 和 ``memset()``
+5.3.7.3. ``memcpy()`` 和 ``memset()``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c++
@@ -592,7 +939,7 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 .. _malloc-and-free:
 
-5.3.6.4. ``malloc()`` 和 ``free()``
+5.3.7.4. ``malloc()`` 和 ``free()``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c++
@@ -675,9 +1022,34 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 注意每个线程如何遇到 ``malloc()`` 和 ``memset()`` 命令，因此接收并初始化自己的分配。
 
+.. _alloca:
+
+5.3.7.5. ``alloca()``
+^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c++
+
+   __host__ __device__ void* alloca(size_t size);
+
+``alloca()`` 函数在调用者的栈帧内分配 ``size`` 字节的内存。返回值是指向已分配内存的指针。当从设备代码调用该函数时，内存起始地址按 16 字节对齐。当调用者从 ``alloca()`` 返回时，内存会自动释放。
+
+.. note::
+
+   在 Windows 平台上，使用 ``alloca()`` 函数之前必须包含 ``<malloc.h>`` 头文件。调用 ``alloca()`` 可能导致栈溢出；用户需要相应地调整栈大小。
+
+示例：
+
+.. code-block:: c++
+
+   __device__ void device_function(int num_items) {
+       int4* ptr = (int4*) alloca(num_items * sizeof(int4));
+       // use of ptr
+       ...
+   }
+
 .. _lambda-expressions:
 
-5.3.7. Lambda 表达式
+5.3.8. Lambda 表达式
 --------------------
 
 编译器通过将 lambda 表达式或闭包类型（C++11）与最内层封闭函数作用域的执行空间相关联来确定其执行空间。如果没有封闭函数作用域，则执行空间指定为 ``__host__`` 。
@@ -714,7 +1086,7 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 .. _lambda-expressions-and-global-function-parameters:
 
-5.3.7.1. Lambda 表达式和 ``__global__`` 函数参数
+5.3.8.1. Lambda 表达式和 ``__global__`` 函数参数
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 只有当 lambda 表达式或闭包类型的执行空间为 ``__device__`` 或 ``__host__ __device__`` 时，才能将其用作 ``__global__`` 函数的参数。全局或命名空间作用域的 lambda 表达式不能用作 ``__global__`` 函数的参数。
@@ -744,7 +1116,7 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 .. _extended-lambdas:
 
-5.3.7.2. 扩展 Lambda
+5.3.8.2. 扩展 Lambda
 ^^^^^^^^^^^^^^^^^^^^
 
 ``nvcc`` 标志 ``--extended-lambda`` 允许在 lambda 表达式中显式注释执行空间。这些注释应出现在 lambda 引导符之后和可选的 lambda 声明符之前。
@@ -791,7 +1163,7 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 .. _extended-lambda-type-traits:
 
-5.3.7.3. 扩展 Lambda 类型特性
+5.3.8.3. 扩展 Lambda 类型特性
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 编译器提供类型特性来在编译时检测扩展 lambda 的闭包类型。
@@ -816,7 +1188,7 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 .. _extended-lambda-restrictions:
 
-5.3.7.4. 扩展 Lambda 限制
+5.3.8.4. 扩展 Lambda 限制
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 扩展 lambda 具有以下限制：
@@ -839,14 +1211,14 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 .. _host-device-lambda-optimization:
 
-5.3.7.5. 主机 - 设备 Lambda 优化注意事项
+5.3.8.5. 主机 - 设备 Lambda 优化注意事项
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 扩展 ``__host__ __device__`` lambda 在主机代码中使用间接函数调用，这可能会阻止内联优化。对于性能关键的代码，考虑使用单独的 ``__device__`` lambda 或 ``__host__`` lambda，而不是 ``__host__ __device__`` lambda。
 
 .. _this-capture-by-value:
 
-5.3.7.6. ``*this`` 按值捕获
+5.3.8.6. ``*this`` 按值捕获
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代码中访问成员变量时出现问题：
@@ -864,14 +1236,14 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _adl-with-extended-lambdas:
 
-5.3.7.7. 参数依赖查找 (ADL)
+5.3.8.7. 参数依赖查找 (ADL)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 扩展 lambda 可能导致额外的命名空间参与 ADL，可能导致函数解析歧义。在使用扩展 lambda 时应注意这一点。
 
 .. _polymorphic-function-wrappers:
 
-5.3.8. 多态函数包装器
+5.3.9. 多态函数包装器
 ---------------------
 
 ``nvfunctional`` 头文件提供 ``nvstd::function`` ，一个多态函数包装器，可在主机和设备代码中使用：
@@ -896,13 +1268,13 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _c-c-language-restrictions:
 
-5.3.9. C/C++ 语言限制
----------------------
+5.3.10. C/C++ 语言限制
+----------------------
 
 .. _unsupported-features:
 
-5.3.9.1. 不支持的特性
-^^^^^^^^^^^^^^^^^^^^^
+5.3.10.1. 不支持的特性
+^^^^^^^^^^^^^^^^^^^^^^
 
 以下 C++ 特性在设备代码中不支持：
 
@@ -913,15 +1285,15 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _namespace-reservations:
 
-5.3.9.2. 命名空间保留
-^^^^^^^^^^^^^^^^^^^^^
+5.3.10.2. 命名空间保留
+^^^^^^^^^^^^^^^^^^^^^^
 
 向 ``cuda::`` 、 ``nv::`` 或 ``cooperative_groups::`` 命名空间添加定义是未定义行为。
 
 .. _pointers-and-memory-addresses:
 
-5.3.9.3. 指针和内存地址
-^^^^^^^^^^^^^^^^^^^^^^^
+5.3.10.3. 指针和内存地址
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 - 不能在主机上解引用设备内存指针
 - 不能在设备代码中解引用主机内存指针
@@ -929,8 +1301,8 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _variables:
 
-5.3.9.4. 变量
-^^^^^^^^^^^^^
+5.3.10.4. 变量
+^^^^^^^^^^^^^^
 
 **局部变量：** 内存空间说明符（ ``__device__`` 、 ``__shared__`` 等）根据执行上下文受到限制。
 
@@ -942,8 +1314,8 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _functions:
 
-5.3.9.5. 函数
-^^^^^^^^^^^^^
+5.3.10.5. 函数
+^^^^^^^^^^^^^^
 
 **递归：** ``__global__`` 函数不支持递归； ``__device__`` 函数支持。
 
@@ -957,8 +1329,8 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _classes:
 
-5.3.9.6. 类
-^^^^^^^^^^^
+5.3.10.6. 类
+^^^^^^^^^^^^
 
 **多态类：** 在主机/设备之间复制是未定义行为。
 
@@ -968,26 +1340,26 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _templates:
 
-5.3.9.7. 模板
-^^^^^^^^^^^^^
+5.3.10.7. 模板
+^^^^^^^^^^^^^^
 
 ``__global__`` 函数模板参数的类型限制适用（不支持局部、未命名或私有类型）。
 
 .. _c-11-restrictions:
 
-5.3.10. C++11 限制
+5.3.11. C++11 限制
 ------------------
 
 .. _inline-namespaces-restrictions:
 
-5.3.10.1. ``inline`` 命名空间
+5.3.11.1. ``inline`` 命名空间
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 不能在内联命名空间和外围命名空间中定义同名的 ``__global__`` 函数或设备变量。
 
 .. _namespace-reservations-restrictions:
 
-5.3.10.2. 命名空间保留
+5.3.11.2. 命名空间保留
 ^^^^^^^^^^^^^^^^^^^^^^
 
 除非另有说明，向顶级命名空间 ``cuda::`` 、 ``nv::`` 或 ``cooperative_groups::`` 或其内部的任何嵌套命名空间添加定义均为未定义行为。允许将 ``cuda::`` 作为子命名空间使用，如下所示：
@@ -1014,33 +1386,33 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _constexpr-functions-restrictions:
 
-5.3.10.3. ``constexpr`` 函数
+5.3.11.3. ``constexpr`` 函数
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 默认情况下，不能从主机代码调用仅设备的 ``constexpr`` 或从设备代码调用仅主机的 ``constexpr`` 。使用 ``--expt-relaxed-constexpr`` 放宽此约束。
 
 .. _constexpr-variables:
 
-5.3.10.4. ``constexpr`` 变量
+5.3.11.4. ``constexpr`` 变量
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 可用于设备代码中的标量类型和具有 ``constexpr`` 构造函数的类类型。不允许 ``constexpr __managed__`` 和 ``constexpr __shared__`` 。
 
 .. _functions-restrictions:
 
-5.3.10.5. 函数
+5.3.11.5. 函数
 ^^^^^^^^^^^^^^
 
 .. _recursion-restrictions:
 
-5.3.10.5.1. 递归
+5.3.11.5.1. 递归
 """"""""""""""""
 
 ``__global__`` 、 ``__tile_global__`` 和 ``__tile__`` 函数不支持递归，而 ``__device__`` 和 ``__host__ __device__`` 函数则没有此限制。
 
 .. _external-linkage:
 
-5.3.10.5.2. 外部链接
+5.3.11.5.2. 外部链接
 """"""""""""""""""""
 
 具有外部链接的设备变量或函数需要跨多个翻译单元的单独编译模式。
@@ -1072,7 +1444,7 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _formal-parameters:
 
-5.3.10.5.3. 形参
+5.3.11.5.3. 形参
 """"""""""""""""
 
 ``__device__`` 、 ``__tile__`` 、 ``__shared__`` 、 ``__managed__`` 和 ``__constant__`` 内存空间说明符不允许用于形参。
@@ -1084,7 +1456,7 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _global-function-parameters:
 
-5.3.10.5.4. ``__global__`` 函数参数
+5.3.11.5.4. ``__global__`` 函数参数
 """"""""""""""""""""""""""""""""""""
 
 ``__global__`` 或 ``__tile_global__`` 函数有以下限制：
@@ -1098,7 +1470,7 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _global-function-arguments:
 
-5.3.10.5.5. ``__global__`` 函数参数传递
+5.3.11.5.5. ``__global__`` 函数参数传递
 """"""""""""""""""""""""""""""""""""""""
 
 从设备代码启动 ``__global__`` 函数时，每个参数必须是可平凡复制（trivially copyable）且可平凡析构（trivially destructible）的。
@@ -1171,19 +1543,19 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _defaulted-functions:
 
-5.3.10.6. 默认函数 ``= default``
+5.3.11.6. 默认函数 ``= default``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 显式默认函数上的执行空间说明符被忽略（除非是外联或虚函数）。
 
 .. _c-14-restrictions:
 
-5.3.11. C++14 限制
+5.3.12. C++14 限制
 ------------------
 
 .. _functions-with-deduced-return-type:
 
-5.3.11.1. 推导返回类型的函数
+5.3.12.1. 推导返回类型的函数
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - ``__global__`` 函数不能有推导返回类型 ``auto``
@@ -1191,38 +1563,38 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _variable-templates-restrictions:
 
-5.3.11.2. 变量模板
+5.3.12.2. 变量模板
 ^^^^^^^^^^^^^^^^^^
 
 ``__device__`` 或 ``__constant__`` 变量模板在使用 Microsoft 编译器时不能是 ``const`` 限定的。
 
 .. _c-17-restrictions:
 
-5.3.12. C++17 限制
+5.3.13. C++17 限制
 ------------------
 
 .. _inline-variables-restrictions:
 
-5.3.12.1. ``inline`` 变量
+5.3.13.1. ``inline`` 变量
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 仅在分离编译模式下或对于具有内部链接的变量允许。
 
 .. _structured-binding-restrictions:
 
-5.3.12.2. 结构化绑定
+5.3.13.2. 结构化绑定
 ^^^^^^^^^^^^^^^^^^^^^
 
 不能用内存空间说明符（ ``__device__`` 、 ``__shared__`` 等）声明。
 
 .. _c-20-restrictions:
 
-5.3.13. C++20 限制
+5.3.14. C++20 限制
 ------------------
 
 .. _three-way-comparison-operator:
 
-5.3.13.1. 三向比较运算符（ ``<=>`` ）
+5.3.14.1. 三向比较运算符（ ``<=>`` ）
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 在设备代码中支持，但可能需要 ``--expt-relaxed-constexpr`` 标志和主机实现兼容性。
@@ -1236,7 +1608,7 @@ C++17 的 ``*this`` 捕获模式复制对象而不是指针，避免在 GPU 代�
 
 .. _consteval-functions:
 
-5.3.13.2. ``consteval`` 函数
+5.3.14.2. ``consteval`` 函数
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 可以从主机和设备代码独立调用，无论其执行空间如何：
