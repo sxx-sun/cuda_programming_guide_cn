@@ -13,62 +13,88 @@
 5.4.1.1. 执行空间说明符
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-执行空间说明符 ``__host__`` 、 ``__device__`` 和 ``__global__`` 指示函数是在主机还是设备上执行。
+执行空间说明符 ``__host__``、``__device__``、``__tile__``、``__global__`` 和 ``__tile_global__`` 指示函数是在主机、SIMT 还是 tile 上下文中执行。
 
 .. list-table:: 执行空间说明符
-   :header-rows: 1
-   :widths: 25 15 15 15 15
+   :header-rows: 2
+   :widths: 25 11 11 11 11 11 11
 
    * - 执行空间说明符
      - 执行位置
-     - 
+     -
+     -
      - 可调用位置
-     - 
-   * - 
+     -
+     -
+   * -
      - 主机
-     - 设备
+     - SIMT
+     - Tile
      - 主机
-     - 设备
-   * - ``__host__`` ，无说明符
+     - SIMT
+     - Tile
+   * - ``__host__``，无说明符
      - ✅
      - ❌
+     - ❌
      - ✅
+     - ❌
      - ❌
    * - ``__device__``
      - ❌
      - ✅
      - ❌
+     - ❌
      - ✅
+     - ❌
    * - ``__global__``
      - ❌
      - ✅
+     - ❌
      - ✅
      - ✅
-   * - ``__host__ __device__``
+     - ❌
+   * - ``__tile__``
+     - ❌
+     - ❌
+     - ✅
+     - ❌
+     - ❌
+     - ✅
+   * - ``__tile_global__``
+     - ❌
+     - ❌
+     - ✅
+     - ✅
+     - ❌
+     - ❌
+   * - ``__host__ __device__ __tile__``
+     - ✅
+     - ✅
      - ✅
      - ✅
      - ✅
      - ✅
 
-``__global__`` 函数的限制：
+``__global__`` 和 ``__tile_global__`` 函数的约束：
 
-- 必须返回 ``void`` 。
-- 不能是 ``class`` 、 ``struct`` 或 ``union`` 的成员。
+- 必须返回 ``void``。
+- 不能是 ``class``、``struct`` 或 ``union`` 的成员。
 - 需要执行配置，如 `内核配置 <#execution-configuration>`__ 中所述。
 - 不支持递归。
 - 有关其他限制，请参阅 ``__global__`` `函数参数 <cpp-language-support.html#global-function-parameters>`__。
 
-对 ``__global__`` 函数的调用是异步的。它们在设备完成执行之前返回到主机线程。
+对 ``__global__`` 和 ``__tile_global__`` 函数的调用是异步的。它们在设备完成执行之前返回到主机线程。
 
-用 ``__host__ __device__`` 声明的函数同时为主机和设备编译。可以使用 ``__CUDA_ARCH__`` `宏 <#cuda-arch-macro>`__ 区分主机和设备代码路径：
+用多个执行空间（例如 ``__host__ __device__``）声明的函数会为每个上下文编译。可以使用 ``__CUDA_ARCH__`` `宏 <#cuda-arch-macro>`__ 区分主机和设备代码路径：
 
 .. code-block:: c++
 
    __host__ __device__ void func() {
    #if defined(__CUDA_ARCH__)
-       // 设备代码路径
+       // Device code path
    #else
-       // 主机代码路径
+       // Host code path
    #endif
    }
 
@@ -77,38 +103,51 @@
 5.4.1.2. 内存空间说明符
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-内存空间说明符 ``__device__`` 、 ``__managed__`` 、 ``__constant__`` 和 ``__shared__`` 指示设备上变量的存储位置。
+内存空间说明符 ``__device__``、``__tile__``、``__managed__``、``__constant__`` 和 ``__shared__`` 指示设备上变量的存储位置。
+
+下表总结了内存空间属性：
 
 .. list-table:: 内存空间说明符
    :header-rows: 1
-   :widths: 20 25 25 20
+   :widths: 18 20 22 16 12
 
    * - 内存空间说明符
      - 位置
      - 可访问者
      - 生存期
+     - 唯一实例
    * - ``__device__``
      - 设备全局内存
      - 设备线程（grid）/ CUDA Runtime API
      - 程序/CUDA 上下文
+     - 每设备
+   * - ``__tile__``
+     - 设备全局内存
+     - Tile 块 / CUDA Runtime API
+     - 程序/CUDA 上下文
+     - 每设备
    * - ``__constant__``
      - 设备常量内存
      - 设备线程（grid）/ CUDA Runtime API
      - 程序/CUDA 上下文
+     - 每设备
    * - ``__managed__``
      - 主机和设备（自动）
      - 主机/设备线程
      - 程序
+     - 每程序
    * - ``__shared__``
      - 设备（流多处理器）
      - 块线程
+     - 块
      - 块
    * - 无说明符
      - 设备（寄存器）
      - 单个线程
      - 单个线程
+     - 单个线程
 
-- ``__device__`` 和 ``__constant__`` 变量都可以通过 `CUDA Runtime API <https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html>`__ 函数 ``cudaGetSymbolAddress()`` 、 ``cudaGetSymbolSize()`` 、 ``cudaMemcpyToSymbol()`` 和 ``cudaMemcpyFromSymbol()`` 从主机访问。
+- ``__device__``、``__tile__`` 和 ``__constant__`` 变量可以通过 `CUDA Runtime API <https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html>`__ 函数 ``cudaGetSymbolAddress()``、``cudaGetSymbolSize()``、``cudaMemcpyToSymbol()`` 和 ``cudaMemcpyFromSymbol()`` 从主机访问。
 
 - ``__constant__`` 变量在设备代码中是只读的，只能使用 `CUDA Runtime API <https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html>`__ 从主机修改。
 
@@ -182,6 +221,64 @@
 - ``__managed__`` 变量具有与`动态分配的托管内存 <../02-basics/understanding-memory.html#memory-unified-memory>`__ 指定的相同的一致性和一致性行为。
 - 另请参阅 `局部变量 <cpp-language-support.html#local-variables>`__ 的限制。
 
+.. _tile-variables:
+
+5.4.1.2.3. ``__tile__`` 变量
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``__tile__`` 内存空间说明符类似于 ``__device__``。用 ``__tile__`` 标记的变量分配在设备全局内存中，可以由 CUDA Runtime API 函数访问。与 ``__device__`` 变量不同，``__tile__`` 变量可以直接从 tile 代码访问。
+
+通常，``__device__`` 变量不能从 ``__tile__`` 或 ``__tile_global__`` 代码按名直接访问，``__tile__`` 变量也不能从 ``__device__`` 或 ``__global__`` 代码按名直接访问。但是，这两种变量都分配在设备全局内存中，指向该内存的指针可以在任一上下文中访问。
+
+以下示例展示了 tile 变量的合法和非法用法：
+
+.. code-block:: c++
+
+   __device__ int x_device = 0;
+   __tile__   int x_tile = 0;
+
+   // ERROR: Variable cannot be both device and tile
+   __device__ __tile__ int x_device_tile = 0;
+
+   __global__ void simt_function(int* in) {
+     x_device = 1; // OK: __device__ variable accessed from SIMT code
+     x_tile = 1;   // ERROR: __tile__ variable accessed from SIMT code
+
+     *in = 1; // OK: May point to any device global memory, including x_tile.
+   }
+
+   __tile_global__ void tile_function(int* in) {
+     x_device = 1; // ERROR: __device__ variable accessed from tile code
+     x_tile = 1;   // OK: __tile__ variable accessed from tile code
+
+     *in = 1; // OK: May point to any device global memory, including x_device.
+   }
+
+   int main() {
+     int* x_device_ptr;
+     cudaGetSymbolAddress((void**) &x_device_ptr, x_device);    // Gets address of x_device
+
+     int* x_tile_ptr;
+     cudaGetSymbolAddress((void**) &x_tile_ptr, x_tile);        // Gets address of x_tile
+
+     // OK: Passing pointer to tile variable into SIMT kernel
+     simt_function<<<1,1>>>(x_tile_ptr);
+     cudaDeviceSynchronize();
+
+     // OK: Passing pointer to device variable into tile kernel
+     tile_function<<<1,1>>>(x_device_ptr);
+     cudaDeviceSynchronize();
+   }
+
+``__tile__`` 变量不能包含指针或引用类型的子对象。例如：
+
+.. code-block:: c++
+
+   __tile__ int* ptr; // ERROR
+
+   struct S1 { int* ptr; };
+   __tile__ S1 val; // ERROR
+
 .. _inline-specifiers:
 
 5.4.1.3. 内联说明符
@@ -193,7 +290,7 @@
 - ``__forceinline__`` ：强制 ``nvcc`` 在单个翻译单元内内联该函数。
 - ``__inline_hint__`` ：使用 `链接时优化 <../02-basics/nvcc.html#nvcc-link-time-optimization>`__ 时启用跨翻译单元的积极内联。
 
-这些说明符是互斥的。
+这些说明符是互斥的。这些说明符应用于 ``__tile__`` 函数时被忽略。
 
 .. _restrict-pointers:
 
@@ -458,6 +555,122 @@ CUDA 提供从基本整数和浮点类型派生的向量类型，这些类型在
      - ``double2``
      - ``double3``
      - ``double4_16a/double4_32a``
+
+请注意，``long4``、``ulong4``、``longlong4``、``ulonglong4`` 和 ``double4`` 已在 CUDA 13 中弃用，并可能在未来版本中移除。
+
+下表详细说明了向量类型的字节大小和对齐要求：
+
+.. list-table:: 对齐要求
+   :header-rows: 1
+   :widths: 50 25 25
+
+   * - 类型
+     - 大小
+     - 对齐
+   * - ``char1``、``uchar1``
+     - 1
+     - 1
+   * - ``char2``、``uchar2``
+     - 2
+     - 2
+   * - ``char3``、``uchar3``
+     - 3
+     - 1
+   * - ``char4``、``uchar4``
+     - 4
+     - 4
+   * - ``short1``、``ushort1``
+     - 2
+     - 2
+   * - ``short2``、``ushort2``
+     - 4
+     - 4
+   * - ``short3``、``ushort3``
+     - 6
+     - 2
+   * - ``short4``、``ushort4``
+     - 8
+     - 8
+   * - ``int1``、``uint1``
+     - 4
+     - 4
+   * - ``int2``、``uint2``
+     - 8
+     - 8
+   * - ``int3``、``uint3``
+     - 12
+     - 4
+   * - ``int4``、``uint4``
+     - 16
+     - 16
+   * - ``long1``、``ulong1``
+     - 4/8 \*
+     - 4/8 \*
+   * - ``long2``、``ulong2``
+     - 8/16 \*
+     - 8/16 \*
+   * - ``long3``、``ulong3``
+     - 12/24 \*
+     - 4/8 \*
+   * - ``long4``、``ulong4`` （已弃用）
+     - 16/32 \*
+     - 16 \*
+   * - ``long4_16a``、``ulong4_16a``
+     - 16/32 \*
+     - 16
+   * - ``long4_32a``、``ulong4_32a``
+     - 16/32 \*
+     - 32
+   * - ``longlong1``、``ulonglong1``
+     - 8
+     - 8
+   * - ``longlong2``、``ulonglong2``
+     - 16
+     - 16
+   * - ``longlong3``、``ulonglong3``
+     - 24
+     - 8
+   * - ``longlong4``、``ulonglong4`` （已弃用）
+     - 32
+     - 16
+   * - ``longlong4_16a``、``ulonglong4_16a``
+     - 32
+     - 16
+   * - ``longlong4_32a``、``ulonglong4_32a``
+     - 32
+     - 32
+   * - ``float1``
+     - 4
+     - 4
+   * - ``float2``
+     - 8
+     - 8
+   * - ``float3``
+     - 12
+     - 4
+   * - ``float4``
+     - 16
+     - 16
+   * - ``double1``
+     - 8
+     - 8
+   * - ``double2``
+     - 16
+     - 16
+   * - ``double3``
+     - 24
+     - 8
+   * - ``double4`` （已弃用）
+     - 32
+     - 16
+   * - ``double4_16a``
+     - 32
+     - 16
+   * - ``double4_32a``
+     - 32
+     - 32
+
+\* ``long`` 在 C++ LLP64 数据模型（Windows 64 位）上为 4 字节，而在 C++ LP64 数据模型（Linux 64 位）上为 8 字节。
 
 向量类型是结构体。它们的第一个、第二个、第三个和第四个组件分别可以通过 ``x`` 、 ``y`` 、 ``z`` 和 ``w`` 字段访问。
 
@@ -2376,6 +2589,26 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
 
 请注意，如果函数声明及其对应定义的 pragma 参数不匹配，程序是格式错误的。
 
+.. _mma-throughput-pragma:
+
+5.4.9.7. MMA 吞吐量 Pragma
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``nv_mma_throughput`` pragma 是一个指令，用于启用专门针对矩阵乘加运算调优的编译器优化。它仅在入口函数作用域（即 ``__global__`` 函数上）有效。其效果可能通过沿调用路径传播的优化，扩展到从该入口函数调用的 ``__device__`` 函数。
+
+示例：
+
+.. code-block:: cuda
+
+   #pragma nv_mma_throughput
+   __global__  void kernel(){
+   ...
+   }
+
+.. note::
+
+   ``nv_mma_throughput`` pragma 仍处于实验阶段。它启用的设置是在有限的 NVIDIA 内部工作负载上调优的。不保证每个内核都能提升性能。
+
 .. _debugging-and-diagnostics:
 
 5.4.10. 调试和诊断
@@ -2583,9 +2816,256 @@ C++ warp 矩阵操作利用 Tensor Core 来加速形式为 ``D=A*B+C`` 的矩阵
    for(int t=0; t<frag.num_elements; t++)
        frag.x[t] *= alpha;
 
+.. _wmma-alternate-floating-point:
+
+5.4.11.2. 备选浮点
+^^^^^^^^^^^^^^^^^^
+
+Tensor Core 在计算能力 8.0 及更高的设备上支持备选类型的浮点运算。
+
+``__nv_bfloat16``
+
+此数据格式是一种备选 fp16 格式，具有与 f32 相同的范围，但精度降低（7 位）。你可以直接使用 ``cuda_bf16.h`` 中提供的 ``__nv_bfloat16`` 类型来使用此数据格式。具有 ``__nv_bfloat16`` 数据类型的矩阵片段需要与 ``float`` 类型的累加器组合使用。支持的形状和操作与 ``__half`` 相同。
+
+``tf32``
+
+此数据格式是 Tensor Core 支持的一种特殊浮点格式，具有与 f32 相同的范围和降低的精度（≥10 位）。此格式的内部布局是实现定义的。要将此浮点格式与 WMMA 操作一起使用，输入矩阵必须手动转换为 tf32 精度。
+
+为便于转换，提供了新的内建函数 ``__float_to_tf32``。虽然该内建函数的输入和输出参数都是 ``float`` 类型，但输出在数值上将是 ``tf32``。此新精度仅用于 Tensor Core，如果与其他 ``float`` 类型操作混合使用，结果的精度和范围将是未定义的。
+
+一旦输入矩阵（``matrix_a`` 或 ``matrix_b``）被转换为 tf32 精度，具有 ``precision::tf32`` 精度和 ``float`` 数据类型的 ``fragment`` 与 ``load_matrix_sync`` 的组合将利用这一新功能。两个累加器片段都必须具有 ``float`` 数据类型。唯一支持的矩阵大小是 16x16x8（m-n-k）。
+
+片段的元素表示为 ``float``，因此从 ``element_type<T>`` 到 ``storage_element_type<T>`` 的映射为：
+
+.. code-block:: text
+
+   precision::tf32 -> float
+
+.. _wmma-double-precision:
+
+5.4.11.3. 双精度
+^^^^^^^^^^^^^^^^
+
+Tensor Core 在计算能力 8.0 及更高的设备上支持双精度浮点运算。要使用此新功能，必须使用 ``double`` 类型的 ``fragment``。``mma_sync`` 操作将使用 .rn（舍入到最接近的偶数）舍入修饰符执行。
+
+.. _wmma-sub-byte-operations:
+
+5.4.11.4. 子字节操作
+^^^^^^^^^^^^^^^^^^^^
+
+子字节 WMMA 操作提供了访问 Tensor Core 低精度能力的方式。它们被视为预览功能，即其数据结构和 API 可能会发生变化，可能不兼容未来版本。此功能通过 ``nvcuda::wmma::experimental`` 命名空间提供：
+
+.. code-block:: cpp
+
+   namespace experimental {
+       namespace precision {
+           struct u4; // 4-bit unsigned
+           struct s4; // 4-bit signed
+           struct b1; // 1-bit
+      }
+       enum bmmaBitOp {
+           bmmaBitOpXOR = 1, // compute_75 minimum
+           bmmaBitOpAND = 2  // compute_80 minimum
+       };
+       enum bmmaAccumulateOp { bmmaAccumulateOpPOPC = 1 };
+   }
+
+对于 4 位精度，可用的 API 保持不变，但你必须指定 ``experimental::precision::u4`` 或 ``experimental::precision::s4`` 作为片段数据类型。由于片段的元素被打包在一起，该片段的 ``num_storage_elements`` 将小于 ``num_elements``。因此，子字节片段的 ``num_elements`` 变量返回子字节类型 ``element_type<T>`` 的元素数量。对于单位精度也是如此，在这种情况下，从 ``element_type<T>`` 到 ``storage_element_type<T>`` 的映射如下：
+
+.. code-block:: text
+
+   experimental::precision::u4 -> unsigned (8 elements in 1 storage element)
+   experimental::precision::s4 -> int (8 elements in 1 storage element)
+   experimental::precision::b1 -> unsigned (32 elements in 1 storage element)
+   T -> T  //all other types
+
+子字节片段允许的布局对于 ``matrix_a`` 始终为 ``row_major``，对于 ``matrix_b`` 始终为 ``col_major``。
+
+对于子字节操作，``load_matrix_sync`` 中 ``ldm`` 的值对于元素类型 ``experimental::precision::u4`` 和 ``experimental::precision::s4`` 应为 32 的倍数，或对于元素类型 ``experimental::precision::b1`` 应为 128 的倍数（即两种情况下都是 16 字节的倍数）。
+
+.. note::
+
+   对以下 MMA 指令变体的支持已弃用，并将在 sm_90 中移除：
+
+   - ``experimental::precision::u4``
+
+   - ``experimental::precision::s4``
+
+   - ``bmmaBitOp`` 设置为 ``bmmaBitOpXOR`` 的 ``experimental::precision::b1``
+
+``bmma_sync``
+
+等待所有 warp lane 执行 bmma_sync，然后执行 warp 同步的位矩阵乘加操作 ``D = (A op B) + C``，其中 ``op`` 由逻辑操作 ``bmmaBitOp`` 后跟 ``bmmaAccumulateOp`` 定义的累加组成。可用的操作有：
+
+``bmmaBitOpXOR``，``matrix_a`` 中的一行与 ``matrix_b`` 的 128 位列进行 128 位 XOR
+
+``bmmaBitOpAND``，``matrix_a`` 中的一行与 ``matrix_b`` 的 128 位列进行 128 位 AND，在计算能力 8.0 及更高的设备上可用。
+
+累加操作始终为 ``bmmaAccumulateOpPOPC``，它计算置位位的数量。
+
+.. _wmma-restrictions:
+
+5.4.11.5. 限制
+^^^^^^^^^^^^^^
+
+Tensor Core 所需的特殊格式对于每个主要和次要设备架构可能不同。线程仅持有整体矩阵的一个片段（不透明的架构特定 ABI 数据结构），且开发者不允许对各参数如何映射到参与矩阵乘加的寄存器做任何假设，这使情况更加复杂。
+
+由于片段是架构特定的，如果函数是为不同的链接兼容架构编译并链接到同一设备可执行文件中的，则将它们从函数 A 传递到函数 B 是不安全的。在这种情况下，片段的大小和布局将特定于某一架构，在另一架构中使用 WMMA API 将导致错误结果或潜在的数据损坏。
+
+两个链接兼容但片段布局不同的架构示例是 sm_70 和 sm_75。
+
+.. code-block:: text
+
+   fragA.cu: void foo() { wmma::fragment<...> mat_a; bar(&mat_a); }
+   fragB.cu: void bar(wmma::fragment<...> *mat_a) { // operate on mat_a }
+
+   // sm_70 fragment layout
+   $> nvcc -dc -arch=compute_70 -code=sm_70 fragA.cu -o fragA.o
+   // sm_75 fragment layout
+   $> nvcc -dc -arch=compute_75 -code=sm_75 fragB.cu -o fragB.o
+   // Linking the two together
+   $> nvcc -dlink -arch=sm_75 fragA.o fragB.o -o frag.o
+
+这种未定义行为在编译时和运行时工具中也可能无法检测，因此需要格外小心以确保片段布局一致。当与既为不同链接兼容架构构建又期望被传递 WMMA 片段的遗留库链接时，最可能出现此链接风险。
+
+请注意，在弱链接的情况下（例如 CUDA C++ 内联函数），链接器可能选择任何可用的函数定义，这可能导致编译单元之间的隐式传递。
+
+为避免此类问题，应始终将矩阵存储到内存中以便通过外部接口传输（例如 ``wmma::store_matrix_sync(dst, …);``），然后可以作为指针类型（例如 ``float *dst``）安全地传递给 ``bar()``。
+
+请注意，由于 sm_70 可以在 sm_75 上运行，上述示例的 sm_75 代码可以改为 sm_70 并在 sm_75 上正确工作。但是，当与其他 sm_75 分离编译的二进制文件链接时，建议在应用程序中使用 sm_75 原生代码。
+
+.. _wmma-element-types-matrix-sizes:
+
+5.4.11.6. 元素类型和矩阵大小
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Tensor Core 支持多种元素类型和矩阵大小。下表展示了支持的 ``matrix_a``、``matrix_b`` 和 ``accumulator`` 矩阵的各种组合：
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 25 25 25
+
+   * - Matrix A
+     - Matrix B
+     - 累加器
+     - 矩阵大小 (m-n-k)
+   * - ``__half``
+     - ``__half``
+     - ``float``
+     - 16x16x16
+   * - ``__half``
+     - ``__half``
+     - ``float``
+     - 32x8x16
+   * - ``__half``
+     - ``__half``
+     - ``float``
+     - 8x32x16
+   * - ``__half``
+     - ``__half``
+     - ``__half``
+     - 16x16x16
+   * - ``__half``
+     - ``__half``
+     - ``__half``
+     - 32x8x16
+   * - ``__half``
+     - ``__half``
+     - ``__half``
+     - 8x32x16
+   * - ``unsigned char``
+     - ``unsigned char``
+     - ``int``
+     - 16x16x16
+   * - ``unsigned char``
+     - ``unsigned char``
+     - ``int``
+     - 32x8x16
+   * - ``unsigned char``
+     - ``unsigned char``
+     - ``int``
+     - 8x32x16
+   * - ``signed char``
+     - ``signed char``
+     - ``int``
+     - 16x16x16
+   * - ``signed char``
+     - ``signed char``
+     - ``int``
+     - 32x8x16
+   * - ``signed char``
+     - ``signed char``
+     - ``int``
+     - 8x32x16
+
+备选浮点支持：
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 25 25 25
+
+   * - Matrix A
+     - Matrix B
+     - 累加器
+     - 矩阵大小 (m-n-k)
+   * - ``__nv_bfloat16``
+     - ``__nv_bfloat16``
+     - ``float``
+     - 16x16x16
+   * - ``__nv_bfloat16``
+     - ``__nv_bfloat16``
+     - ``float``
+     - 32x8x16
+   * - ``__nv_bfloat16``
+     - ``__nv_bfloat16``
+     - ``float``
+     - 8x32x16
+   * - ``precision::tf32``
+     - ``precision::tf32``
+     - ``float``
+     - 16x16x8
+
+双精度支持：
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 25 25 25
+
+   * - Matrix A
+     - Matrix B
+     - 累加器
+     - 矩阵大小 (m-n-k)
+   * - ``double``
+     - ``double``
+     - ``double``
+     - 8x8x4
+
+子字节操作的实验性支持：
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 25 25 25
+
+   * - Matrix A
+     - Matrix B
+     - 累加器
+     - 矩阵大小 (m-n-k)
+   * - ``precision::u4``
+     - ``precision::u4``
+     - ``int``
+     - 8x8x32
+   * - ``precision::s4``
+     - ``precision::s4``
+     - ``int``
+     - 8x8x32
+   * - ``precision::b1``
+     - ``precision::b1``
+     - ``int``
+     - 8x8x128
+
 .. _wmma-example:
 
-5.4.11.2. 示例
+5.4.11.7. 示例
 ^^^^^^^^^^^^^^
 
 以下代码在单个 warp 中实现了 16x16x16 矩阵乘法。
