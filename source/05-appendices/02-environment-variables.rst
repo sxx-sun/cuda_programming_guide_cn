@@ -3,7 +3,8 @@
 5.2. CUDA 环境变量
 ==================
 
-以下部分列出了 CUDA 环境变量。与多进程服务 (MPS) 相关的环境变量记录在 `GPU 部署和管理指南 <https://docs.nvidia.com/deploy/mps/index.html#environment-variables>`_ 中。
+以下部分列出了 CUDA 环境变量。
+与多进程服务 (Multi-Process Service, MPS) 相关的环境变量记录在 `GPU 部署和管理指南 <https://docs.nvidia.com/deploy/mps/index.html#environment-variables>`_ 中。
 
 .. _device-enumeration-and-properties:
 
@@ -19,7 +20,7 @@
 
 - 如果未设置该变量，则所有 GPU 设备都可见。
 
-- 如果将该变量设置为空字符串，则没有 GPU 设备可见。
+- 如果将该变量设置为空字符串，则 GPU 设备不可见。
 
 **可选值**：以逗号分隔的 GPU 标识符序列。
 
@@ -27,19 +28,27 @@ GPU 标识符的提供方式如下：
 
 - **整数索引**：这些对应于系统中 GPU 的序号，由 ``nvidia-smi`` 确定，从 0 开始。例如，设置 ``CUDA_VISIBLE_DEVICES=2,1`` 会使设备 0 不可见，并使设备 2 在设备 1 之前枚举。
 
-  - 如果遇到无效索引，则只有索引在无效索引之前出现的设备才可见。例如，设置 ``CUDA_VISIBLE_DEVICES=0,2,-1,1`` 会使设备 0 和 2 可见，而设备 1 不可见，因为它出现在无效索引 ``-1`` 之后。
+  - 如果遇到无效索引，则只有索引在无效索引之前出现的设备才可见。
+    例如，设置 ``CUDA_VISIBLE_DEVICES=0,2,-1,1`` 会使设备 0 和 2 可见，而设备 1 不可见，因为它出现在无效索引 ``-1`` 之后。
 
-- **GPU UUID 字符串**：这些应遵循 ``nvidia-smi -L`` 给出的相同格式，例如 ``GPU-8932f937-d72c-4106-c12f-20bd9faed9f6`` 。但是，为了方便起见，允许使用缩写形式；只需指定 GPU UUID 开头的足够数字即可在目标系统中唯一标识该 GPU。例如，假设系统中没有其他 GPU 共享此前缀，则 ``CUDA_VISIBLE_DEVICES=GPU-8932f937`` 可能是引用上述 GPU UUID 的有效方式。
+- **GPU UUID 字符串**：这些应遵循 ``nvidia-smi -L`` 给出的相同格式，例如 ``GPU-8932f937-d72c-4106-c12f-20bd9faed9f6`` 。
+  但是，为了方便起见，允许使用缩写形式；只需指定 GPU UUID 开头的足够数字即可在目标系统中唯一标识该 GPU。
+  例如，假设系统中没有其他 GPU 共享此前缀，则 ``CUDA_VISIBLE_DEVICES=GPU-8932f937`` 可能是引用上述 GPU UUID 的有效方式。
 
-- `多实例 GPU (MIG) <https://docs.nvidia.com/datacenter/tesla/mig-user-guide/>`_ 支持： ``MIG-<GPU-UUID>/<GPU 实例 ID>/<计算实例 ID>`` 。例如， ``MIG-GPU-8932f937-d72c-4106-c12f-20bd9faed9f6/1/2`` 。仅支持单个 MIG 实例枚举。
+- `多实例 GPU (MIG) <https://docs.nvidia.com/datacenter/tesla/mig-user-guide/>`_ 支持： ``MIG-<GPU-UUID>/<GPU 实例 ID>/<计算实例 ID>`` 。
+  例如， ``MIG-GPU-8932f937-d72c-4106-c12f-20bd9faed9f6/1/2`` 。
+  仅支持单个 MIG 实例枚举。
 
-``cudaGetDeviceCount()`` API 返回的设备计数仅包括可见设备，因此使用整数设备标识符的 CUDA API 仅支持 [0, 可见设备计数 - 1] 范围内的序号。GPU 设备的枚举顺序决定了序号值。例如，使用 ``CUDA_VISIBLE_DEVICES=2,1`` 时，调用 ``cudaSetDevice(0)`` 会将设备 2 设置为当前设备，因为它首先被枚举并分配了序号 0。之后调用 ``cudaGetDevice(&device_ordinal)`` 也会将 ``device_ordinal`` 设置为 0，这对应于设备 2。
+``cudaGetDeviceCount()`` API 返回的设备计数仅包括可见设备，因此使用整数设备标识符的 CUDA API 仅支持 ``[0, 可见设备计数 - 1]`` 范围内的序号。
+GPU 设备的枚举顺序决定了序号值。
+例如，使用 ``CUDA_VISIBLE_DEVICES=2,1`` 时，调用 ``cudaSetDevice(0)`` 会将设备 2 设置为当前设备，因为它首先被枚举并分配了序号 0。
+之后调用 ``cudaGetDevice(&device_ordinal)`` 也会将 ``device_ordinal`` 设置为 0，这对应于设备 2。
 
 **示例**：
 
 .. code-block:: bash
 
-   nvidia-smi -L  # 获取 GPU UUID 列表
+   nvidia-smi -L  # Get list of GPU UUIDs
    CUDA_VISIBLE_DEVICES=0,1
    CUDA_VISIBLE_DEVICES=GPU-8932f937-d72c-4106-c12f-20bd9faed9f6
    CUDA_VISIBLE_DEVICES=MIG-GPU-8932f937-d72c-4106-c12f-20bd9faed9f6/1/2
@@ -89,6 +98,8 @@ GPU 标识符的提供方式如下：
    CUDA_MANAGED_FORCE_DEVICE_ALLOC=0
    CUDA_MANAGED_FORCE_DEVICE_ALLOC=1  # 强制使用设备内存
 
+译注：主要针对 Windows 设备。 从 CUDA 8.0 起此变量对 Linux 无效，Linux 上的托管内存分配策略由驱动自动管理。
+
 ----
 
 .. _jit-compilation:
@@ -101,9 +112,11 @@ GPU 标识符的提供方式如下：
 5.2.2.1. ``CUDA_CACHE_DISABLE``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-该环境变量控制磁盘上 :ref:`just-in-time-compilation` 缓存的行为。禁用 JIT 缓存会强制 CUDA 应用程序每次执行时都进行 PTX 到 CUBIN 的编译，除非在二进制文件中找到运行架构的 CUBIN 代码。
+该环境变量控制磁盘上 :ref:`just-in-time-compilation` 缓存的行为。
+禁用 JIT 缓存会强制 CUDA 应用程序每次执行时都进行 PTX 到 CUBIN 的编译，除非在二进制文件中找到运行架构的 CUBIN 代码。
 
-禁用 JIT 缓存会增加应用程序在初始执行期间的加载时间。但是，它对于减少应用程序的磁盘空间以及诊断不同驱动程序版本或构建标志之间的差异很有用。
+禁用 JIT 缓存会增加应用程序在初始执行期间的加载时间。
+但是，它对于减少应用程序的磁盘空间以及诊断不同驱动程序版本或构建标志之间的差异很有用。
 
 **可选值**：
 
@@ -146,7 +159,8 @@ GPU 标识符的提供方式如下：
 5.2.2.3. ``CUDA_CACHE_MAXSIZE``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-该环境变量以字节为单位指定 :ref:`just-in-time-compilation` 缓存的大小。超过此大小的二进制文件不会被缓存。如果需要，会从缓存中驱逐较旧的二进制文件以为较新的文件腾出空间。
+该环境变量以字节为单位指定 :ref:`just-in-time-compilation` 缓存的大小。
+超过此大小的二进制文件不会被缓存。如果需要，会从缓存中删除较旧的二进制文件以为较新的文件腾出空间。
 
 **可选值**：字节数。默认值为：
 
@@ -350,7 +364,7 @@ GPU 标识符的提供方式如下：
 
 该环境变量控制 CUDA 应用程序在发生异常（错误）时的行为。
 
-启用后，当设备端异常发生时，CUDA 应用程序将暂停并等待，允许调试器（如 `cuda-gdb <https://docs.nvidia.com/cuda/cuda-gdb/index.html>`_）附加以在进程退出或继续之前检查实时 GPU 状态。
+启用后，当发生设备端异常时，CUDA 应用会暂停并等待，以便挂载 `cuda-gdb <https://docs.nvidia.com/cuda/cuda-gdb/index.html>`_ 等调试器，在进程退出或继续运行之前检查实时的 GPU 状态。
 
 **可选值**：
 
@@ -371,11 +385,13 @@ GPU 标识符的提供方式如下：
 5.2.3.7. ``CUDA_DEVICE_DEFAULT_PERSISTING_L2_CACHE_PERCENTAGE_LIMIT``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-该环境变量控制 GPU 的 L2 缓存中为 :ref:`l2-set-aside` 保留的默认「预留」部分，以 L2 大小的百分比表示。
+该环境变量用于控制 GPU L2 缓存中默认预留给 :ref:`持久化访问使用 <l2-set-aside>` 的部分，取值以 L2 缓存总容量的百分比表示。
 
-它与支持持久 L2 缓存的 GPU 相关，特别是使用 `CUDA 多进程服务 (MPS) <https://docs.nvidia.com/deploy/mps/index.html>`_ 时 :ref:`compute-capabilities` 8.0 或更高的设备。必须在启动 CUDA MPS 控制守护进程之前设置此环境变量，即在运行 ``nvidia-cuda-mps-control -d`` 命令之前。
+它仅对支持持久化 L2 缓存的 GPU 有效，具体而言是使用 `CUDA 多进程服务 (MPS) <https://docs.nvidia.com/deploy/mps/index.html>`_ 且计算能力为 8.0 及以上的设备。
+该环境变量必须在启动 CUDA MPS 控制守护进程之前设置，即在运行 ``nvidia-cuda-mps-control -d`` 命令之前设置。
 
-**可选值**：0 到 100 之间的百分比值，默认为 0。
+
+**可选值**：百分比值，0 到 100 之间。默认为 0。
 
 **示例**：
 
@@ -390,7 +406,8 @@ GPU 标识符的提供方式如下：
 5.2.3.8. ``CUDA_DISABLE_PERF_BOOST``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-在 Linux 主机上，将此环境变量设置为 1 可防止提升设备性能状态，而是可以根据各种启发式方法隐式选择 pstate。此选项可能有助于降低功耗，但由于动态性能状态选择，在某些情况下可能会导致更高的延迟。
+在 Linux 主机上，将此环境变量设置为 1 会阻止提升设备的性能状态，取而代之的是，pstate（性能状态）可以根据各种启发式策略被隐式选择。
+该选项可能用于降低功耗，但在某些场景下，由于动态选择性能状态，可能会导致更高的延迟。
 
 **示例**：
 
@@ -499,9 +516,13 @@ GPU 标识符的提供方式如下：
 5.2.5.1. ``CUDA_LOG_FILE``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-该环境变量指定一个位置，当支持的 CUDA API 调用返回错误时，将在该位置打印描述性错误日志消息。
+该环境变量指定一个位置，当支持的 CUDA API 调用返回错误时，将打印描述性错误日志消息并输出到指定位置。
 
-例如，如果尝试使用无效的网格配置启动内核，例如 ``kernel<<<1, dim3(1,1,128)>>>(...)`` ，则该内核将无法启动， ``cudaGetLastError()`` 将返回通用的 ``invalid configuration argument`` 错误。如果设置了 ``CUDA_LOG_FILE`` 环境变量，用户可以在日志中看到以下描述性错误消息： ``[CUDA][E] Block Dimensions (1,1,128) include one or more values that exceed the device limit of (1024,1024,64)`` ，并轻松确定指定的块的 z 维度无效。有关更多详细信息，请参阅 :doc:`../04-special-topics/error-log-management`。
+例如，如果尝试使用无效的网格配置启动核函数，例如 ``kernel<<<1, dim3(1,1,128)>>>(...)`` ，则该核函数将无法启动，
+``cudaGetLastError()`` 将返回通用的 ``invalid configuration argument`` 错误。
+如果设置了 ``CUDA_LOG_FILE`` 环境变量，用户可以在日志中看到以下描述性错误消息：
+``[CUDA][E] Block Dimensions (1,1,128) include one or more values that exceed the device limit of (1024,1024,64)`` ，并轻松确定指定的块的 z 维度无效。
+有关更多详细信息，请参阅 :ref:`error-log-management-details`。
 
 **可选值**： ``stdout`` 、 ``stderr`` 或有效文件路径（具有适当的访问权限）
 
