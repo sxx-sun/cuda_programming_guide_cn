@@ -89,7 +89,7 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 `共享内存�
        using barrier_t = cuda::barrier<cuda::thread_scope_block>;
        __shared__ barrier_t barrier;
        __shared__ float buffer[8 + 32 + 8];
-       
+
        // 初始化同步对象
        if (block.thread_rank() == 0) {
            init(&barrier, block.size());
@@ -108,17 +108,17 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 `共享内存�
            cuda::memcpy_async(buffer + 40, right + tid, cuda::aligned_size_t<4>(sizeof(float)), barrier); // 中心
            // 或 cuda::memcpy_async(thread, buffer + 40, right + tid, cuda::aligned_size_t<4>(sizeof(float)), barrier);
        }
-       
+
        // 版本 2：跨所有线程集体发出拷贝
        cuda::memcpy_async(block, buffer, left, cuda::aligned_size_t<4>(8 * sizeof(float)), barrier); // 左 halo
        cuda::memcpy_async(block, buffer + 8, center, cuda::aligned_size_t<4>(32 * sizeof(float)), barrier); // 中心
        cuda::memcpy_async(block, buffer + 40, right, cuda::aligned_size_t<4>(8 * sizeof(float)), barrier); // 右 halo
-       
+
        // 等待所有拷贝完成
        barrier.arrive_and_wait();
        __syncthreads();
 
-       // 计算模板      
+       // 计算模板
    }
 
 使用 ``cooperative_groups::memcpy_async``:
@@ -219,7 +219,7 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 `共享内存�
        // 用前 num_stages 个批次填充管道
        for (int s = 0; s < num_stages; ++s) {
            pipeline.producer_acquire();
-           cuda::memcpy_async(shared + shared_offset[s] + tid, global_in + block_batch(s) + tid, 
+           cuda::memcpy_async(shared + shared_offset[s] + tid, global_in + block_batch(s) + tid,
                               cuda::aligned_size_t<4>(sizeof(int)), pipeline);
            pipeline.producer_commit();
        }
@@ -228,7 +228,7 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 `共享内存�
 
        // compute_batch: 下一个要处理的批次
        // fetch_batch:   下一个要从 Global 内存获取的批次
-       for (size_t compute_batch = 0, fetch_batch = num_stages; compute_batch < batch_size; 
+       for (size_t compute_batch = 0, fetch_batch = num_stages; compute_batch < batch_size;
             ++compute_batch, ++fetch_batch) {
            // 等待第一个请求的阶段完成
            constexpr size_t pending_batches = num_stages - 1;
@@ -237,7 +237,7 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 `共享内存�
 
            // 在当前批次上计算
            compute(global_out + block_batch(compute_batch) + tid, shared + shared_offset[stage] + tid);
-           
+
            // 释放当前阶段
            pipeline.consumer_release();
            __syncthreads(); // 如果每个线程处理它拷贝的数据则不需要
@@ -245,8 +245,8 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 `共享内存�
            // 加载未来阶段，领先当前计算批次 num_stages
            pipeline.producer_acquire();
            if (fetch_batch < batch_size) {
-               cuda::memcpy_async(shared + shared_offset[stage] + tid, 
-                                  global_in + block_batch(fetch_batch) + tid, 
+               cuda::memcpy_async(shared + shared_offset[stage] + tid,
+                                  global_in + block_batch(fetch_batch) + tid,
                                   cuda::aligned_size_t<4>(sizeof(int)), pipeline);
            }
            pipeline.producer_commit();
@@ -280,7 +280,7 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 `共享内存�
        // 用前 num_stages 个批次填充管道
        for (int s = 0; s < num_stages; ++s) {
            size_t block_batch_idx = block_batch(s);
-           cg::memcpy_async(block, shared + shared_offset[s], global_in + block_batch_idx, 
+           cg::memcpy_async(block, shared + shared_offset[s], global_in + block_batch_idx,
                             cuda::aligned_size_t<4>(sizeof(int)));
        }
 
@@ -288,7 +288,7 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 `共享内存�
 
        // compute_batch: 下一个要处理的批次
        // fetch_batch:   下一个要从 Global 内存获取的批次
-       for (size_t compute_batch = 0, fetch_batch = num_stages; compute_batch < batch_size; 
+       for (size_t compute_batch = 0, fetch_batch = num_stages; compute_batch < batch_size;
             ++compute_batch, ++fetch_batch) {
            // 等待第一个请求的阶段完成
            size_t pending_batches = (fetch_batch < batch_size - num_stages) ? num_stages - 1 : batch_size - fetch_batch - 1;
@@ -297,13 +297,13 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 `共享内存�
 
            // 在当前批次上计算
            compute(global_out + block_batch(compute_batch) + tid, shared + shared_offset[stage] + tid);
-           
+
            __syncthreads(); // 如果每个线程处理它拷贝的数据则不需要
 
            // 加载未来阶段，领先当前计算批次 num_stages
            size_t fetch_batch_idx = block_batch(fetch_batch);
            if (fetch_batch < batch_size) {
-               cg::memcpy_async(block, shared + shared_offset[stage], global_in + block_batch(fetch_batch), 
+               cg::memcpy_async(block, shared + shared_offset[stage], global_in + block_batch(fetch_batch),
                                 cuda::aligned_size_t<4>(sizeof(int)) * block.size());
            }
            stage = (stage + 1) % num_stages;
@@ -333,14 +333,14 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 `共享内存�
 
        // 用前 num_stages 个批次填充管道
        for (int s = 0; s < num_stages; ++s) {
-           __pipeline_memcpy_async(shared + shared_offset[s] + tid, global_in + block_batch(s) + tid, 
+           __pipeline_memcpy_async(shared + shared_offset[s] + tid, global_in + block_batch(s) + tid,
                                    cuda::aligned_size_t<4>(sizeof(int)));
            __pipeline_commit();
        }
 
        // compute_batch: 下一个要处理的批次
        // fetch_batch:   下一个要从 Global 内存获取的批次
-       for (size_t compute_batch = 0, fetch_batch = num_stages; compute_batch < batch_size; 
+       for (size_t compute_batch = 0, fetch_batch = num_stages; compute_batch < batch_size;
             ++compute_batch, ++fetch_batch) {
            // 等待第一个请求的阶段完成
            constexpr size_t pending_batches = num_stages - 1;
@@ -349,13 +349,13 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 `共享内存�
 
            // 在当前批次上计算
            compute(global_out + block_batch(compute_batch) + tid, shared + shared_offset[stage] + tid);
-           
+
            __syncthreads(); // 如果每个线程处理它拷贝的数据则不需要
 
            // 加载未来阶段，领先当前计算批次 num_stages
            if (fetch_batch < batch_size) {
-               __pipeline_memcpy_async(shared + shared_offset[stage] + tid, 
-                                       global_in + block_batch(fetch_batch) + tid, 
+               __pipeline_memcpy_async(shared + shared_offset[stage] + tid,
+                                       global_in + block_batch(fetch_batch) + tid,
                                        cuda::aligned_size_t<4>(sizeof(int)));
            }
            __pipeline_commit();
@@ -393,20 +393,20 @@ CUDA C 原始 API 实现以与第一个非常相似的方式演示了使用低�
 
    using pipeline = cuda::pipeline<cuda::thread_scope_block>;
 
-   __device__ void produce(pipeline &pipe, int num_stages, int stage, int num_batches, int batch, 
+   __device__ void produce(pipeline &pipe, int num_stages, int stage, int num_batches, int batch,
                           float *buffer, int buffer_len, float *in, int N)
    {
      if (batch < num_batches)
      {
        pipe.producer_acquire();
        /* 使用异步内存拷贝将数据从 in(batch) 拷贝到 buffer(stage) */
-       cuda::memcpy_async(buffer + stage * buffer_len + threadIdx.x, in + batch * buffer_len + threadIdx.x, 
+       cuda::memcpy_async(buffer + stage * buffer_len + threadIdx.x, in + batch * buffer_len + threadIdx.x,
                           cuda::aligned_size_t<4>(sizeof(float)), pipe);
        pipe.producer_commit();
      }
    }
 
-   __device__ void consume(pipeline &pipe, int num_stages, int stage, int num_batches, int batch, 
+   __device__ void consume(pipeline &pipe, int num_stages, int stage, int num_batches, int batch,
                           float *buffer, int buffer_len, float *out, int N)
    {
      pipe.consumer_wait();
@@ -470,7 +470,7 @@ CUDA C 原始 API 实现以与第一个非常相似的方式演示了使用低�
        __mbarrier_token_t token = __mbarrier_arrive(&ready[i % 2]); /* 等待 buffer_(i%2) 准备好被填充 */
        while(!__mbarrier_try_wait(&ready[i % 2], token, 1000)) {}
        /* 生产，即填充 buffer_(i%2) */
-       __pipeline_memcpy_async(buffer + i * buffer_len + threadIdx.x, in + i * buffer_len + threadIdx.x, 
+       __pipeline_memcpy_async(buffer + i * buffer_len + threadIdx.x, in + i * buffer_len + threadIdx.x,
                                cuda::aligned_size_t<4>(sizeof(float)));
        __pipeline_arrive_on(filled[i % 2]);
        __mbarrier_arrive(filled[i % 2]);  /* buffer_(i%2) 已填充 */
@@ -619,7 +619,10 @@ CUDA C 原始 API 实现以与第一个非常相似的方式演示了使用低�
 
 .. note::
 
-   建议由块中的单个线程发起 TMA 操作。虽然使用 ``if (threadIdx.x == 0)`` 看起来可能足够，但编译器无法验证确实只有一个线程发起拷贝，并可能为所有活动线程插入剥离循环，这会导致 warp 序列化和性能降低。为了防止这种情况，我们定义 ``is_elected()`` 辅助函数，使用 ``cuda::ptx::elect_sync`` 从 warp 0（编译器已知的）选择一个线程执行拷贝，允许编译器生成更高效的代码。或者，可以使用 `cooperative_groups::invoke_one <cooperative-groups.html#cooperative-groups-invoke-one>`_ 实现相同的效果。
+   建议由块中的单个线程发起 TMA 操作。
+   虽然使用 ``if (threadIdx.x == 0)`` 看起来可能足够，但编译器无法验证确实只有一个线程发起拷贝，并可能为所有活动线程插入剥离循环，这会导致 warp 序列化和性能降低。
+   为了防止这种情况，我们定义 ``is_elected()`` 辅助函数，使用 ``cuda::ptx::elect_sync`` 从 warp 0（编译器已知的）选择一个线程执行拷贝，允许编译器生成更高效的代码。
+   或者，可以使用 `cooperative_groups::invoke_one <cooperative-groups.html#cooperative-groups-invoke-one>`_ 实现相同的效果。
 
 批量异步指令对其源和目标地址有特定的对齐要求。更多信息请见下表。
 
@@ -636,7 +639,7 @@ CUDA C 原始 API 实现以与第一个非常相似的方式演示了使用低�
    * - 共享内存屏障地址
      - 必须 8 字节对齐（由 ``cuda::barrier`` 保证）
    * - 传输大小
-      - 必须是 16 字节的倍数
+     - 必须是 16 字节的倍数
 
 .. _async-copies-tma-one-dim-staging:
 
@@ -694,7 +697,7 @@ CUDA C 原始 API 实现以与第一个非常相似的方式演示了使用低�
            size_t num_bytes = block_size * sizeof(int);
            #pragma unroll num_stages
            for (int s = 0; s < num_stages; ++s) {
-               cuda::device::memcpy_async_tx(&shared[shared_offset[s]], &global_in[block_batch(s)], 
+               cuda::device::memcpy_async_tx(&shared[shared_offset[s]], &global_in[block_batch(s)],
                                              cuda::aligned_size_t<16>(num_bytes), bar[s]);
                (void)cuda::device::barrier_arrive_tx(bar[s], 1, num_bytes);
            }
@@ -702,9 +705,9 @@ CUDA C 原始 API 实现以与第一个非常相似的方式演示了使用低�
 
        int stage = 0;
        uint32_t parity = 0;
-       for (size_t compute_batch = 0, fetch_batch = num_stages; compute_batch < batch_size; 
+       for (size_t compute_batch = 0, fetch_batch = num_stages; compute_batch < batch_size;
             ++compute_batch, ++fetch_batch) {
-           while (!ptx::mbarrier_try_wait_parity(ptx::sem_acquire, ptx::scope_cta, 
+           while (!ptx::mbarrier_try_wait_parity(ptx::sem_acquire, ptx::scope_cta,
                                                  cuda::device::barrier_native_handle(bar[stage]), parity)) {}
 
            compute(global_out + block_batch(compute_batch) + tid, shared + shared_offset[stage] + tid);
@@ -712,7 +715,7 @@ CUDA C 原始 API 实现以与第一个非常相似的方式演示了使用低�
 
            if (is_elected() && fetch_batch < batch_size) {
                size_t num_bytes = block_size * sizeof(int);
-               cuda::device::memcpy_async_tx(&shared[shared_offset[stage]], &global_in[block_batch(fetch_batch)], 
+               cuda::device::memcpy_async_tx(&shared[shared_offset[stage]], &global_in[block_batch(fetch_batch)],
                                              cuda::aligned_size_t<16>(num_bytes), bar[stage]);
                (void)cuda::device::barrier_arrive_tx(bar[stage], 1, num_bytes);
            }
@@ -774,7 +777,7 @@ CUDA C 原始 API 实现以与第一个非常相似的方式演示了使用低�
    PFN_cuTensorMapEncodeTiled_v12000 get_cuTensorMapEncodeTiled() {
      cudaDriverEntryPointQueryResult driver_status;
      void* cuTensorMapEncodeTiled_ptr = nullptr;
-     CUDA_CHECK(cudaGetDriverEntryPointByVersion("cuTensorMapEncodeTiled", &cuTensorMapEncodeTiled_ptr, 12000, 
+     CUDA_CHECK(cudaGetDriverEntryPointByVersion("cuTensorMapEncodeTiled", &cuTensorMapEncodeTiled_ptr, 12000,
                                                   cudaEnableDefault, &driver_status));
      assert(driver_status == cudaDriverEntryPointSuccess);
      return reinterpret_cast<PFN_cuTensorMapEncodeTiled_v12000>(cuTensorMapEncodeTiled_ptr);
@@ -849,7 +852,7 @@ CUDA C 原始 API 实现以与第一个非常相似的方式演示了使用低�
      barrier::arrival_token token;
      if (is_elected()) {
        int32_t tensor_coords[2] = { x, y };
-       ptx::cp_async_bulk_tensor(ptx::space_shared, ptx::space_global, &smem_buffer, &tensor_map, 
+       ptx::cp_async_bulk_tensor(ptx::space_shared, ptx::space_global, &smem_buffer, &tensor_map,
                                  tensor_coords, cuda::device::barrier_native_handle(bar));
        token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(smem_buffer));
      } else {
@@ -893,7 +896,7 @@ CUDA C 原始 API 实现以与第一个非常相似的方式演示了使用低�
    * - 共享内存屏障地址
      - 必须 8 字节对齐
    * - 传输大小
-      - 必须是 16 字节的倍数
+     - 必须是 16 字节的倍数
 
 .. _async-copies-tma-encode-on-device:
 
@@ -1168,7 +1171,7 @@ TMA 引擎可以按"swizzle 模式"对数据进行洗牌，以减少共享内存
       barrier::arrival_token token;
       if (is_elected()) {
         int32_t tensor_coords[2] = { 0, 0 };
-        ptx::cp_async_bulk_tensor(ptx::space_shared, ptx::space_global, &smem_buffer, &tensor_map, 
+        ptx::cp_async_bulk_tensor(ptx::space_shared, ptx::space_global, &smem_buffer, &tensor_map,
                                   tensor_coords, cuda::device::barrier_native_handle(bar));
         token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(smem_buffer));
       } else {
@@ -1272,7 +1275,7 @@ TMA 引擎可以按"swizzle 模式"对数据进行洗牌，以减少共享内存
    #include <cuda/barrier>
    #include <cuda/ptx>
 
-   __global__ __cluster_dims__(8, 1, 1) void producer_consumer_kernel() 
+   __global__ __cluster_dims__(8, 1, 1) void producer_consumer_kernel()
    {
        using namespace cooperative_groups;
        using namespace cuda::device;
@@ -1285,37 +1288,37 @@ TMA 引擎可以按"swizzle 模式"对数据进行洗牌，以减少共享内存
        __shared__ int buffer[BLOCK_SIZE];
        __shared__ barrier_t filled;
        __shared__ barrier_t ready;
-       
+
        if (threadIdx.x == 0) {
            init(&filled, 1);
            init(&ready, BLOCK_SIZE);
        }
-       
+
        cluster.sync();
-       
+
        int rk = cluster.block_rank();
        int rk_next = (rk + 1) % 8;
        int rk_prev = (rk + 7) % 8;
-         
+
        auto buffer_next = cluster.map_shared_rank(buffer, rk_next);
        auto bar_next = cluster.map_shared_rank(barrier_native_handle(filled), rk_next);
        auto bar_prev = cluster.map_shared_rank(barrier_native_handle(ready), rk_prev);
-       
+
        int phase = 0;
        for (int it = 0; it < 1000; ++it) {
            st_async(&buffer_next[threadIdx.x], rk, bar_next);
-           
+
            if (threadIdx.x == 0) {
-               mbarrier_arrive_expect_tx(sem_release, scope_cluster, space_shared, 
+               mbarrier_arrive_expect_tx(sem_release, scope_cluster, space_shared,
                                          barrier_native_handle(filled), sizeof(buffer));
            }
 
            while (!mbarrier_try_wait_parity(barrier_native_handle(filled), phase, 1000)) {}
-           
+
            int r = buffer[threadIdx.x];
-           
+
            mbarrier_arrive(sem_release, scope_cluster, space_cluster, bar_prev);
-           
+
            while (!mbarrier_try_wait_parity(barrier_native_handle(ready), phase, 1000)) {}
            phase ^= 1;
        }

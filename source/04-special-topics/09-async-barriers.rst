@@ -81,10 +81,12 @@
 在此示例中，使用屏障的线程属于一个协作组，并使用 ``block.sync()`` 来引导初始化。
 由于整个线程块都参与屏障，也可以使用 ``__syncthreads()`` 。
 
-``init()`` 的第二个参数是 *预期到达计数* （expected arrival count），即在线程被 ``bar.wait(std::move(token))`` 调用阻塞解除之前，期望参与线程调用 ``bar.arrive()`` 的次数。
+``init()`` 的第二个参数是预期到达计数 （expected arrival count），即在线程被 ``bar.wait(std::move(token))`` 调用阻塞解除之前，期望参与线程调用 ``bar.arrive()`` 的次数。
 在此示例及前面的示例中，屏障使用线程块中的线程数进行初始化，即 ``cooperative_groups::this_thread_block().size()`` ，以便线程块内的所有线程都能参与屏障。
 
-异步屏障可以灵活地指定线程 *如何* 参与（分离 arrive/wait）以及 *哪些* 线程参与。相比之下， ``this_thread_block.sync()`` 或 ``__syncthreads()`` 适用于整个线程块，而 ``__syncwarp(mask)`` 适用于 warp 的指定子集。尽管如此，如果用户的意图是同步完整的线程块或完整的 warp，我们建议分别使用 ``__syncthreads()`` 和 ``__syncwarp()`` 以获得更好的性能。
+异步屏障可以灵活地指定线程如何参与（分离 arrive/wait）以及哪些线程参与。
+相比之下， ``this_thread_block.sync()`` 或 ``__syncthreads()`` 适用于整个线程块，而 ``__syncwarp(mask)`` 适用于 warp 的指定子集。
+尽管如此，如果用户的意图是同步完整的线程块或完整的 warp，我们建议分别使用 ``__syncthreads()`` 和 ``__syncwarp()`` 以获得更好的性能。
 
 .. _async-barriers-phase:
 
@@ -128,7 +130,8 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 
 .. note::
 
-   建议由收敛的线程使用 ``arrive-on(bar)`` 调用，以尽量减少对屏障对象的更新。当这些操作之前的代码使线程分歧时，应在调用 arrive-on 操作之前通过 ``__syncwarp`` 重新收敛 warp。
+   建议由收敛的线程使用 ``arrive-on(bar)`` 调用，以尽量减少对屏障对象的更新。
+   如果该操作之前的代码造成线程分支发散，应在调用 arrive-on 操作之前通过 ``__syncwarp`` 重新收敛 warp。
 
 .. _async-barriers-explicit-phase-tracking:
 
@@ -138,7 +141,7 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 异步屏障根据线程和内存操作的同步次数可以有多个 phase 。
 我们可以通过 ``cuda::ptx`` 和原语 API 提供的 ``mbarrier_try_wait_parity()`` 系列函数直接跟踪 phase ，而不是使用 token 来跟踪屏障 phase 翻转。
 
-在最简单的形式中， ``cuda::ptx::mbarrier_try_wait_parity(uint64_t* bar, const uint32_t& phaseParity)`` 函数等待具有特定奇偶性的 phase 。
+在最简单的形式中， ``cuda::ptx::mbarrier_try_wait_parity(uint64_t* bar, const uint32_t& phaseParity)`` 函数用于等待屏障进入具有指定奇偶状态的 phase 。
 ``phaseParity`` 操作数是屏障对象当前 phase 或紧邻前一 phase 的整数奇偶性。
 偶数 phase 的整数奇偶性为 0 ，奇数 phase 的整数奇偶性为 1。
 初始化屏障时，其 phase 的奇偶性为 0。
@@ -367,7 +370,7 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 ---------------
 
 ``cuda::barrier`` API 支持可选的完成函数。
-``cuda::barrier<Scope, CompletionFunction>`` 中的 ``CompletionFunction`` 在每个 phase 执行一次，在最后一个线程 *到达* 之后、任何线程从 ``wait`` 解除阻塞之前。
+``cuda::barrier<Scope, CompletionFunction>`` 中的 ``CompletionFunction`` 在每个 phase 执行一次，在最后一个线程到达之后、任何线程从 ``wait`` 解除阻塞之前。
 在当前 phase 期间到达 ``barrier`` 的线程执行的内存操作对执行 ``CompletionFunction`` 的线程可见，
 并且 ``CompletionFunction`` 内执行的所有内存操作对所有等待 ``barrier`` 的线程在解除阻塞后可见。
 
@@ -447,12 +450,12 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 
 异步屏障可用于跟踪 :ref:`异步内存拷贝 <asynchronous-data-copies>`。
 当异步拷贝操作绑定到屏障时，该拷贝操作在启动时自动递增屏障当前 phase 的预期计数，并在完成时递减它。
-此机制确保屏障的 ``wait()`` 操作阻塞直所有关联的异步内存拷贝完成，从而提供了一种方便的方式来同步多个并发内存操作。
+此机制确保屏障的 ``wait()`` 操作阻塞直到所有关联的异步内存拷贝完成，从而提供了一种方便的方式来同步多个并发内存操作。
 
 从计算能力 9.0 开始，具有线程块或集群作用域的共享内存中的异步屏障可以 **显式** 跟踪异步内存操作。
 我们将这些屏障称为 *异步事务屏障* （asynchronous transaction barriers）。
-除了预期到达计数外，屏障对象还可以接受 **事务计数** （transaction count），可用于跟踪异步事务的完成情况。
-事务计数跟踪尚未完成的异步事务数量，以异步内存操作指定的单位（通常是字节）。
+除了预期到达计数外，屏障对象还可以接受 **事务计数** （transaction count），用于跟踪异步事务的完成情况。
+事务计数以异步内存操作指定的单位（通常是字节）来跟踪尚未完成的异步事务数量。
 当前 phase 要跟踪的事务计数可以在到达时通过 ``cuda::device::barrier_arrive_tx()`` 设置，或直接通过 ``cuda::device::barrier_expect_tx()`` 设置。
 当屏障使用事务计数时，它会在线程执行 wait 操作时阻塞，直到所有生产者线程执行了 arrive **并且** 所有事务计数的总和达到预期值。
 
@@ -515,7 +518,8 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 
 线程块可以进行空间分区，以允许不同的线程执行独立的操作。这通常通过将线程块内不同 warp 的线程分配给特定任务来完成。这种技术称为 *warp 特化* （warp specialization）。
 
-本节展示生产者-消费者模式中空间分区的一个示例，其中一个线程子集产生数据，另一个（不相交的）线程子集同时消费这些数据。生产者-消费者空间分区模式需要两个单向同步来管理生产者和消费者之间的数据缓冲区。
+本节展示生产者-消费者模式中空间分区的一个示例，其中一个线程子集产生数据，另一个（不相交的）线程子集同时消费这些数据。
+生产者-消费者空间分区模式需要两个单向同步来管理生产者和消费者之间的数据缓冲区。
 
 .. list-table::
    :header-rows: 1
@@ -540,169 +544,158 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 
       .. code-block:: cpp
 
-         #include <cuda/barrier>
+        #include <cuda/barrier>
 
-         using barrier_t = cuda::barrier<cuda::thread_scope_block>;
+        using barrier_t = cuda::barrier<cuda::thread_scope_block>;
 
-         __device__ void produce(barrier_t ready[], barrier_t filled[], float *buffer, int buffer_len, float *in, int N)
-         {
-           for (int i = 0; i < N / buffer_len; ++i)
-           {
-             ready[i % 2].arrive_and_wait(); /* wait for buffer_(i%2) to be ready to be filled */
-             /* produce, i.e., fill in, buffer_(i%2)  */
-             barrier_t::arrival_token token = filled[i % 2].arrive(); /* buffer_(i%2) is filled */
-           }
-         }
+        __device__ void
+        produce (barrier_t ready[], barrier_t filled[], float *buffer, int buffer_len,
+                float *in, int N)
+        {
+          for (int i = 0; i < N / buffer_len; ++i)
+            {
+              // wait for buffer_(i%2) to be ready to be filled
+              ready[i % 2].arrive_and_wait ();
 
-         __device__ void consume(barrier_t ready[], barrier_t filled[], float *buffer, int buffer_len, float *out, int N)
-         {
-           barrier_t::arrival_token token1 = ready[0].arrive(); /* buffer_0 is ready for initial fill */
-           barrier_t::arrival_token token2 = ready[1].arrive(); /* buffer_1 is ready for initial fill */
-           for (int i = 0; i < N / buffer_len; ++i)
-           {
-             filled[i % 2].arrive_and_wait(); /* wait for buffer_(i%2) to be filled */
-             /* consume buffer_(i%2) */
-             barrier_t::arrival_token token3 = ready[i % 2].arrive(); /* buffer_(i%2) is ready to be re-filled */
-           }
-         }
+              // produce, i.e., fill in, buffer_(i%2)
 
-         __global__ void producer_consumer_pattern(int N, float *in, float *out, int buffer_len)
-         {
-           constexpr int warpSize = 32;
+              // buffer_(i%2) is filled
+              barrier_t::arrival_token token = filled[i % 2].arrive ();
+            }
+        }
 
-           /* Shared memory buffer declared below is of size 2 * buffer_len
-              so that we can alternatively work between two buffers.
-              buffer_0 = buffer and buffer_1 = buffer + buffer_len */
-           __shared__ extern float buffer[];
+        __device__ void
+        consume (barrier_t ready[], barrier_t filled[], float *buffer, int buffer_len,
+                float *out, int N)
+        {
+          // buffer_0 is ready for initial fill
+          barrier_t::arrival_token token1 = ready[0].arrive ();
+          // buffer_1 is ready for initial fill
+          barrier_t::arrival_token token2 = ready[1].arrive ();
 
-           /* bar[0] and bar[1] track if buffers buffer_0 and buffer_1 are ready to be filled,
-              while bar[2] and bar[3] track if buffers buffer_0 and buffer_1 are filled-in respectively */
-           #pragma nv_diag_suppress static_var_with_dynamic_init
-           __shared__ barrier_t bar[4];
+          for (int i = 0; i < N / buffer_len; ++i)
+            {
+              // wait for buffer_(i%2) to be filled
+              filled[i % 2].arrive_and_wait ();
 
-           if (threadIdx.x < 4)
-           {
-             init(bar + threadIdx.x, blockDim.x);
-           }
-           __syncthreads();
+              // consume buffer_(i%2)
 
-           if (threadIdx.x < warpSize)
-           { produce(bar, bar + 2, buffer, buffer_len, in, N); }
-           else
-           { consume(bar, bar + 2, buffer, buffer_len, out, N); }
-         }
+              // buffer_(i%2) is ready to be re-filled
+              barrier_t::arrival_token token3 = ready[i % 2].arrive ();
+            }
+        }
 
-   .. tab-item:: CUDA C++ `cuda::ptx`
+        __global__ void
+        producer_consumer_pattern (int N, float *in, float *out, int buffer_len)
+        {
+          constexpr int warpSize = 32;
 
-      .. code-block:: cpp
+          /* Shared memory buffer declared below is of size 2 * buffer_len
+            so that we can alternatively work between two buffers.
+            buffer_0 = buffer and buffer_1 = buffer + buffer_len */
+          __shared__ extern float buffer[];
 
-         #include <cuda/ptx>
+        /* bar[0] and bar[1] track if buffers buffer_0 and buffer_1 are ready to be
+          filled, while bar[2] and bar[3] track if buffers buffer_0 and buffer_1 are
+          filled-in respectively */
+        #pragma nv_diag_suppress static_var_with_dynamic_init
+          __shared__ barrier_t bar[4];
 
-         __device__ void produce(barrier ready[], barrier filled[], float *buffer, int buffer_len, float *in, int N)
-         {
-           for (int i = 0; i < N / buffer_len; ++i)
-           {
-             uint64_t token1 = cuda::ptx::mbarrier_arrive(ready[i % 2]);
-             while(!cuda::ptx::mbarrier_try_wait(&ready[i % 2], token1)) {} /* wait for buffer_(i%2) to be ready to be filled */
-             /* produce, i.e., fill in, buffer_(i%2)  */
-             uint64_t token2 = cuda::ptx::mbarrier_arrive(&filled[i % 2]); /* buffer_(i%2) is filled */
-           }
-         }
+          if (threadIdx.x < 4)
+            {
+              init (bar + threadIdx.x, blockDim.x);
+            }
+          __syncthreads ();
 
-         __device__ void consume(barrier ready[], barrier filled[], float *buffer, buffer_len, float *out, int N)
-         {
-           uint64_t token1 = cuda::ptx::mbarrier_arrive(&ready[0]); /* buffer_0 is ready for initial fill */
-           uint64_t token2 = cuda::ptx::mbarrier_arrive(&ready[1]); /* buffer_1 is ready for initial fill */
-           for (int i = 0; i < N / buffer_len; ++i)
-           {
-             uint64_t token3 = cuda::ptx::mbarrier_arrive(&filled[i % 2]);
-             while(!cuda::ptx::mbarrier_try_wait(&filled[i % 2], token3)) {} /* wait for buffer_(i%2) to be filled */
-             /* consume buffer_(i%2) */
-             uint64_t token4 = cuda::ptx::mbarrier_arrive(&ready[i % 2]); /* buffer_(i%2) is ready to be re-filled */
-           }
-         }
-
-         __global__ void producer_consumer_pattern(int N, float *in, float *out, int buffer_len)
-         {
-           constexpr int warpSize = 32;
-
-           /* Shared memory buffer declared below is of size 2 * buffer_len
-              so that we can alternatively work between two buffers.
-              buffer_0 = buffer and buffer_1 = buffer + buffer_len */
-           __shared__ extern float buffer[];
-
-           /* bar[0] and bar[1] track if buffers buffer_0 and buffer_1 are ready to be filled,
-              while bar[2] and bar[3] track if buffers buffer_0 and buffer_1 are filled-in respectively */
-           #pragma nv_diag_suppress static_var_with_dynamic_init
-           __shared__ uint64_t bar[4];
-
-           if (threadIdx.x < 4)
-           {
-             cuda::ptx::mbarrier_init(bar + threadIdx.x, blockDim.x);
-           }
-           __syncthreads();
-
-           if (threadIdx.x < warpSize)
-           {  produce(bar, bar + 2, buffer, buffer_len, in, N); }
-           else
-           {  consume(bar, bar + 2, buffer, buffer_len, out, N); }
-         }
+          if (threadIdx.x < warpSize)
+            {
+              produce (bar, bar + 2, buffer, buffer_len, in, N);
+            }
+          else
+            {
+              consume (bar, bar + 2, buffer, buffer_len, out, N);
+            }
+        }
 
    .. tab-item:: CUDA C 原语
 
       .. code-block:: cpp
 
-         #include <cuda_awbarrier_primitives.h>
+        #include <cuda_awbarrier_primitives.h>
 
-         __device__ void produce(__mbarrier_t ready[], __mbarrier_t filled[], float *buffer, int buffer_len, float *in, int N)
-         {
-           for (int i = 0; i < N / buffer_len; ++i)
-           {
-             __mbarrier_token_t token1 = __mbarrier_arrive(&ready[i % 2]); /* wait for buffer_(i%2) to be ready to be filled */
-             while(!__mbarrier_try_wait(&ready[i % 2], token1, 1000)) {}
-             /* produce, i.e., fill in, buffer_(i%2)  */
-             __mbarrier_token_t token2 = __mbarrier_arrive(filled[i % 2]);  /* buffer_(i%2) is filled */
-           }
-         }
+        __device__ void
+        produce (__mbarrier_t ready[], __mbarrier_t filled[], float *buffer,
+                int buffer_len, float *in, int N)
+        {
+          for (int i = 0; i < N / buffer_len; ++i)
+            {
+              /* wait for buffer_(i%2) to be ready to be filled */
+              __mbarrier_token_t token1 = __mbarrier_arrive (&ready[i % 2]);
+              while (!__mbarrier_try_wait (&ready[i % 2], token1, 1000))
+                {
+                }
 
-         __device__ void consume(__mbarrier_t ready[], __mbarrier_t filled[], float *buffer, int buffer_len, float *out, int N)
-         {
-           __mbarrier_token_t token1 = __mbarrier_arrive(&ready[0]); /* buffer_0 is ready for initial fill */
-           __mbarrier_token_t token2 = __mbarrier_arrive(&ready[1]); /* buffer_1 is ready for initial fill */
-           for (int i = 0; i < N / buffer_len; ++i)
-           {
-             __mbarrier_token_t token3 = __mbarrier_arrive(&filled[i % 2]);
-             while(!__mbarrier_try_wait(&filled[i % 2], token3, 1000)) {}
-             /* consume buffer_(i%2) */
-             __mbarrier_token_t token4 = __mbarrier_arrive(&ready[i % 2]); /* buffer_(i%2) is ready to be re-filled */
-           }
-         }
+              /* produce, i.e., fill in, buffer_(i%2)  */
 
-         __global__ void producer_consumer_pattern(int N, float *in, float *out, int buffer_len)
-         {
-           constexpr int warpSize = 32;
+              /* buffer_(i%2) is filled */
+              __mbarrier_token_t token2 = __mbarrier_arrive (filled[i % 2]);
+            }
+        }
 
-           /* Shared memory buffer declared below is of size 2 * buffer_len
-              so that we can alternatively work between two buffers.
-              buffer_0 = buffer and buffer_1 = buffer + buffer_len */
-           __shared__ extern float buffer[];
+        __device__ void
+        consume (__mbarrier_t ready[], __mbarrier_t filled[], float *buffer,
+                int buffer_len, float *out, int N)
+        {
+          /* buffer_0 is ready for initial fill */
+          __mbarrier_token_t token1 = __mbarrier_arrive (&ready[0]);
+          /* buffer_1 is ready for initial fill */
+          __mbarrier_token_t token2 = __mbarrier_arrive (&ready[1]);
 
-           /* bar[0] and bar[1] track if buffers buffer_0 and buffer_1 are ready to be filled,
-              while bar[2] and bar[3] track if buffers buffer_0 and buffer_1 are filled-in respectively */
-           #pragma nv_diag_suppress static_var_with_dynamic_init
-           __shared__ __mbarrier_t bar[4];
+          for (int i = 0; i < N / buffer_len; ++i)
+            {
+              __mbarrier_token_t token3 = __mbarrier_arrive (&filled[i % 2]);
+              while (!__mbarrier_try_wait (&filled[i % 2], token3, 1000))
+                {
+                }
 
-           if (threadIdx.x < 4)
-           {
-             __mbarrier_init(bar + threadIdx.x, blockDim.x);
-           }
-           __syncthreads();
+              /* consume buffer_(i%2) */
 
-           if (threadIdx.x < warpSize)
-           { produce(bar, bar + 2, buffer, buffer_len, in, N); }
-           else
-           { consume(bar, bar + 2, buffer, buffer_len, out, N); }
-         }
+              /* buffer_(i%2) is ready to be re-filled */
+              __mbarrier_token_t token4 = __mbarrier_arrive (&ready[i % 2]);
+            }
+        }
+
+        __global__ void
+        producer_consumer_pattern (int N, float *in, float *out, int buffer_len)
+        {
+          constexpr int warpSize = 32;
+
+          /* Shared memory buffer declared below is of size 2 * buffer_len
+            so that we can alternatively work between two buffers.
+            buffer_0 = buffer and buffer_1 = buffer + buffer_len */
+          __shared__ extern float buffer[];
+
+        /* bar[0] and bar[1] track if buffers buffer_0 and buffer_1 are ready to be
+          filled, while bar[2] and bar[3] track if buffers buffer_0 and buffer_1 are
+          filled-in respectively */
+        #pragma nv_diag_suppress static_var_with_dynamic_init
+          __shared__ __mbarrier_t bar[4];
+
+          if (threadIdx.x < 4)
+            {
+              __mbarrier_init (bar + threadIdx.x, blockDim.x);
+            }
+          __syncthreads ();
+
+          if (threadIdx.x < warpSize)
+            {
+              produce (bar, bar + 2, buffer, buffer_len, in, N);
+            }
+          else
+            {
+              consume (bar, bar + 2, buffer, buffer_len, out, N);
+            }
+        }
 
 在此示例中，第一个 warp 特化为生产者，其余 warp 特化为消费者。
 所有生产者和消费者线程参与四个屏障中的每一个（调用 ``bar.arrive()`` 或 ``bar.arrive_and_wait()`` ），因此预期到达计数等于 ``block.size()``。
@@ -716,6 +709,10 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
    bar.arrive_and_wait();
    /* is equivalent to */
    bar.wait(bar.arrive());
+
+.. note::
+  因为每个屏障都是使用 `blockDim.x` 初始化的：  `init (bar + threadIdx.x, blockDim.x)` 。 因此所有的线程都需要 `arrive()` 。
+  即使等待的线程也要先 `arrive()` 再 `wait()` 。
 
 生产者线程计算并填充就绪缓冲区，然后通过到达 filled 屏障 ``filled[i%2].arrive()`` 发出缓冲区已填充的信号。
 生产者线程此时不等待，而是等待下一迭代的缓冲区（双缓冲）准备好被填充。

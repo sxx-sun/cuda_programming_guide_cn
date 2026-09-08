@@ -130,7 +130,8 @@ Pipeline 机制在同一个 warp 中的 CUDA 线程之间共享。
 4.10.6. 跟踪异步内存操作
 ------------------------
 
-以下示例演示了如何使用 pipeline 跟踪复制操作，通过异步内存复制集体将数据从全局内存复制到共享内存。每个线程使用自己的 pipeline 独立提交内存复制，然后等待它们完成并消费数据。关于异步数据复制的更多详细信息，请参阅 :numref:`Section 3.2.5`。
+以下示例演示了如何使用 pipeline 跟踪复制操作，通过异步内存复制集体将数据从全局内存复制到共享内存。
+每个线程使用自己的 pipeline 独立提交内存复制，然后等待它们完成并消费数据。关于异步数据复制的更多详细信息，请参阅 :ref:`asynchronous-data-copies` 。
 
 .. raw:: html
 
@@ -249,7 +250,8 @@ Pipeline 机制在同一个 warp 中的 CUDA 线程之间共享。
 4.10.7. 使用 Pipelines 的生产者-消费者模式
 ------------------------------------------
 
-在 :numref:`Section 4.9.7` 中，我们展示了如何使用 :ref:`asynchronous-barriers` 对线程块进行空间分区以实现生产者-消费者模式。使用 ``cuda::pipeline`` ，可以通过单个分区 pipeline 简化这一过程，每个数据缓冲区使用一个阶段，而不是每个缓冲区使用两个异步屏障。
+在 :ref:`async-barriers-producer-consumer` 中，我们展示了如何使用 :ref:`asynchronous-barriers` 对线程块进行空间分区以实现生产者-消费者模式。
+使用 ``cuda::pipeline`` ，可以通过单个分区 pipeline 简化这一过程，每个数据缓冲区使用一个阶段，而不是每个缓冲区使用两个异步屏障。
 
 .. code-block:: cuda
 

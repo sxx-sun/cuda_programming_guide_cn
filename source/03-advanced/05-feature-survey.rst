@@ -219,7 +219,7 @@ CUDA 进程间通信（CUDA IPC）提供了在不同进程之间共享 GPU 缓�
 
 驱动入口点访问（Driver entry point access）是指从 CUDA 11.3 开始提供的一种能力，它允许开发者检索指向 CUDA 驱动 API 和 CUDA 运行时 API 的函数指针。
 此外，它还允许开发者获取特定驱动函数的变体版本的函数指针，并能够调用比当前安装的 CUDA 工具包更新的驱动程序中所包含的驱动函数。
-关于驱动入口点访问的详细内容，请参阅 :ref:`driver-entry-point-access` 。
+关于驱动入口点访问的详细内容，请参阅 :ref:`driver-entry-point-access-details` 。
 
 .. _error-log-management:
 
