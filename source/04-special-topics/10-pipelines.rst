@@ -47,7 +47,9 @@ Pipelines 可以是统一（unified）或分区（partitioned）的。
     : cuda::pipeline_role::consumer;
    auto pipeline = cuda::make_pipeline(group, &shared_state, thread_role);
 
-为了支持分区，共享的 ``cuda::pipeline`` 会产生额外的开销，包括每个阶段使用一组共享内存屏障进行同步。即使 pipeline 是统一的并且可以使用 ``__syncthreads()`` ，这些开销也会产生。因此，在可能的情况下，最好使用线程局部 pipeline 来避免这些开销。
+为了支持分区，共享的 ``cuda::pipeline`` 会产生额外的开销，包括每个阶段使用一组共享内存屏障进行同步。
+即使 pipeline 是统一的并且可以使用 ``__syncthreads()`` ，这些开销也会产生。
+因此，在可能的情况下，最好使用线程局部 pipeline 来避免这些开销。
 
 .. _pipelines-submit:
 
@@ -82,7 +84,8 @@ Pipelines 可以是统一（unified）或分区（partitioned）的。
 Pipeline 机制在同一个 warp 中的 CUDA 线程之间共享。
 这种共享导致提交操作序列在一个 warp 内被纠缠，在某些情况下可能会影响性能。
 
-**提交（Commit）** 。提交操作会被合并，使得 pipeline 的对于所有调用提交操作的收敛线程只递增一次，并且它们提交的操作会被批处理在一起。如果 warp 完全收敛，序列递增一，所有提交的操作将被批处理在 pipeline 的同一阶段；如果 warp 完全发散，序列递增 32，所有提交的操作将被分散到不同的阶段。
+**提交（Commit）** 。提交操作会被合并，使得 pipeline 的对于所有调用提交操作的收敛线程只递增一次，并且它们提交的操作会被批处理在一起。
+如果 warp 完全收敛，序列递增一，所有提交的操作将被批处理在 pipeline 的同一阶段；如果 warp 完全发散，序列递增 32，所有提交的操作将被分散到不同的阶段。
 
 - 设 *PB* 为 warp 共享 pipeline 的实际操作序列。
 
@@ -108,9 +111,13 @@ Pipeline 机制在同一个 warp 中的 CUDA 线程之间共享。
   - ``…``
   - Thread 31: ``TB = {0}`` （ ``TL=0`` ）
 
-**等待（Wait）**\ 。CUDA 线程调用 ``pipeline::consumer_wait()`` 或 ``pipeline_consumer_wait_prior<N>()`` 来等待感知序列 ``TB`` 中的批处理完成。注意 ``pipeline::consumer_wait()`` 等价于 ``pipeline_consumer_wait_prior<N>()`` ，其中 ``N = PL`` 。
+**等待（Wait）** 。CUDA 线程调用 ``pipeline::consumer_wait()`` 或 ``pipeline_consumer_wait_prior<N>()`` 来等待感知序列 ``TB`` 中的批处理完成。
+注意 ``pipeline::consumer_wait()`` 等价于 ``pipeline_consumer_wait_prior<N>()`` ，其中 ``N = PL`` 。
 
-**等待优先（wait prior）**\ 变体等待实际序列中至少到并包括 ``PL-N`` 的批处理。由于 ``TL <= PL`` ，等待到并包括 ``PL-N`` 的批处理包括等待批处理 ``TL-N`` 。因此，当 ``TL < PL`` 时，线程会意外地等待额外的、更近的批处理。在上面的极端完全发散 warp 示例中，每个线程可能等待所有 32 个批处理。
+**等待优先（wait prior）** 变体等待实际序列中至少到并包括 ``PL-N`` 的批处理。
+由于 ``TL <= PL`` ，等待到并包括 ``PL-N`` 的批处理包括等待批处理 ``TL-N`` 。
+因此，当 ``TL < PL`` 时，线程会意外地等待额外的、更近的批处理。
+在上面的极端完全发散 warp 示例中，每个线程可能等待所有 32 个批处理。
 
 .. note::
 
@@ -133,117 +140,110 @@ Pipeline 机制在同一个 warp 中的 CUDA 线程之间共享。
 以下示例演示了如何使用 pipeline 跟踪复制操作，通过异步内存复制集体将数据从全局内存复制到共享内存。
 每个线程使用自己的 pipeline 独立提交内存复制，然后等待它们完成并消费数据。关于异步数据复制的更多详细信息，请参阅 :ref:`asynchronous-data-copies` 。
 
-.. raw:: html
 
-   <details>
-   <summary><b>CUDA C++ <code>cuda::pipeline</code></b></summary>
+.. tab-set::
 
-.. code-block:: cuda
+   .. tab-item:: CUDA C++ `cuda::pipeline`
 
-   #include <cuda/pipeline>
+      .. code-block:: cuda
 
-   __global__ void example_kernel(const float *in)
-   {
-       constexpr int block_size = 128;
-       __shared__ __align__(sizeof(float)) float buffer[4 * block_size];
+         #include <cuda/pipeline>
 
-       // Create a unified pipeline per thread
-       cuda::pipeline<cuda::thread_scope_thread> pipeline = cuda::make_pipeline();
+         __global__ void example_kernel(const float *in)
+         {
+             constexpr int block_size = 128;
+             __shared__ __align__(sizeof(float)) float buffer[4 * block_size];
 
-       // First stage of memory copies
-       pipeline.producer_acquire();
-       // Every thread fetches one element of the first block
-       cuda::memcpy_async(buffer, in, sizeof(float), pipeline);
-       pipeline.producer_commit();
+             // Create a unified pipeline per thread
+             cuda::pipeline<cuda::thread_scope_thread> pipeline = cuda::make_pipeline();
 
-       // Second stage of memory copies
-       pipeline.producer_acquire();
-       // Every thread fetches one element of the second and third block
-       cuda::memcpy_async(buffer + block_size, in + block_size, sizeof(float), pipeline);
-       cuda::memcpy_async(buffer + 2 * block_size, in + 2 * block_size, sizeof(float), pipeline);
-       pipeline.producer_commit();
+             // First stage of memory copies
+             pipeline.producer_acquire();
+             // Every thread fetches one element of the first block
+             cuda::memcpy_async(buffer, in, sizeof(float), pipeline);
+             pipeline.producer_commit();
 
-       // Third stage of memory copies
-       pipeline.producer_acquire();
-       // Every thread fetches one element of the last block
-       cuda::memcpy_async(buffer + 3 * block_size, in + 3 * block_size, sizeof(float), pipeline);
-       pipeline.producer_commit();
+             // Second stage of memory copies
+             pipeline.producer_acquire();
+             // Every thread fetches one element of the second and third block
+             cuda::memcpy_async(buffer + block_size, in + block_size, sizeof(float), pipeline);
+             cuda::memcpy_async(buffer + 2 * block_size, in + 2 * block_size, sizeof(float), pipeline);
+             pipeline.producer_commit();
 
-       // Wait for the oldest stage (waits for first stage)
-       pipeline.consumer_wait();
-       pipeline.consumer_release();
+             // Third stage of memory copies
+             pipeline.producer_acquire();
+             // Every thread fetches one element of the last block
+             cuda::memcpy_async(buffer + 3 * block_size, in + 3 * block_size, sizeof(float), pipeline);
+             pipeline.producer_commit();
 
-       // __syncthreads();
-       // Use data from the first stage
+             // Wait for the oldest stage (waits for first stage)
+             pipeline.consumer_wait();
+             pipeline.consumer_release();
 
-       // Wait for the oldest stage (waits for second stage)
-       pipeline.consumer_wait();
-       pipeline.consumer_release();
+             // __syncthreads();
+             // Use data from the first stage
 
-       // __syncthreads();
-       // Use data from the second stage
+             // Wait for the oldest stage (waits for second stage)
+             pipeline.consumer_wait();
+             pipeline.consumer_release();
 
-       // Wait for the oldest stage (waits for third stage)
-       pipeline.consumer_wait();
-       pipeline.consumer_release();
+             // __syncthreads();
+             // Use data from the second stage
 
-       // __syncthreads();
-       // Use data from the third stage
-   }
+             // Wait for the oldest stage (waits for third stage)
+             pipeline.consumer_wait();
+             pipeline.consumer_release();
 
-.. raw:: html
+             // __syncthreads();
+             // Use data from the third stage
+         }
 
-   </details>
-   <details>
-   <summary><b>CUDA C primitives</b></summary>
+   .. tab-item:: CUDA C primitives
 
-.. code-block:: cuda
+      .. code-block:: cuda
 
-   #include <cuda_pipeline.h>
+          #include <cuda_pipeline.h>
 
-   __global__ void example_kernel(const float *in)
-   {
-       constexpr int block_size = 128;
-       __shared__ __align__(sizeof(float)) float buffer[4 * block_size];
+          __global__ void example_kernel(const float *in)
+          {
+              constexpr int block_size = 128;
+              __shared__ __align__(sizeof(float)) float buffer[4 * block_size];
 
-       // First batch of memory copies
-       // Every thread fetches one element of the first block
-       __pipeline_memcpy_async(buffer, in, sizeof(float));
-       __pipeline_commit();
+              // First batch of memory copies
+              // Every thread fetches one element of the first block
+              __pipeline_memcpy_async(buffer, in, sizeof(float));
+              __pipeline_commit();
 
-       // Second batch of memory copies
-       // Every thread fetches one element of the second and third block
-       __pipeline_memcpy_async(buffer + block_size, in + block_size, sizeof(float));
-       __pipeline_memcpy_async(buffer + 2 * block_size, in + 2 * block_size, sizeof(float));
-       __pipeline_commit();
+              // Second batch of memory copies
+              // Every thread fetches one element of the second and third block
+              __pipeline_memcpy_async(buffer + block_size, in + block_size, sizeof(float));
+              __pipeline_memcpy_async(buffer + 2 * block_size, in + 2 * block_size, sizeof(float));
+              __pipeline_commit();
 
-       // Third batch of memory copies
-       // Every thread fetches one element of the last block
-       __pipeline_memcpy_async(buffer + 3 * block_size, in + 3 * block_size, sizeof(float));
-       __pipeline_commit();
+              // Third batch of memory copies
+              // Every thread fetches one element of the last block
+              __pipeline_memcpy_async(buffer + 3 * block_size, in + 3 * block_size, sizeof(float));
+              __pipeline_commit();
 
-       // Wait for all except the last two batches of memory copies (waits for first batch)
-       __pipeline_wait_prior(2);
+              // Wait for all except the last two batches of memory copies (waits for first batch)
+              __pipeline_wait_prior(2);
 
-       // __syncthreads();
-       // Use data from the first batch
+              // __syncthreads();
+              // Use data from the first batch
 
-       // Wait for all except the last batch of memory copies (waits for second batch)
-       __pipeline_wait_prior(1);
+              // Wait for all except the last batch of memory copies (waits for second batch)
+              __pipeline_wait_prior(1);
 
-       // __syncthreads();
-       // Use data from the second batch
+              // __syncthreads();
+              // Use data from the second batch
 
-       // Wait for all batches of memory copies (waits for third batch)
-       __pipeline_wait_prior(0);
+              // Wait for all batches of memory copies (waits for third batch)
+              __pipeline_wait_prior(0);
 
-       // __syncthreads();
-       // Use data from the last batch
-   }
+              // __syncthreads();
+              // Use data from the last batch
+          }
 
-.. raw:: html
-
-   </details>
 
 .. _pipelines-producer-consumer:
 
@@ -324,4 +324,10 @@ Pipeline 机制在同一个 warp 中的 CUDA 线程之间共享。
      }
    }
 
-在这个示例中，我们使用线程块中一半的线程作为生产者，另一半作为消费者。首先，我们需要创建一个 ``cuda::pipeline`` 对象。由于我们希望一些线程是生产者而另一些是消费者，我们需要使用 ``cuda::thread_scope_block`` 的分区 pipeline。分区 pipeline 需要一个 ``cuda::pipeline_shared_state`` 来协调参与的线程。我们为线程块作用域的 2 阶段 pipeline 初始化状态，然后调用 ``cuda::make_pipeline()`` 。接下来，生产者线程通过提交从 ``in`` 到 ``buffer`` 的异步复制来填充 pipeline。此时所有数据复制都在进行中。最后，在主循环中，我们遍历所有数据批次，根据线程是生产者还是消费者，我们要么为未来的批次提交另一个异步复制，要么消费当前批次。
+在这个示例中，我们使用线程块中一半的线程作为生产者，另一半作为消费者。首先，我们需要创建一个 ``cuda::pipeline`` 对象。
+由于我们希望一些线程是生产者而另一些是消费者，我们需要使用 ``cuda::thread_scope_block`` 的分区 pipeline。
+分区 pipeline 需要一个 ``cuda::pipeline_shared_state`` 来协调参与的线程。
+我们为线程块作用域的 2 阶段 pipeline 初始化状态，然后调用 ``cuda::make_pipeline()`` 。
+接下来，生产者线程通过提交从 ``in`` 到 ``buffer`` 的异步复制来填充 pipeline。
+此时所有数据复制都在进行中。
+最后，在主循环中，我们遍历所有数据批次，根据线程是生产者还是消费者，我们要么为未来的批次提交另一个异步复制，要么消费当前批次。

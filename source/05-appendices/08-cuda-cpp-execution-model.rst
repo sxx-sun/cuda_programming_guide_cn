@@ -35,7 +35,7 @@ CUDA C++ 编程语言是 C++ 编程语言的扩展。本节记录了对当前 `I
 
 - 如果它是 `Cooperative Grid <https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__EXECUTION.html#group__CUDART__EXECUTION_1g504b94170f83285c71031be6d5d15f73>`__ 的一部分，则其 grid 中的所有设备线程应最终取得进展。
 
-- 否则，其 :ref:`thread-block-cluster` 中的所有设备线程应最终取得进展。
+- 否则，其 :ref:`线程块集群 <intro-cuda-cpp-thread-block-cluster>` 中的所有设备线程应最终取得进展。
 
   [注：其他线程块集群中的线程不保证最终取得进展。——尾注]
 
@@ -69,7 +69,7 @@ CUDA C++ 编程语言是 C++ 编程语言的扩展。本节记录了对当前 `I
 
    [注：设备线程相对于主机线程的一些当前限制是我们已知的实现缺陷，我们可能会随着时间的推移修复这些缺陷。示例包括设备线程最终仅对自动存储期对象执行 volatile 或原子操作所产生的未定义行为。但是，设备线程相对于主机线程的其他限制是有意的选择。它们使性能优化成为可能，如果设备线程严格遵循 C++ 标准，则无法实现这些优化。例如，为最终仅执行原子写入或栅栏的程序提供前进保证会降低整体性能，而实际收益很小。——尾注]
 
-.. dropdown:: 主机线程和设备线程前进保证差异示例（由于对 [intro.progress.1] 的修改）
+.. dropdown:: 主机线程和设备线程前进保证差异示例（由于对 `[intro.progress.1] <https://eel.is/c++draft/intro.progress#1>`__ 的修改）
 
    以下示例使用 "host.threads.<id>" 和 "device.threads.<id>" 分别指代上述主机和设备线程的实现假设的条款子项。
 
@@ -219,7 +219,7 @@ CUDA 查询函数（例如 `cudaStreamQuery <https://docs.nvidia.com/cuda/cuda-r
 
 设备线程在其所有依赖项完成之前不应启动。
 
-[注：阻止设备线程开始取得进展的依赖关系可以通过多种方式创建，例如通过 :ref:`cuda-streams`。这些依赖关系可能包括对 :ref:`cuda-events` 和 :ref:`kernels` 等完成的依赖。——尾注]
+[注：阻止设备线程开始取得进展的依赖关系，例如可以通过 :ref:`CUDA 流命令 <cuda-streams>` 创建。这些依赖关系可能包括对 :ref:`CUDA Events <cuda-events>` 和 :ref:`CUDA 核函数 <kernels>` 等完成的依赖。——尾注]
 
 .. dropdown:: 依赖关系导致的 CUDA API 前进保证示例
 

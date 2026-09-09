@@ -43,14 +43,14 @@ CUDA 中的 Dynamic Parallelism 允许 GPU 线程配置、启动和隐式同步�
    :align: center
    :alt: 父子启动嵌套
 
-   父子启动嵌套
+   图 57 父子启动嵌套
 
 .. _scope-of-cuda-primitives-cdp2:
 
 4.18.2.2. CUDA 原语的作用域
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-CUDA Dynamic Parallelism 依赖于 :ref:`cuda-device-runtime`，它允许调用一组有限的 API，这些 API 在语法上与 CUDA Runtime API 相似，但在设备代码中可用。设备运行时 API 的行为与其主机对应项相似，但存在一些差异。这些差异在 :ref:`device-runtime-api-reference` 章节的表格中列出。
+CUDA Dynamic Parallelism 依赖于 :ref:`cuda-device-runtime`，它允许调用一组有限的 API，这些 API 在语法上与 CUDA Runtime API 相似，但在设备代码中可用。设备运行时 API 的行为与其主机对应项相似，但存在一些差异。这些差异在 :ref:`api-reference` 章节的表格中列出。
 
 在主机和设备上，CUDA 运行时都提供了用于启动 kernel 和通过 stream 和 event 跟踪启动之间依赖关系的 API。在设备上，启动的 kernel 和 CUDA 对象对调用 grid 中的所有线程可见。这意味着，例如，一个 stream 可以由一个线程创建，并由同一 grid 中的任何其他线程使用。但是，由设备 API 调用创建的 CUDA 对象（如 stream 和 event）仅在创建它们的 grid 内有效。
 
@@ -171,14 +171,14 @@ CUDA *Stream* 和 *Event* 允许控制 kernel 启动之间的依赖关系：启�
 
 .. code-block:: c++
 
-   int x_array[10];       // 在父的本地内存中创建 x_array
+   int x_array[10];       // Creates x_array in parent's local memory
    child_launch<<< 1, 1 >>>(x_array);
 
 程序员有时很难知道编译器何时将变量放入本地内存。作为一般规则，传递给子 kernel 的所有存储都应该从全局内存堆中显式分配，可以使用 ``cudaMalloc()`` 、 ``new()`` 或通过在全局作用域声明 ``__device__`` 存储。例如：
 
 .. code-block:: c++
 
-   // 正确 - "value" 是全局存储
+   // Correct - "value" is global storage
    __device__ int value;
    __device__ void x() {
        value = 5;
@@ -187,7 +187,7 @@ CUDA *Stream* 和 *Event* 允许控制 kernel 启动之间的依赖关系：启�
 
 .. code-block:: c++
 
-   // 无效 - "value" 是本地存储
+   // Invalid - "value" is local storage
    __device__ void y() {
        int value = 5;
        child<<< 1, 1 >>>(&value);
@@ -228,27 +228,27 @@ CUDA *Stream* 和 *Event* 允许控制 kernel 启动之间的依赖关系：启�
 
    __global__ void parentKernel()
    {
-       // 启动子 kernel
+       // launch child
        childKernel<<<1,1>>>();
        if (cudaSuccess != cudaGetLastError()) {
            return;
        }
 
-       // 将 tail kernel 启动到 cudaStreamTailLaunch stream
-       // 隐式同步：等待子 kernel 完成
+       // launch tail into cudaStreamTailLaunch stream
+       // implicitly synchronizes: waits for child to complete
        tailKernel<<<1,1,0,cudaStreamTailLaunch>>>();
 
    }
 
    int main(int argc, char *argv[])
    {
-       // 启动父 kernel
+       // launch parent
        parentKernel<<<1,1>>>();
        if (cudaSuccess != cudaGetLastError()) {
            return 1;
        }
 
-       // 等待父 kernel 完成
+       // wait for parent to complete
        if (cudaSuccess != cudaDeviceSynchronize()) {
            return 2;
        }
@@ -354,7 +354,7 @@ CUDA *Stream* 和 *Event* 允许控制 kernel 启动之间的依赖关系：启�
 4.18.5.2. 实现限制与局限性
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Dynamic Parallelism 保证本文档中描述的所有语义，但是，某些硬件和软件资源是实现相关的，并限制了使用设备运行的程序的范围、性能和其他属性。
+Dynamic Parallelism 保证本文档中描述的所有语义，但是，某些硬件和软件资源是实现相关的，并限制了使用设备运行时的程序的范围、性能和其他属性。
 
 .. _runtime:
 
@@ -366,7 +366,7 @@ Dynamic Parallelism 保证本文档中描述的所有语义，但是，某些硬
 4.18.5.2.1.1. 内存占用
 .......................
 
-设备运行时系统软件保留内存用于各种管理目的，特别是用于跟踪待处理 grid 启动的预留。配置控件可用于减少此预留的大小，以换取某些启动限制。有关详细信息，请参阅下面的 :ref:`device-runtime-configuration-options`。
+设备运行时系统软件保留内存用于各种管理目的，特别是用于跟踪待处理 grid 启动的预留。配置控件可用于减少此预留的大小，以换取某些启动限制。有关详细信息，请参阅下面的 :ref:`configuration-options`。
 
 .. _pending-kernel-launches:
 
@@ -430,7 +430,7 @@ CDP2 是默认版本。函数可以使用 ``-DCUDA_FORCE_CDP1_IF_SUPPORTED`` 编
 
 .. code-block:: c++
 
-   // 当 .address_size 为 64 时的 PTX 级 cudaLaunchDevice() 声明
+   // PTX-level Declaration of cudaLaunchDevice() when .address_size is 64
    .extern .func(.param .b32 func_retval0) cudaLaunchDevice
    (
      .param .b64 func,
@@ -446,14 +446,14 @@ CDP2 是默认版本。函数可以使用 ``-DCUDA_FORCE_CDP1_IF_SUPPORTED`` 编
 
 .. code-block:: c++
 
-   // CUDA 级 cudaLaunchDevice() 声明
+   // CUDA-level declaration of cudaLaunchDevice()
    extern "C" __device__
    cudaError_t cudaLaunchDevice(void *func, void *parameterBuffer,
                                 dim3 gridDimension, dim3 blockDimension,
                                 unsigned int sharedMemSize,
                                 cudaStream_t stream);
 
-第一个参数是指向要启动的 kernel 的指针，第二个参数是保存启动 kernel 实际参数的参数缓冲区。参数缓冲区的布局在下面的 :ref:`parameter-buffer-layout` 中解释。其他参数指定启动配置，即 grid 维度、块维度、共享内存大小和与启动关联的 stream（有关启动配置的详细描述，请参阅 :ref:`execution-configuration` ）。
+第一个参数是指向要启动的 kernel 的指针，第二个参数是保存启动 kernel 实际参数的参数缓冲区。参数缓冲区的布局在下面的 :ref:`parameter-buffer-layout` 中解释。其他参数指定启动配置，即 grid 维度、块维度、共享内存大小和与启动关联的 stream（有关启动配置的详细描述，请参阅 :ref:`kernel-configuration` ）。
 
 .. _cudagetparameterbuffer-cdp2:
 
@@ -464,7 +464,7 @@ CDP2 是默认版本。函数可以使用 ``-DCUDA_FORCE_CDP1_IF_SUPPORTED`` 编
 
 .. code-block:: c++
 
-   // 当 .address_size 为 64 时的 PTX 级 cudaGetParameterBuffer() 声明
+   // PTX-level Declaration of cudaGetParameterBuffer() when .address_size is 64
    .extern .func(.param .b64 func_retval0) cudaGetParameterBuffer
    (
      .param .b64 alignment,
@@ -476,7 +476,7 @@ CDP2 是默认版本。函数可以使用 ``-DCUDA_FORCE_CDP1_IF_SUPPORTED`` 编
 
 .. code-block:: c++
 
-   // CUDA 级 cudaGetParameterBuffer() 声明
+   // CUDA-level Declaration of cudaGetParameterBuffer()
    extern "C" __device__
    void *cudaGetParameterBuffer(size_t alignment, size_t size);
 

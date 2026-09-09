@@ -118,7 +118,7 @@ EGM 使用由操作系统分配的 NUMA 节点标识符。请注意，此标识�
 4.17.2.2.1. 使用 VMM API
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-使用虚拟内存管理 API 分配内存的第一步是创建一个物理内存块，为分配提供后备存储。有关更多详细信息，请参阅 CUDA 编程指南的虚拟内存管理部分。在 EGM 分配中，用户必须显式提供 ``CU_MEM_LOCATION_TYPE_HOST_NUMA`` 作为位置类型，并提供 ``numaID`` 作为位置标识符。此外，在 EGM 中，分配必须与平台的适当粒度对齐。以下代码片段展示了使用 ``cuMemCreate`` 分配物理内存：
+使用虚拟内存管理 API 分配内存的第一步是创建一个物理内存块，为分配提供后备存储。有关更多详细信息，请参阅 CUDA 编程指南的 :ref:`virtual-memory-management` 部分。在 EGM 分配中，用户必须显式提供 ``CU_MEM_LOCATION_TYPE_HOST_NUMA`` 作为位置类型，并提供 ``numaID`` 作为位置标识符。此外，在 EGM 中，分配必须与平台的适当粒度对齐。以下代码片段展示了使用 ``cuMemCreate`` 分配物理内存：
 
 .. code-block:: c++
 
@@ -195,7 +195,7 @@ EGM 使用由操作系统分配的 NUMA 节点标识符。请注意，此标识�
 4.17.2.3. 多节点、多 GPU
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-除了内存分配之外，远程对等访问没有 EGM 特定的修改，它遵循 CUDA 进程间（IPC）协议。有关 IPC 的更多详细信息，请参阅 CUDA 编程指南。
+除了内存分配之外，远程对等访问没有 EGM 特定的修改，它遵循 CUDA 进程间（IPC）协议。有关 IPC 的更多详细信息，请参阅 CUDA 编程指南的 :ref:`interprocess-communication` 。
 
 用户应该使用 ``cuMemCreate`` 分配内存，并且同样必须显式提供 ``CU_MEM_LOCATION_TYPE_HOST_NUMA`` 作为位置类型，并提供 ``numaID`` 作为位置标识符。此外，应将 ``CU_MEM_HANDLE_TYPE_FABRIC`` 定义为请求的句柄类型。以下代码片段展示了在节点 A 上分配物理内存：
 
@@ -221,13 +221,13 @@ EGM 使用由操作系统分配的 NUMA 节点标识符。请注意，此标识�
 
    cuMemExportToShareableHandle(&fabricHandle, allocHandle,
                                 CU_MEM_HANDLE_TYPE_FABRIC, 0);
-   // 此时，fabricHandle 应通过 TCP/IP 发送到节点 B。
+    // At this point, fabricHandle should be sent to Node B via TCP/IP.
 
 在节点 B 上，可以使用 ``cuMemImportFromShareableHandle`` 导入句柄，并将其视为任何其他 fabric 句柄：
 
 .. code-block:: c++
 
-   // 此时，fabricHandle 应通过 TCP/IP 从节点 A 接收。
+    // At this point, fabricHandle should be received from Node A via TCP/IP.
    CUmemGenericAllocationHandle allocHandle;
    cuMemImportFromShareableHandle(&allocHandle, &fabricHandle,
                                   CU_MEM_HANDLE_TYPE_FABRIC);
@@ -250,7 +250,7 @@ EGM 使用由操作系统分配的 NUMA 节点标识符。请注意，此标识�
 
 .. code-block:: c++
 
-   // 为所有 8 个本地 GPU 授予对位于节点 A 的导出 EGM 内存的访问权限。
+    // Give all 8 local GPUs access to exported EGM memory located on Node A.
    CUmemAccessDesc accessDesc[8];
    for (int i = 0; i < 8; i++) {
       accessDesc[i].location.type = CU_MEM_LOCATION_TYPE_DEVICE;

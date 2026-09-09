@@ -74,7 +74,7 @@ GPU 设备的枚举顺序决定了序号值。
 
    CUDA_DEVICE_ORDER=FASTEST_FIRST
    CUDA_DEVICE_ORDER=PCI_BUS_ID
-   nvidia-smi --query-gpu=name,pci.bus_id  # 获取 PCI 总线 ID 列表
+   nvidia-smi --query-gpu=name,pci.bus_id  # Get list of PCI bus IDs
 
 ----
 
@@ -96,7 +96,7 @@ GPU 设备的枚举顺序决定了序号值。
 .. code-block:: bash
 
    CUDA_MANAGED_FORCE_DEVICE_ALLOC=0
-   CUDA_MANAGED_FORCE_DEVICE_ALLOC=1  # 强制使用设备内存
+   CUDA_MANAGED_FORCE_DEVICE_ALLOC=1  # force device memory
 
 译注：主要针对 Windows 设备。 从 CUDA 8.0 起此变量对 Linux 无效，Linux 上的托管内存分配策略由驱动自动管理。
 
@@ -128,8 +128,8 @@ GPU 设备的枚举顺序决定了序号值。
 
 .. code-block:: bash
 
-   CUDA_CACHE_DISABLE=1  # 禁用缓存
-   CUDA_CACHE_DISABLE=0  # 启用缓存
+   CUDA_CACHE_DISABLE=1  # disables caching
+   CUDA_CACHE_DISABLE=0  # enables caching
 
 ----
 
@@ -185,7 +185,7 @@ GPU 设备的枚举顺序决定了序号值。
 
 这些环境变量指示 CUDA 驱动程序忽略应用程序中嵌入的任何 CUBIN，并对嵌入的 PTX 代码执行 :ref:`just-in-time-compilation`。
 
-强制 JIT 编译会增加应用程序在初始执行期间的加载时间。但是，它可用于验证 PTX 代码是否嵌入在应用程序中以及其即时编译是否正常工作。这确保了与未来架构的 `前向兼容性 <https://docs.nvidia.com/deploy/cuda-compatibility/>`_。
+强制 JIT 编译会增加应用程序在初始执行期间的加载时间。但是，它可用于验证 PTX 代码是否嵌入在应用程序中以及其即时编译是否正常工作。这确保了与未来架构的 `前向兼容性 <https://docs.nvidia.com/deploy/cuda-compatibility/>`_ 。
 
 ``CUDA_FORCE_PTX_JIT`` 优先于 ``CUDA_FORCE_JIT`` 。
 
@@ -413,8 +413,10 @@ GPU 设备的枚举顺序决定了序号值。
 
 .. code-block:: bash
 
-   CUDA_DISABLE_PERF_BOOST=1  # 禁用性能提升，仅限 Linux
-   CUDA_DISABLE_PERF_BOOST=0  # 默认行为
+   CUDA_DISABLE_PERF_BOOST=1  # perf boost disabled, Linux only.
+   CUDA_DISABLE_PERF_BOOST=0  # default behavior
+
+----
 
 .. _cuda-auto-boost-deprecated:
 
@@ -486,6 +488,8 @@ GPU 设备的枚举顺序决定了序号值。
 .. code-block:: bash
 
    CUDA_MODULE_DATA_LOADING=EAGER
+
+----
 
 .. _cuda-binary-loader-thread-count:
 

@@ -15,7 +15,7 @@
 
 - *抢占*
 
-  GPU 调度器可以开始执行 :doc:`更高优先级的 kernel <../02-basics/asynchronous-execution>`，即使它是在较低优先级的 kernel 已经开始执行后才启动的，方法是在较低优先级的 kernel 的线程块完成时调度其线程块。然后，一旦高优先级的 kernel 完成执行，它就可以恢复执行较低优先级的 kernel。
+  GPU 调度器可以开始执行 :ref:`更高优先级的 kernel <async-execution-stream-priorities>`，即使它是在较低优先级的 kernel 已经开始执行后才启动的，方法是在较低优先级的 kernel 的线程块完成时调度其线程块。然后，一旦高优先级的 kernel 完成执行，它就可以恢复执行较低优先级的 kernel。
 
 **固定线程块数量**：在这种方法中，通常实现为 block-stride 或 grid-stride 循环，线程块数量不依赖于问题规模。相反，每个线程块完成的工作量是问题规模的函数。通常，线程块数量基于执行 kernel 的 GPU 上的 SM 数量和所需的占用率。
 
@@ -35,7 +35,7 @@
    :alt: Cluster Launch Control Flow
    :align: center
 
-   图 51 Cluster Launch Control 流程
+   图 54 Cluster Launch Control 流程
 
 使用 cluster launch control，线程块尝试取消尚未开始执行的另一个线程块的启动。如果取消请求成功，它会使用另一个线程块的索引来执行任务，从而"窃取"其工作。如果没有更多可用的线程块索引或由于其他原因（例如调度了更高优先级的 kernel），取消将失败。在后一种情况下，如果线程块在取消失败后退出，调度器可以开始执行更高优先级的 kernel，之后它将继续调度当前 kernel 的剩余线程块以执行。上图 :numref:`fig-cluster-launch-control` 展示了此过程的执行流程。
 
@@ -71,15 +71,15 @@
 4.12.1. API 详情
 ----------------
 
-通过 cluster launch control API 取消线程块是异步完成的，并使用共享内存屏障进行同步，遵循与 :doc:`异步数据复制 <../03-advanced/advanced-kernel-programming>` 类似的编程模式。
+通过 cluster launch control API 取消线程块是异步完成的，并使用共享内存屏障进行同步，遵循与 :ref:`异步数据复制 <asynchronous-data-copies>` 类似的编程模式。
 
-该 API 通过 `libcu++ <https://nvidia.github.io/cccl/libcudacxx/ptx_api.html>`_ 提供，提供：
+该 API 通过 `libcu++ <https://nvidia.github.io/cccl/unstable/libcudacxx/ptx_api.html>`_ 提供，提供：
 
 - 一个请求指令，将编码的取消结果写入 ``__shared__`` 变量。
 
 - 解码指令，提取成功/失败状态和被取消的线程块索引。
 
-注意，cluster launch control 操作被建模为异步代理操作（参见 :ref:`async-thread-proxy` ）。
+注意，cluster launch control 操作被建模为异步代理操作（参见 :ref:`async-thread-and-async-proxy` ）。
 
 .. _thread-block-cancellation:
 
@@ -99,9 +99,9 @@
    .. code-block:: cuda
       :linenos:
 
-      __shared__ uint4 result;  // 请求结果。
-      __shared__ uint64_t bar;  // 同步屏障。
-      int phase = 0;            // 同步屏障阶段。
+      __shared__ uint4 result;  // Request result.
+      __shared__ uint64_t bar;  // Synchronization barrier.
+      int phase = 0;            // Synchronization barrier phase.
 
 2. 使用单个到达计数初始化共享内存屏障：
 
@@ -124,7 +124,7 @@
 
    .. note::
 
-      由于线程块取消是一个统一指令，建议在 :ref:`cooperative-groups-invoke-one` 线程选择器内提交它。这允许编译器优化掉剥离循环。
+      由于线程块取消是一个统一指令，建议在 :ref:`cg-invoke-one` 线程选择器内提交它。这允许编译器优化掉剥离循环。
 
 4. 同步（完成）异步取消请求：
 
@@ -142,7 +142,7 @@
 
       bool success = ptx::clusterlaunchcontrol_query_cancel_is_canceled(result);
       if (success) {
-          // 对于 1D/2D 线程块不需要全部三个：
+          // Don't need all three for 1D/2D thread blocks:
           int bx = ptx::clusterlaunchcontrol_query_cancel_get_first_ctaid_x(result);
           int by = ptx::clusterlaunchcontrol_query_cancel_get_first_ctaid_y(result);
           int bz = ptx::clusterlaunchcontrol_query_cancel_get_first_ctaid_z(result);
@@ -220,40 +220,40 @@
   .. code-block:: cuda
      :linenos:
 
-     __global__
-     void kernel_fixed_work (float* data, int n)
-     {
-         // 序言：
-         float alpha = compute_scalar();
+      __global__
+      void kernel_fixed_work (float* data, int n)
+      {
+          // Prologue:
+          float alpha = compute_scalar();
 
-         // 计算：
-         int i = blockIdx.x * blockDim.x + threadIdx.x;
-         if (i < n)
-             data[i] *= alpha;
-     }
+          // Computation:
+          int i = blockIdx.x * blockDim.x + threadIdx.x;
+          if (i < n)
+              data[i] *= alpha;
+      }
 
-     // 启动：kernel_fixed_work<<<1024, (n + 1023) / 1024>>>(data, n);
+      // Launch: kernel_fixed_work<<<(n + 1023) / 1024, 1024>>>(data, n);
 
 - 固定线程块数量：
 
   .. code-block:: cuda
      :linenos:
 
-     __global__
-     void kernel_fixed_blocks (float* data, int n)
-     {
-         // 序言：
-         float alpha = compute_scalar();
+      __global__
+      void kernel_fixed_blocks (float* data, int n)
+      {
+          // Prologue:
+          float alpha = compute_scalar();
 
-         // 计算：
-         int i = blockIdx.x * blockDim.x + threadIdx.x;
-         while (i < n) {
-             data[i] *= alpha;
-             i += gridDim.x * blockDim.x;
-         }
-     }
+          // Computation:
+          int i = blockIdx.x * blockDim.x + threadIdx.x;
+          while (i < n) {
+              data[i] *= alpha;
+              i += gridDim.x * blockDim.x;
+          }
+      }
 
-     // 启动：kernel_fixed_blocks<<<1024, SM_COUNT>>>(data, n);
+      // Launch: kernel_fixed_blocks<<<SM_COUNT, 1024>>>(data, n);
 
 - Cluster Launch Control：
 
@@ -266,60 +266,60 @@
      namespace cg = cooperative_groups;
      namespace ptx = cuda::ptx;
 
-     __global__
-     void kernel_cluster_launch_control (float* data, int n)
-     {
-         // Cluster launch control 初始化：
-         __shared__ uint4 result;
-         __shared__ uint64_t bar;
-         int phase = 0;
+      __global__
+      void kernel_cluster_launch_control (float* data, int n)
+      {
+          // Cluster launch control initialization:
+          __shared__ uint4 result;
+          __shared__ uint64_t bar;
+          int phase = 0;
 
-         if (cg::thread_block::thread_rank() == 0)
-             ptx::mbarrier_init(&bar, 1);
+          if (cg::thread_block::thread_rank() == 0)
+              ptx::mbarrier_init(&bar, 1);
 
-         // 序言：
-         float alpha = compute_scalar();  // 此代码片段中未显示设备函数。
+          // Prologue:
+          float alpha = compute_scalar();  // Device function not shown in this code snippet.
 
-         // 工作窃取循环：
-         int bx = blockIdx.x;  // 假设是一维 x 轴线程块。
+          // Work-stealing loop:
+          int bx = blockIdx.x;  // Assuming 1D x-axis thread blocks.
 
-         while (true) {
-             // 保护结果在下一次迭代中被覆盖，
-             // （也确保在第一次迭代时屏障初始化）：
-             __syncthreads();
+          while (true) {
+              // Protect result from overwrite in the next iteration,
+              // (also ensure barrier initialization at 1st iteration):
+              __syncthreads();
 
-             // 取消请求：
-             if (cg::thread_block::thread_rank() == 0) {
-                 // 在异步代理中获取结果的写入：
-                 ptx::fence_proxy_async_generic_sync_restrict(ptx::sem_acquire, ptx::space_cluster, ptx::scope_cluster);
+              // Cancellation request:
+              if (cg::thread_block::thread_rank() == 0) {
+                  // Acquire write of result in the async proxy:
+                  ptx::fence_proxy_async_generic_sync_restrict(ptx::sem_acquire, ptx::space_cluster, ptx::scope_cluster);
 
-                 cg::invoke_one(cg::coalesced_threads(), [&](){ptx::clusterlaunchcontrol_try_cancel(&result, &bar);});
-                 ptx::mbarrier_arrive_expect_tx(ptx::sem_relaxed, ptx::scope_cta, ptx::space_shared, &bar, sizeof(uint4));
-             }
+                  cg::invoke_one(cg::coalesced_threads(), [&](){ptx::clusterlaunchcontrol_try_cancel(&result, &bar);});
+                  ptx::mbarrier_arrive_expect_tx(ptx::sem_relaxed, ptx::scope_cta, ptx::space_shared, &bar, sizeof(uint4));
+              }
 
-             // 计算：
-             int i = bx * blockDim.x + threadIdx.x;
-             if (i < n)
-                 data[i] *= alpha;
+              // Computation:
+              int i = bx * blockDim.x + threadIdx.x;
+              if (i < n)
+                  data[i] *= alpha;
 
-             // 取消请求同步：
-             while (!ptx::mbarrier_try_wait_parity(ptx::sem_acquire, ptx::scope_cta, &bar, phase))
-             {}
-             phase ^= 1;
+              // Cancellation request synchronization:
+              while (!ptx::mbarrier_try_wait_parity(ptx::sem_acquire, ptx::scope_cta, &bar, phase))
+              {}
+              phase ^= 1;
 
-             // 取消请求解码：
-             bool success = ptx::clusterlaunchcontrol_query_cancel_is_canceled(result);
-             if (!success)
-                 break;
+              // Cancellation request decoding:
+              bool success = ptx::clusterlaunchcontrol_query_cancel_is_canceled(result);
+              if (!success)
+                  break;
 
-             bx = ptx::clusterlaunchcontrol_query_cancel_get_first_ctaid_x<int>(result);
+              bx = ptx::clusterlaunchcontrol_query_cancel_get_first_ctaid_x<int>(result);
 
-             // 将结果的读取释放到异步代理：
-             ptx::fence_proxy_async_generic_sync_restrict(ptx::sem_release, ptx::space_shared, ptx::scope_cluster);
-         }
-     }
+              // Release read of result to the async proxy:
+              ptx::fence_proxy_async_generic_sync_restrict(ptx::sem_release, ptx::space_shared, ptx::scope_cluster);
+          }
+      }
 
-     // 启动：kernel_cluster_launch_control<<<1024, (n + 1023) / 1024>>>(data, n);
+      // Launch: kernel_cluster_launch_control<<<(n + 1023) / 1024, 1024>>>(data, n);
 
 .. _use-case-thread-block-clusters:
 
@@ -334,7 +334,7 @@
 
 - 同步由每个集群的线程块使用本地 ``__shared__`` 内存屏障执行。屏障操作必须使用 ``ptx::scope_cluster`` 作用域执行。
 
-- 集群情况下的取消需要所有线程块都存在。用户可以使用 :ref:`cg-api-sync-function` API 中的 ``cg::cluster_group::sync()`` 来保证所有线程块都在运行。
+- 集群情况下的取消需要所有线程块都存在。用户可以使用 :ref:`sync` API 中的 ``cg::cluster_group::sync()`` 来保证所有线程块都在运行。
 
 下面的 kernel 演示了使用线程块集群的 cluster launch control 方法。
 
@@ -347,63 +347,63 @@
    namespace cg = cooperative_groups;
    namespace ptx = cuda::ptx;
 
-   __global__ __cluster_dims__(2, 1, 1)
-   void kernel_cluster_launch_control (float* data, int n)
-   {
-       // Cluster launch control 初始化：
-       __shared__ uint4 result;
-       __shared__ uint64_t bar;
-       int phase = 0;
+    __global__ __cluster_dims__(2, 1, 1)
+    void kernel_cluster_launch_control (float* data, int n)
+    {
+        // Cluster launch control initialization:
+        __shared__ uint4 result;
+        __shared__ uint64_t bar;
+        int phase = 0;
 
-       if (cg::thread_block::thread_rank() == 0) {
-           ptx::mbarrier_init(&bar, 1);
-           ptx::fence_mbarrier_init(ptx::sem_release, ptx::scope_cluster);  // CGA 级别栅栏。
-       }
+        if (cg::thread_block::thread_rank() == 0) {
+            ptx::mbarrier_init(&bar, 1);
+            ptx::fence_mbarrier_init(ptx::sem_release, ptx::scope_cluster);  // CGA-level fence.
+        }
 
-       // 序言：
-       float alpha = compute_scalar();  // 此代码片段中未显示设备函数。
+        // Prologue:
+        float alpha = compute_scalar();  // Device function not shown in this code snippet.
 
-       // 工作窃取循环：
-       int bx = blockIdx.x;  // 假设是一维 x 轴线程块。
+        // Work-stealing loop:
+        int bx = blockIdx.x;  // Assuming 1D x-axis thread blocks.
 
-       while (true) {
-           // 保护结果在下一次迭代中被覆盖，
-           // （也确保所有线程块在第一次迭代时已启动）：
-           cg::cluster_group::sync();
+        while (true) {
+            // Protect result from overwrite in the next iteration,
+            // (also ensure all thread blocks have started at 1st iteration):
+            cg::cluster_group::sync();
 
-           // 由单个集群线程取消请求：
-           if (cg::cluster_group::thread_rank() == 0) {
-               // 在异步代理中获取结果的写入：
-               ptx::fence_proxy_async_generic_sync_restrict(ptx::sem_acquire, ptx::space_cluster, ptx::scope_cluster);
+            // Cancellation request by a single cluster thread:
+            if (cg::cluster_group::thread_rank() == 0) {
+                // Acquire write of result in the async proxy:
+                ptx::fence_proxy_async_generic_sync_restrict(ptx::sem_acquire, ptx::space_cluster, ptx::scope_cluster);
 
-               cg::invoke_one(cg::coalesced_threads(), [&](){ptx::clusterlaunchcontrol_try_cancel_multicast(&result, &bar);});
-           }
+                cg::invoke_one(cg::coalesced_threads(), [&](){ptx::clusterlaunchcontrol_try_cancel_multicast(&result, &bar);});
+            }
 
-           // 每个线程块跟踪的取消完成：
-           if (cg::thread_block::thread_rank() == 0)
-               ptx::mbarrier_arrive_expect_tx(ptx::sem_relaxed, ptx::scope_cluster, ptx::space_shared, &bar, sizeof(uint4));
+            // Cancellation completion tracked by each thread block:
+            if (cg::thread_block::thread_rank() == 0)
+                ptx::mbarrier_arrive_expect_tx(ptx::sem_relaxed, ptx::scope_cluster, ptx::space_shared, &bar, sizeof(uint4));
 
-           // 计算：
-           int i = bx * blockDim.x + threadIdx.x;
-           if (i < n)
-               data[i] *= alpha;
+            // Computation:
+            int i = bx * blockDim.x + threadIdx.x;
+            if (i < n)
+                data[i] *= alpha;
 
-           // 取消请求同步：
-           while (!ptx::mbarrier_try_wait_parity(ptx::sem_acquire, ptx::scope_cluster, &bar, phase))
-           {}
-           phase ^= 1;
+            // Cancellation request synchronization:
+            while (!ptx::mbarrier_try_wait_parity(ptx::sem_acquire, ptx::scope_cluster, &bar, phase))
+            {}
+            phase ^= 1;
 
-           // 取消请求解码：
-           bool success = ptx::clusterlaunchcontrol_query_cancel_is_canceled(result);
-           if (!success)
-               break;
+            // Cancellation request decoding:
+            bool success = ptx::clusterlaunchcontrol_query_cancel_is_canceled(result);
+            if (!success)
+                break;
 
-           bx = ptx::clusterlaunchcontrol_query_cancel_get_first_ctaid_x<int>(result);
-           bx += cg::cluster_group::block_index().x;  // 添加本地偏移。
+            bx = ptx::clusterlaunchcontrol_query_cancel_get_first_ctaid_x<int>(result);
+            bx += cg::cluster_group::block_index().x;  // Add local offset.
 
-           // 将结果的读取释放到异步代理：
-           ptx::fence_proxy_async_generic_sync_restrict(ptx::sem_release, ptx::space_shared, ptx::scope_cluster);
-       }
-   }
+            // Release read of result to the async proxy:
+            ptx::fence_proxy_async_generic_sync_restrict(ptx::sem_release, ptx::space_shared, ptx::scope_cluster);
+        }
+    }
 
-   // 启动：kernel_cluster_launch_control<<<1024, (n + 1023) / 1024>>>(data, n);
+    // Launch: kernel_cluster_launch_control<<<(n + 1023) / 1024, 1024>>>(data, n);

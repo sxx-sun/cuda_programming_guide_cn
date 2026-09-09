@@ -80,13 +80,13 @@
 
 - 必须返回 ``void``。
 - 不能是 ``class``、``struct`` 或 ``union`` 的成员。
-- 需要执行配置，如 `内核配置 <#execution-configuration>`__ 中所述。
+- 需要执行配置，如 :ref:`内核配置 <kernel-configuration>` 中所述。
 - 不支持递归。
-- 有关其他限制，请参阅 ``__global__`` `函数参数 <cpp-language-support.html#global-function-parameters>`__。
+- 有关其他限制，请参阅 ``__global__`` :ref:`函数参数 <global-function-parameters>`。
 
 对 ``__global__`` 和 ``__tile_global__`` 函数的调用是异步的。它们在设备完成执行之前返回到主机线程。
 
-用多个执行空间（例如 ``__host__ __device__``）声明的函数会为每个上下文编译。可以使用 ``__CUDA_ARCH__`` `宏 <#cuda-arch-macro>`__ 区分主机和设备代码路径：
+用多个执行空间（例如 ``__host__ __device__``）声明的函数会为每个上下文编译。可以使用 ``__CUDA_ARCH__`` :ref:`宏 <cuda-arch-macro>` 区分主机和设备代码路径：
 
 .. code-block:: c++
 
@@ -119,17 +119,17 @@
    * - ``__device__``
      - 设备全局内存
      - 设备线程（grid）/ CUDA Runtime API
-     - 程序/CUDA 上下文
+     - 程序/:ref:`CUDA 上下文 <driver-api-context>`
      - 每设备
    * - ``__tile__``
      - 设备全局内存
      - Tile 块 / CUDA Runtime API
-     - 程序/CUDA 上下文
+     - 程序/:ref:`CUDA 上下文 <driver-api-context>`
      - 每设备
    * - ``__constant__``
      - 设备常量内存
      - 设备线程（grid）/ CUDA Runtime API
-     - 程序/CUDA 上下文
+     - 程序/:ref:`CUDA 上下文 <driver-api-context>`
      - 每设备
    * - ``__managed__``
      - 主机和设备（自动）
@@ -155,29 +155,31 @@
 
 .. code-block:: c++
 
-   __device__   float device_var       = 4.0f; // 设备内存中的变量
-   __constant__ float constant_mem_var = 4.0f; // 常量内存中的变量
-                                               // 为便于阅读，以下示例侧重于设备变量。
+   __device__   float device_var       = 4.0f; // Variable in device memory
+   __constant__ float constant_mem_var = 4.0f; // Variable in constant memory
+                                               // For readability, the following example focuses on a device variable.
    int main() {
        float* device_ptr;
-       cudaGetSymbolAddress((void**) &device_ptr, device_var);        // 获取 device_var 的地址
+       cudaGetSymbolAddress((void**) &device_ptr, device_var);        // Gets address of device_var
 
        size_t symbol_size;
-       cudaGetSymbolSize(&symbol_size, device_var);                   // 检索符号的大小（4 字节）。
+       cudaGetSymbolSize(&symbol_size, device_var);                   // Retrieves the size of the symbol (4 bytes).
 
        float host_var;
-       cudaMemcpyFromSymbol(&host_var, device_var, sizeof(host_var)); // 从设备复制到主机。
+       cudaMemcpyFromSymbol(&host_var, device_var, sizeof(host_var)); // Copies from device to host.
 
        host_var = 3.0f;
-       cudaMemcpyToSymbol(device_var, &host_var, sizeof(host_var));   // 从主机复制到设备。
+       cudaMemcpyToSymbol(device_var, &host_var, sizeof(host_var));   // Copies from host to device.
    }
+
+另请参阅 `Compiler Explorer <https://godbolt.org/z/vYjP8GGv3>`__ 上的示例。
 
 .. _shared-memory:
 
 5.4.1.2.1. ``__shared__`` 内存
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``__shared__`` 内存变量可以具有静态大小（在编译时确定）或动态大小（在内核启动时确定）。有关在运行时指定共享内存大小的详细信息，请参阅 `内核配置 <#execution-configuration>`__ 部分。
+``__shared__`` 内存变量可以具有静态大小（在编译时确定）或动态大小（在内核启动时确定）。有关在运行时指定共享内存大小的详细信息，请参阅 :ref:`内核配置 <kernel-configuration>` 部分。
 
 共享内存限制：
 
@@ -189,11 +191,11 @@
 .. code-block:: c++
 
    extern __shared__ char dynamic_smem_pointer[];
-   // extern __shared__ char* dynamic_smem_pointer; 替代语法
+   // extern __shared__ char* dynamic_smem_pointer; alternative syntax
 
-   __global__ void kernel() { // 或 __device__ 函数
-       __shared__ int smem_var1[4];                  // 静态大小
-       auto smem_var2 = (int*) dynamic_smem_pointer; // 动态大小
+   __global__ void kernel() { // or a __device__ function
+       __shared__ int smem_var1[4];                  // static size
+       auto smem_var2 = (int*) dynamic_smem_pointer; // dynamic size
    }
 
    int main() {
@@ -201,6 +203,8 @@
        kernel<<<1, 1, shared_memory_size>>>();
        cudaDeviceSynchronize();
    }
+
+另请参阅 `Compiler Explorer <https://godbolt.org/z/nPjvd1frb>`__ 上的示例。
 
 .. _managed-memory:
 
@@ -218,8 +222,56 @@
   - 在 CUDA 运行时可能未初始化时执行的代码中。例如，标记为 ``__attribute__((constructor))`` 的函数。
 
 - ``__managed__`` 变量不能用作 ``decltype()`` 表达式的未括号化 id 表达式参数。
-- ``__managed__`` 变量具有与`动态分配的托管内存 <../02-basics/understanding-memory.html#memory-unified-memory>`__ 指定的相同的一致性和一致性行为。
-- 另请参阅 `局部变量 <cpp-language-support.html#local-variables>`__ 的限制。
+- ``__managed__`` 变量具有与 :ref:`动态分配的托管内存 <memory-unified-memory>` 指定的相同的一致性和一致性行为。
+- 另请参阅 :ref:`局部变量 <local-variables>` 的限制。
+
+以下是 ``__managed__`` 变量合法与非法用法的示例：
+
+.. code-block:: c++
+
+   #include <cassert>
+
+   __device__ __managed__ int global_var = 10; // OK
+
+   int* ptr = &global_var;                     // ERROR: use of a managed variable in static initialization
+
+   struct MyStruct1 {
+       int field;
+       MyStruct1() : field(global_var) {};
+   };
+
+   struct MyStruct2 {
+       ~MyStruct2() { global_var = 10; }
+   };
+
+   MyStruct1 temp1; // ERROR: use of managed variable in dynamic initialization
+
+   MyStruct2 temp2; // ERROR: use of managed variable in the destructor of
+                    //        object with static storage duration
+
+   __device__ __managed__ const int const_var = 10;         // ERROR: const-qualified type
+
+   __device__ __managed__ int&      reference = global_var; // ERROR: reference type
+
+   template <int* Addr>
+   struct MyStruct3 {};
+
+   MyStruct3<&global_var> temp;     // ERROR: address of managed variable is not a constant expression
+
+   __global__ void kernel(int* ptr) {
+       assert(ptr == &global_var);  // OK
+       global_var = 20;             // OK
+   }
+
+   int main() {
+       int* ptr = &global_var;      // OK
+       kernel<<<1, 1>>>(ptr);
+       cudaDeviceSynchronize();
+       global_var++;                // OK
+       decltype(global_var) var1;   // ERROR: managed variable used as unparenthesized argument to decltype
+
+       decltype((global_var)) var2; // OK
+   }
 
 .. _tile-variables:
 
@@ -288,7 +340,7 @@
 
 - ``__noinline__`` ：指示 ``nvcc`` 不要内联该函数。
 - ``__forceinline__`` ：强制 ``nvcc`` 在单个翻译单元内内联该函数。
-- ``__inline_hint__`` ：使用 `链接时优化 <../02-basics/nvcc.html#nvcc-link-time-optimization>`__ 时启用跨翻译单元的积极内联。
+- ``__inline_hint__`` ：使用 :ref:`链接时优化 <nvcc-link-time-optimization>` 时启用跨翻译单元的积极内联。
 
 这些说明符是互斥的。这些说明符应用于 ``__tile__`` 函数时被忽略。
 
@@ -349,11 +401,13 @@
        ...
    }
 
+另请参阅 `Compiler Explorer <https://godbolt.org/z/6KeTqarnW>`__ 上的示例。
+
 结果是减少了内存访问和计算次数，但由于在寄存器中缓存加载和公共子表达式，寄存器压力增加。
 
 由于寄存器压力是许多 CUDA 代码中的关键问题，使用受限指针可能会通过降低占用率对性能产生负面影响。
 
-访问标记为 ``__restrict__`` 的 ``__global__`` 函数 ``const`` 指针被编译为只读缓存加载，类似于 `PTX <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-ld-global-nc>`__ ``ld.global.nc`` 或 ``__ldg()`` `低级加载和存储函数 <#low-level-load-store-functions>`__ 指令。
+访问标记为 ``__restrict__`` 的 ``__global__`` 函数 ``const`` 指针被编译为只读缓存加载，类似于 `PTX <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-ld-global-nc>`__ ``ld.global.nc`` 或 ``__ldg()`` :ref:`低级加载和存储函数 <low-level-load-store-functions>` 指令。
 
 .. code-block:: c++
 
@@ -366,6 +420,8 @@
    void kernel2(const float* __restrict__ in, float* out) {
        *out = *in;  // PTX: ld.global.nc
    }
+
+另请参阅 `Compiler Explorer <https://godbolt.org/z/drsTEPa8s>`__ 上的示例。
 
 .. _grid-constant-parameters:
 
@@ -387,6 +443,7 @@
 - 所有函数声明必须与任何 ``__grid_constant__`` 参数一致。
 - 函数模板特化必须与主模板声明匹配，关于任何 ``__grid_constant__`` 参数。
 - 函数模板实例化也必须与主模板声明匹配，关于任何 ``__grid_constant__`` 参数。
+- ``__grid_constant__`` 注释在 ``__tile_global__`` 函数参数中被忽略。
 
 示例：
 
@@ -400,17 +457,21 @@
    __device__ void external_function(const MyStruct&);
 
    __global__ void kernel(const __grid_constant__ MyStruct s) {
-       // s.x++; // 编译错误：尝试修改只读内存
-       // s.y++; // 未定义行为：尝试修改只读内存
+       // s.x++; // Compile error: tried to modify read-only memory
+       // s.y++; // Undefined Behavior: tried to modify read-only memory
 
-       // 编译器不会创建 "s" 的每线程本地副本：
+       // Compiler will NOT create a per-thread local copy of "s":
        external_function(s);
    }
+
+另请参阅 `Compiler Explorer <https://godbolt.org/z/Goq9jrEeo>`__ 上的示例。
 
 .. _annotation-summary:
 
 5.4.1.6. 注释摘要
 ^^^^^^^^^^^^^^^^^
+
+下表总结了 CUDA 注释，并报告每个注释适用于哪个执行空间以及它在何处有效。
 
 .. list-table:: 注释摘要
    :header-rows: 1
@@ -419,22 +480,22 @@
    * - 注释
      - ``__host__`` / ``__device__`` / ``__host__ __device__``
      - ``__global__``
-   * - `__noinline__ <#inline-specifiers>`__、`__forceinline__ <#inline-specifiers>`__、`__inline_hint__ <#inline-specifiers>`__
+   * - :ref:`__noinline__ <inline-specifiers>`、:ref:`__forceinline__ <inline-specifiers>`、:ref:`__inline_hint__ <inline-specifiers>`
      - 函数
      - ❌
-   * - `__restrict__ <#restrict>`__
+   * - :ref:`__restrict__ <restrict-pointers>`
      - 指针参数
      - 指针参数
-   * - `__grid_constant__ <#grid-constant>`__
+   * - :ref:`__grid_constant__ <grid-constant-parameters>`
      - ❌
      - 参数
-   * - `__launch_bounds__ <#launch-bounds>`__
+   * - :ref:`__launch_bounds__ <launch-bounds>`
      - ❌
      - 函数
-   * - `__maxnreg__ <#maximum-number-of-registers-per-thread>`__
+   * - :ref:`__maxnreg__ <maximum-number-of-registers-per-thread>`
      - ❌
      - 函数
-   * - `__cluster_dims__ <#cluster-dimensions>`__
+   * - :ref:`__cluster_dims__ <thread-block-cluster>`
      - ❌
      - 函数
 
@@ -460,6 +521,8 @@ CUDA 允许使用非标准算术类型，只要主机编译器支持。支持以
 
 - ``_Complex`` `类型 <https://www.gnu.org/software/c-intro-and-ref/manual/html_node/Complex-Data-Types.html>`__ 仅在主机代码中支持。
 
+128 位整数和浮点类型在 tile 代码中不受支持。
+
 .. _built-in-variables:
 
 5.4.2.2. 内建变量
@@ -477,7 +540,9 @@ CUDA 允许使用非标准算术类型，只要主机编译器支持。支持以
 
 - ``uint3 threadIdx`` ：包含块内的线程索引，沿 x、y 和 z 维度。
 
-- ``int warpSize`` ：运行时值，定义为 warp 中的线程数，通常为 ``32`` 。另请参阅 `Warp 和 SIMT <../01-introduction/programming-model.html#programming-model-warps-simt>`__ 了解 warp 的定义。
+- ``int warpSize`` ：运行时值，定义为 warp 中的线程数，通常为 ``32`` 。另请参阅 :ref:`Warp 和 SIMT <warps-and-simt>` 了解 warp 的定义。
+
+这些变量在 tile 代码中不受支持。要在 tile 代码中检索块 ID 或 grid 大小，请使用 ``cuda::tiles::bid()`` 和 ``cuda::tiles::num_blocks()`` API。
 
 .. _built-in-types:
 
@@ -695,15 +760,15 @@ CUDA 提供从基本整数和浮点类型派生的向量类型，这些类型在
 5.4.3. 内核配置
 ---------------
 
-对 ``__global__`` 函数的任何调用都必须为该调用指定*执行配置*。此执行配置定义将用于在设备上执行函数的 grid 和块的维度，以及关联的 `流 <../02-basics/asynchronous-execution.html#cuda-streams>`__。
+对 ``__global__`` 或 ``__tile_global__`` 函数的任何调用都必须为该调用指定*执行配置*。此执行配置定义将用于在设备上执行函数的 grid 和块的维度，以及关联的 :ref:`流 <cuda-streams>` 。
 
 执行配置通过在函数名和括号参数列表之间插入 ``<<<grid_dim, block_dim, dynamic_smem_bytes, stream>>>`` 形式的表达式来指定，其中：
 
-- ``grid_dim`` 是 `dim3 <#built-in-variables>`__ 类型，指定 grid 的维度和大小，使得 ``grid_dim.x * grid_dim.y * grid_dim.z`` 等于正在启动的块数；
+- ``grid_dim`` 是 :ref:`dim3 <built-in-variables>` 类型，指定 grid 的维度和大小，使得 ``grid_dim.x * grid_dim.y * grid_dim.z`` 等于正在启动的块数；
 
-- ``block_dim`` 是 `dim3 <#built-in-variables>`__ 类型，指定每个块的维度和大小，使得 ``block_dim.x * block_dim.y * block_dim.z`` 等于每个块的线程数；
+- ``block_dim`` 是 :ref:`dim3 <built-in-variables>` 类型，指定每个块的维度和大小，使得 ``block_dim.x * block_dim.y * block_dim.z`` 等于每个块的线程数；对于 ``__tile_global__`` 内核， ``block_dim`` 必须为 ``1`` ，因为编译器在启动 tile 内核时将决定调度多少线程。
 
-- ``dynamic_smem_bytes`` 是可选的 ``size_t`` 参数，默认为零。它指定此次调用每个块动态分配的共享内存字节数，除了静态分配的内存。此内存由 ``extern __shared__`` 数组使用（参见 `__shared__ 内存 <#shared-memory-specifier>`__）。
+- ``dynamic_smem_bytes`` 是可选的 ``size_t`` 参数，默认为零。它指定此次调用每个块动态分配的共享内存字节数，除了静态分配的内存。此内存由 ``extern __shared__`` 数组使用（参见 :ref:`__shared__ 内存 <shared-memory>` ）。
 
 - ``stream`` 是 ``cudaStream_t`` （指针）类型，指定关联的流。 ``stream`` 是可选参数，默认为 ``NULL`` 。
 
@@ -717,31 +782,59 @@ CUDA 提供从基本整数和浮点类型派生的向量类型，这些类型在
 
 执行配置的参数在实际函数参数之前计算。
 
-如果 ``grid_dim`` 或 ``block_dim`` 超过设备允许的最大大小（如 `计算能力 <compute-capabilities.html#compute-capabilities>`__ 中指定），或者 ``dynamic_smem_bytes`` 大于考虑静态分配内存后的可用共享内存，函数调用将失败。
+如果 ``grid_dim`` 或 ``block_dim`` 超过设备允许的最大大小（如 :ref:`计算能力 <compute-capabilities>` 中指定），或者 ``dynamic_smem_bytes`` 大于考虑静态分配内存后的可用共享内存，函数调用将失败。
 
 .. _thread-block-cluster:
 
 5.4.3.1. 线程块集群
 ^^^^^^^^^^^^^^^^^^^
 
-计算能力 9.0 及更高版本允许用户指定编译时线程块集群维度，以便内核可以使用 CUDA 中的 `集群层次结构 <../02-basics/intro-to-cuda-cpp.html#thread-block-clusters>`__。可以使用 ``__cluster_dims__`` 属性指定编译时集群维度，语法如下： ``__cluster_dims__([x, [y, [z]]])`` 。以下示例显示 X 维度为 2、Y 和 Z 维度为 1 的编译时集群大小。
+计算能力 9.0 及更高版本允许用户指定编译时线程块集群维度，以便内核可以使用 CUDA 中的 :ref:`集群层次结构 <intro-cuda-cpp-thread-block-cluster>` 。可以使用 ``__cluster_dims__`` 属性指定编译时集群维度，语法如下： ``__cluster_dims__([x, [y, [z]]])`` 。以下示例显示 X 维度为 2、Y 和 Z 维度为 1 的编译时集群大小。
 
 .. code-block:: c++
 
    __global__ void __cluster_dims__(2, 1, 1) kernel(float* parameter);
 
-``__cluster_dims__()`` 的默认形式指定内核将作为 grid 集群启动。如果未指定集群维度，用户可以在启动时指定。如果在启动时未能指定维度，将导致启动时错误。
+``__cluster_dims__()`` 的默认形式指定内核将作为 grid 集群启动。如果未指定集群维度，用户可以在启动时指定。如果在启动时未能指定维度，将导致启动时错误。 ``__cluster_dims__`` 属性不能在 ``__tile_global__`` 内核上指定，因为编译器决定如何跨集群调度 tile 内核。
 
-线程块集群的维度也可以在运行时指定，可以使用 ``cudaLaunchKernelEx`` API 启动带有集群的内核。此 API 接受 ``cudaLaunchConfig_t`` 类型的配置参数、内核函数指针和内核参数。
+线程块集群的维度也可以在运行时指定，可以使用 ``cudaLaunchKernelEx`` API 启动带有集群的内核。此 API 接受 ``cudaLaunchConfig_t`` 类型的配置参数、内核函数指针和内核参数。以下示例显示运行时内核配置。
+
+.. code-block:: c++
+
+   __global__ void kernel(float parameter1, int parameter2) {}
+
+   int main() {
+       cudaLaunchConfig_t config = {0};
+       // The grid dimension is not affected by cluster launch, and is still enumerated
+       // using the number of blocks.
+       // The grid dimension should be a multiple of cluster size.
+       config.gridDim          = dim3{4};  // 4 blocks
+       config.blockDim         = dim3{32}; // 32 threads per block
+       config.dynamicSmemBytes = 1024;     // 1 KB
+
+       cudaLaunchAttribute attribute[1];
+       attribute[0].id               = cudaLaunchAttributeClusterDimension;
+       attribute[0].val.clusterDim.x = 2; // Cluster size in X-dimension
+       attribute[0].val.clusterDim.y = 1;
+       attribute[0].val.clusterDim.z = 1;
+       config.attrs    = attribute;
+       config.numAttrs = 1;
+
+       float parameter1 = 3.0f;
+       int   parameter2 = 4;
+       cudaLaunchKernelEx(&config, kernel, parameter1, parameter2);
+   }
+
+另请参阅 `Compiler Explorer <https://cuda.godbolt.org/z/M67r3a5zM>`__ 上的示例。
 
 .. _launch-bounds:
 
 5.4.3.2. 启动边界
 ^^^^^^^^^^^^^^^^^
 
-如 `内核启动和占用率 <../02-basics/writing-cuda-kernels.html#writing-cuda-kernels-kernel-launch-and-occupancy>`__ 部分所述，使用更少的寄存器允许更多线程和线程块驻留在多处理器上，从而提高性能。
+如 :ref:`内核启动和占用率 <writing-cuda-kernels-kernel-launch-and-occupancy>` 部分所述，使用更少的寄存器允许更多线程和线程块驻留在多处理器上，从而提高性能。
 
-因此，编译器使用启发式方法最小化寄存器使用，同时将 `寄存器溢出 <../02-basics/writing-cuda-kernels.html#writing-cuda-kernels-registers>`__ 和指令计数保持在最低限度。应用程序可以通过使用 ``__launch_bounds__()`` 限定符在 ``__global__`` 函数定义中指定启动边界，以编译器提供额外信息的形式可选地辅助这些启发式方法：
+因此，编译器使用启发式方法最小化寄存器使用，同时将 :ref:`寄存器溢出 <writing-cuda-kernels-registers>` 和指令计数保持在最低限度。应用程序可以选择以启动边界（launch bounds）的形式向编译器提供额外信息，来辅助这些启发式方法。启动边界使用 ``__launch_bounds__()`` 限定符在 ``__global__`` 函数的定义中指定：
 
 .. code-block:: c++
 
@@ -757,13 +850,13 @@ CUDA 提供从基本整数和浮点类型派生的向量类型，这些类型在
 
 - ``maxBlocksPerCluster`` 是可选的，指定应用程序将启动 ``MyKernel()`` 的每个集群的最大线程块数；它编译为 ``.maxclusterrank`` PTX 指令。
 
-如果指定了启动边界，编译器首先推导内核应使用的寄存器数量的上限 ``L`` 。这确保 ``minBlocksPerMultiprocessor`` 个 ``maxThreadsPerBlock`` 线程块可以驻留在多处理器上（如果未指定 ``minBlocksPerMultiprocessor`` ，则为单个块）。然后编译器优化寄存器使用：
+如果指定了启动边界，编译器首先推导内核应使用的寄存器数量的上限 ``L`` 。这确保 ``minBlocksPerMultiprocessor`` 个 ``maxThreadsPerBlock`` 线程块可以驻留在多处理器上（如果未指定 ``minBlocksPerMultiprocessor`` ，则为单个块）。有关内核使用的寄存器数量与每个块分配的寄存器数量之间的关系，请参见 :ref:`占用率 <writing-cuda-kernels-kernel-launch-and-occupancy>` 部分。然后编译器按如下方式优化寄存器使用：
 
 - 如果初始寄存器使用超过 ``L`` ，编译器会减少它，直到它小于或等于 ``L`` 。这通常会导致本地内存使用增加和/或指令数量增加。
 
 - 如果初始寄存器使用低于 ``L``
   
-  - 如果指定了 ``maxThreadsPerBlock`` 但未指定 ``minBlocksPerMultiprocessor`` ，编译器使用 ``maxThreadsPerBlock`` 确定从 ``n`` 到 ``n + 1`` 个驻留块过渡的寄存器使用阈值。
+  - 如果指定了 ``maxThreadsPerBlock`` 但未指定 ``minBlocksPerMultiprocessor`` ，编译器使用 ``maxThreadsPerBlock`` 确定从 ``n`` 到 ``n + 1`` 个驻留块过渡的寄存器使用阈值。当少使用一个寄存器就能为额外的驻留块腾出空间时，就会发生这种情况。然后，编译器应用与未指定启动边界时类似的启发式方法。
   
   - 如果同时指定了 ``minBlocksPerMultiprocessor`` 和 ``maxThreadsPerBlock`` ，编译器可能会将寄存器使用增加到 ``L`` ，以减少指令数量并更好地隐藏单线程指令的延迟。
 
@@ -771,6 +864,55 @@ CUDA 提供从基本整数和浮点类型派生的向量类型，这些类型在
 
 - 每块线程数超过其启动边界 ``maxThreadsPerBlock`` 。
 - 每集群线程块数超过其启动边界 ``maxBlocksPerCluster`` 。
+
+CUDA 内核所需的每线程资源可能以不理想的方式限制最大块大小。为保持与未来硬件和工具包的前向兼容性，并确保至少有一个线程块可以在流多处理器上运行，开发者应包含单参数形式 ``__launch_bounds__(maxThreadsPerBlock)`` ，它指定内核将启动的最大块大小。未这样做可能导致「too many resources requested for launch」错误。在某些情况下，提供双参数形式 ``__launch_bounds__(maxThreadsPerBlock,minBlocksPerMultiprocessor)`` 可以提升性能。``minBlocksPerMultiprocessor`` 的最佳值应通过对每个内核的详细分析来确定。
+
+内核的最优启动边界通常在主要架构修订之间有所不同。以下代码示例说明如何在设备代码中使用 ``__CUDA_ARCH__`` :ref:`宏 <cuda-arch-macro>` 来管理这一点。
+
+.. code-block:: c++
+
+   #define THREADS_PER_BLOCK  256
+
+   #if __CUDA_ARCH__ >= 900
+       #define MY_KERNEL_MAX_THREADS  (2 * THREADS_PER_BLOCK)
+       #define MY_KERNEL_MIN_BLOCKS   3
+   #else
+       #define MY_KERNEL_MAX_THREADS  THREADS_PER_BLOCK
+       #define MY_KERNEL_MIN_BLOCKS   2
+   #endif
+
+   __global__ void
+   __launch_bounds__(MY_KERNEL_MAX_THREADS, MY_KERNEL_MIN_BLOCKS)
+   MyKernel(...) {
+       ...
+   }
+
+当 ``MyKernel`` 以每个块的最大线程数被调用时——即作为 ``__launch_bounds__()`` 的第一个参数指定——人们很容易想把 ``MY_KERNEL_MAX_THREADS`` 用作执行配置中每块的线程数：
+
+.. code-block:: c++
+
+   // Host code
+   MyKernel<<<blocksPerGrid, MY_KERNEL_MAX_THREADS>>>(...);
+
+然而，这行不通，因为如 :ref:`执行空间说明符 <execution-space-specifiers>` 部分所述， ``__CUDA_ARCH__`` 在主机代码中未定义。因此， ``MyKernel`` 将以每块 256 个线程启动。每块的线程数应改为通过以下方式确定：
+
+- 在编译时使用不依赖 ``__CUDA_ARCH__`` 的宏或常量确定，例如：
+
+  .. code-block:: c++
+
+     // Host code
+     MyKernel<<<blocksPerGrid, THREADS_PER_BLOCK>>>(...);
+
+- 或在运行时基于计算能力确定：
+
+  .. code-block:: c++
+
+     // Host code
+     cudaGetDeviceProperties(&deviceProp, device);
+     int threadsPerBlock = (deviceProp.major >= 9) ? 2 * THREADS_PER_BLOCK : THREADS_PER_BLOCK;
+     MyKernel<<<blocksPerGrid, threadsPerBlock>>>(...);
+
+``--resource-usage`` 编译器选项会报告寄存器使用量。`CUDA profiler <https://docs.nvidia.com/nsight-compute/NsightCompute/index.html#occupancy-calculator>`__ 会报告占用率，可用于推导驻留块数量。
 
 .. _maximum-number-of-registers-per-thread:
 
@@ -822,19 +964,25 @@ CUDA 提供从基本整数和浮点类型派生的向量类型，这些类型在
 
 .. code-block:: c++
 
-   // 假设 blockDim.x 为 128
-   __global__ void example_syncthreads(int* input_data, int* output_data) {
-       __shared__ int shared_data[128];
-       // 每个线程写入 'shared_data' 的不同元素：
-       shared_data[threadIdx.x] = input_data[threadIdx.x];
+   #include <cuda_runtime_api.h>
+   #include <memory.h>
+   #include <cstdlib>
+   #include <ctime>
+   #include <stdio.h>
 
-       // 所有线程同步，保证所有对 'shared_data' 的写入在
-       // 任何线程从 '__syncthreads()' 解除阻塞之前排序：
+   // assuming blockDim.x is 128
+   __global__ void example_syncthreads(int* input_data, int* output_data)
+   {
+       __shared__ int shared_data[128];
+       shared_data[threadIdx.x] = input_data[blockDim.x*blockIdx.x + threadIdx.x];
+
+       // All threads synchronize, guaranteeing all writes to 'shared_data' are ordered
+       // before any thread is unblocked from '__syncthreads()':
        __syncthreads();
 
-       // 单个线程安全读取 'shared_data'：
+       // A single thread safely reads 'shared_data':
        if (threadIdx.x == 0) {
-           int sum = 0;
+           float sum = 0;
            for (int i = 0; i < blockDim.x; ++i) {
                sum += shared_data[i];
            }
@@ -842,15 +990,121 @@ CUDA 提供从基本整数和浮点类型派生的向量类型，这些类型在
        }
    }
 
+   void initArray(int* A, int length)
+   {
+        std::srand(std::time({}));
+       for(int i=0; i<length; i++)
+       {
+           A[i] = int(10.f * (rand() / (float)RAND_MAX));
+       }
+   }
+
+   int main(int argc, char** arg)
+   {
+       constexpr int block_size = 128;
+       constexpr int input_length = 1024;
+       constexpr int output_length = input_length / block_size;
+
+       // Pointers to memory vectors
+       int* input = nullptr;
+       int* output = nullptr;
+       int* comparisonResult = (int*)malloc(output_length*sizeof(int));
+
+       // Use unified memory to allocate buffers
+       cudaMallocManaged(&input, input_length*sizeof(int));
+       cudaMallocManaged(&output, output_length*sizeof(int));
+
+       initArray(input, input_length);
+       int grid_size = input_length / block_size;
+
+       example_syncthreads<<<grid_size, block_size>>>(input, output);
+       cudaDeviceSynchronize();
+
+       for(int i=0; i<output_length; i++)
+       {
+           comparisonResult[i] = 0;
+           for(int j=0; j < block_size; j++)
+           {
+               comparisonResult[i] += input[i*block_size + j];
+           }
+       }
+
+       for(int i=0; i< output_length; i++)
+       {
+           if(output[i] != comparisonResult[i])
+           {
+               printf("Results do not match at index %d: %d != %d\n", i, output[i], comparisonResult[i]);
+               exit(-1);
+           }
+       }
+       printf("Test passed\n");
+
+       return 0;
+   }
+
 ``__syncthreads*()`` 内建函数允许在条件代码中使用，但仅当条件在整个线程块中统一求值时。否则，执行可能会挂起或产生意外的副作用。
+
+以下示例演示了有效的行为：
+
+.. code-block:: c++
+
+   // assuming blockDim.x is 128
+   __global__ void syncthreads_valid_behavior(int* input_data, int* output_data) {
+       __shared__ int shared_data[128];
+       shared_data[threadIdx.x] = input_data[threadIdx.x];
+       if (blockIdx.x > 0) { // CORRECT, uniform condition across all block threads
+           __syncthreads();
+           output_data[threadIdx.x] = shared_data[128 - threadIdx.x];
+       }
+   }
+
+而以下示例表现出无效行为，例如内核挂起或未定义行为：
+
+.. code-block:: c++
+
+   // assuming blockDim.x is 128
+   __global__ void syncthreads_invalid_behavior1(int* input_data, int* output_data) {
+       __shared__ int shared_data[256];
+       shared_data[threadIdx.x] = input_data[threadIdx.x];
+       if (threadIdx.x > 0) { // WRONG, non-uniform condition
+           __syncthreads();   // Undefined Behavior
+           output_data[threadIdx.x] = shared_data[128 - threadIdx.x];
+       }
+   }
+
+.. code-block:: c++
+
+   // assuming blockDim.x is 128
+   __global__ void syncthreads_invalid_behavior2(int* input_data, int* output_data) {
+       __shared__ int shared_data[256];
+       shared_data[threadIdx.x] = input_data[threadIdx.x];
+       for (int i = 0; i < blockDim.x; ++i) {
+           if (i == threadIdx.x) { // WRONG, non-uniform condition
+               __syncthreads();    // Undefined Behavior
+           }
+       }
+       output_data[threadIdx.x] = shared_data[128 - threadIdx.x];
+   }
 
 **带谓词的 ``__syncthreads()`` 变体：**
 
-``int __syncthreads_count(int predicate);`` 与 ``__syncthreads()`` 相同，只是它为块中所有未退出的线程计算谓词，并返回谓词计算为非零值的线程数。
+.. code-block:: c++
 
-``int __syncthreads_and(int predicate);`` 与 ``__syncthreads()`` 相同，只是它为块中所有未退出的线程计算谓词。当且仅当谓词对所有线程都计算为非零值时，它返回非零值。
+   int __syncthreads_count(int predicate);
 
-``int __syncthreads_or(int predicate);`` 与 ``__syncthreads()`` 相同，只是它为块中所有未退出的线程计算谓词。当且仅当谓词对一个或多个线程计算为非零值时，它返回非零值。
+与 ``__syncthreads()`` 相同，只是它为块中所有未退出的线程计算谓词，并返回谓词计算为非零值的线程数。
+
+.. code-block:: c++
+
+   int __syncthreads_and(int predicate);
+
+与 ``__syncthreads()`` 相同，只是它为块中所有未退出的线程计算谓词。当且仅当谓词对所有线程都计算为非零值时，它返回非零值。
+
+.. code-block:: c++
+
+   int __syncthreads_or(int predicate);
+
+与 ``__syncthreads()`` 相同，只是它为块中所有未退出的线程计算谓词。当且仅当谓词对一个或多个线程计算为非零值时，它返回非零值。
 
 .. _warp-synchronization-function:
 
@@ -865,7 +1119,22 @@ CUDA 提供从基本整数和浮点类型派生的向量类型，这些类型在
 
 调用 ``__syncwarp(mask)`` 在 ``mask`` 中命名的 warp 内参与线程之间提供内存排序：对 ``__syncwarp(mask)`` 的调用强烈发生在（参见 `C++ 规范 [intro.races] <https://eel.is/c++draft/intro.races>`__） ``mask`` 中命名的任何 warp 线程从等待中解除阻塞或退出之前。
 
-这些函数受 `Warp __sync 内建约束 <#warp-sync-intrinsic-constraints>`__ 限制。
+这些函数受 :ref:`Warp __sync 内建约束 <warp-sync-intrinsic-constraints>` 限制。
+
+以下示例演示如何使用 ``__syncwarp()`` 同步 warp 内的线程以安全访问共享内存数组：
+
+.. code-block:: c++
+
+   __global__ void example_syncwarp(int* input_data, int* output_data) {
+       if (threadIdx.x < warpSize) {
+           __shared__ int shared_data[warpSize];
+           shared_data[threadIdx.x] = input_data[threadIdx.x];
+
+           __syncwarp(); // equivalent to __syncwarp(0xFFFFFFFF)
+           if (threadIdx.x == 0)
+               output_data[0] = shared_data[1];
+       }
+   }
 
 .. _memory-fence-functions:
 
@@ -874,44 +1143,225 @@ CUDA 提供从基本整数和浮点类型派生的向量类型，这些类型在
 
 CUDA 编程模型采用弱排序内存模型。换句话说，CUDA 线程将数据写入共享内存、全局内存、页锁定主机内存或对等设备内存的顺序不一定是另一个 CUDA 或主机线程观察数据写入的顺序。在没有内存栅栏或同步的情况下从同一内存位置读取或写入会导致未定义行为。
 
-内存栅栏和同步函数强制执行内存访问的 `顺序一致性排序 <https://en.cppreference.com/w/cpp/atomic/memory_order>`__。这些函数在强制执行排序的 `线程作用域 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_model.html#thread-scopes>`__ 方面有所不同，但独立于访问的内存空间，包括共享内存、全局内存、页锁定主机内存和对等设备的内存。
+在以下示例中，线程 1 执行 ``writeXY()`` ，线程 2 执行 ``readXY()`` 。
+
+.. code-block:: c++
+
+   __device__ int X = 1, Y = 2;
+
+   __device__ void writeXY() {
+       X = 10;
+       Y = 20;
+   }
+
+   __device__ void readXY() {
+       int B = Y;
+       int A = X;
+   }
+
+两个线程同时读写相同的内存位置 ``X`` 和 ``Y`` 。任何数据竞争都会导致未定义行为并且没有定义的语义。因此，``A`` 和 ``B`` 的结果值可以是任何值。
+
+内存栅栏和同步函数强制执行内存访问的 `顺序一致性排序 <https://en.cppreference.com/w/cpp/atomic/memory_order>`__ 。这些函数在强制执行排序的 `线程作用域 <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/memory_model.html#thread-scopes>`__ 方面有所不同，但独立于访问的内存空间，包括共享内存、全局内存、页锁定主机内存和对等设备的内存。
 
 .. hint::
 
-   建议尽可能使用 `libcu++ <https://nvidia.github.io/cccl/libcudacxx/extended_api/synchronization_primitives/atomic/atomic_thread_fence.html>`__ 提供的 ``cuda::atomic_thread_fence`` 以确保安全和可移植性。
+   建议尽可能使用 `libcu++ <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/synchronization_primitives/atomic/atomic_thread_fence.html>`__ 提供的 ``cuda::atomic_thread_fence`` 以确保安全和可移植性。
 
 **块级内存栅栏**
 
-.. code-block:: c++
+.. tab-set::
 
-   // <cuda/atomic> 头文件
-   cuda::atomic_thread_fence(cuda::memory_order_seq_cst, cuda::thread_scope_block);
+   .. tab-item:: CUDA C++
 
-确保：
+      .. code-block:: c++
 
-- 调用线程在调用 ``cuda::atomic_thread_fence()`` 之前对所有内存的所有写入，被调用线程所在块中的所有线程观察到发生在调用线程在调用 ``cuda::atomic_thread_fence()`` 之后对所有内存的所有写入之前；
+         // <cuda/atomic> header
+         cuda::atomic_thread_fence(cuda::memory_order_seq_cst, cuda::thread_scope_block);
 
-- 调用线程在调用 ``cuda::atomic_thread_fence()`` 之前对所有内存的所有读取，排序在调用线程在调用 ``cuda::atomic_thread_fence()`` 之后对所有内存的所有读取之前。
+      确保：
+
+      - 调用线程在调用 ``cuda::atomic_thread_fence()`` 之前对所有内存的所有写入，被调用线程所在块中的所有线程观察到发生在调用线程在调用 ``cuda::atomic_thread_fence()`` 之后对所有内存的所有写入之前；
+
+      - 调用线程在调用 ``cuda::atomic_thread_fence()`` 之前对所有内存的所有读取，排序在调用线程在调用 ``cuda::atomic_thread_fence()`` 之后对所有内存的所有读取之前。
+
+   .. tab-item:: 内建函数
+
+      .. code-block:: c++
+
+         void __threadfence_block();
+
+      确保：
+
+      - 调用线程在调用 ``__threadfence_block()`` 之前对所有内存的所有写入，被调用线程所在块中的所有线程观察到发生在调用线程在调用 ``__threadfence_block()`` 之后对所有内存的所有写入之前；
+
+      - 调用线程在调用 ``__threadfence_block()`` 之前对所有内存的所有读取，排序在调用线程在调用 ``__threadfence_block()`` 之后对所有内存的所有读取之前。
 
 **设备级内存栅栏**
 
-.. code-block:: c++
+.. tab-set::
 
-   cuda::atomic_thread_fence(cuda::memory_order_seq_cst, cuda::thread_scope_device);
+   .. tab-item:: CUDA C++
 
-确保：
+      .. code-block:: c++
 
-- 调用线程在调用 ``cuda::atomic_thread_fence()`` 之后对所有内存的所有写入，不会被设备中的任何线程观察到发生在调用线程在调用 ``cuda::atomic_thread_fence()`` 之前对所有内存的任何写入之前。
+         cuda::atomic_thread_fence(cuda::memory_order_seq_cst, cuda::thread_scope_device);
+
+      确保：
+
+      - 调用线程在调用 ``cuda::atomic_thread_fence()`` 之后对所有内存的所有写入，不会被设备中的任何线程观察到发生在调用线程在调用 ``cuda::atomic_thread_fence()`` 之前对所有内存的任何写入之前。
+
+   .. tab-item:: 内建函数
+
+      .. code-block:: c++
+
+         void __threadfence();
+
+      确保：
+
+      - 调用线程在调用 ``__threadfence()`` 之后对所有内存的所有写入，不会被设备中的任何线程观察到发生在调用线程在调用 ``__threadfence()`` 之前对所有内存的任何写入之前。
 
 **系统级内存栅栏**
 
+.. tab-set::
+
+   .. tab-item:: CUDA C++
+
+      .. code-block:: c++
+
+         cuda::atomic_thread_fence(cuda::memory_order_seq_cst, cuda::thread_scope_system);
+
+      确保：
+
+      - 调用线程在调用 ``cuda::atomic_thread_fence()`` 之前对所有内存的所有写入，被设备中的所有线程、主机线程和对等设备中的所有线程观察到发生在调用线程在调用 ``cuda::atomic_thread_fence()`` 之后对所有内存的所有写入之前。
+
+   .. tab-item:: 内建函数
+
+      .. code-block:: c++
+
+         void __threadfence_system();
+
+      确保：
+
+      - 调用线程在调用 ``__threadfence_system()`` 之前对所有内存的所有写入，被设备中的所有线程、主机线程和对等设备中的所有线程观察到发生在调用线程在调用 ``__threadfence_system()`` 之后对所有内存的所有写入之前。
+
+在上面的代码示例中，可以按如下方式在代码中插入内存栅栏：
+
+.. tab-set::
+
+   .. tab-item:: CUDA C++
+
+      .. code-block:: c++
+
+         #include <cuda/atomic>
+
+         __device__ int X = 1, Y = 2;
+
+         __device__ void writeXY() {
+             X = 10;
+             cuda::atomic_thread_fence(cuda::memory_order_seq_cst, cuda::thread_scope_device);
+             Y = 20;
+         }
+
+         __device__ void readXY() {
+             int B = Y;
+             cuda::atomic_thread_fence(cuda::memory_order_seq_cst, cuda::thread_scope_device);
+             int A = X;
+         }
+
+   .. tab-item:: 内建函数
+
+      .. code-block:: c++
+
+         __device__ int X = 1, Y = 2;
+
+         __device__ void writeXY() {
+             X = 10;
+             __threadfence();
+             Y = 20;
+         }
+
+         __device__ void readXY() {
+             int B = Y;
+             __threadfence();
+             int A = X;
+         }
+
+对于此代码，可以观察到以下结果：
+
+- ``A`` 等于 1 且 ``B`` 等于 2，即 ``readXY()`` 在 ``writeXY()`` 之前执行；
+
+- ``A`` 等于 10 且 ``B`` 等于 20，即 ``writeXY()`` 在 ``readXY()`` 之前执行；
+
+- ``A`` 等于 10 且 ``B`` 等于 2；
+
+- ``A`` 为 1 且 ``B`` 为 20 的情况不可能出现，因为内存栅栏确保对 ``X`` 的写入在对 ``Y`` 的写入之前可见。
+
+如果线程 1 和线程 2 属于同一个块，使用块级栅栏就足够了。如果线程 1 和线程 2 不属于同一个块，当它们是同一设备的 CUDA 线程时必须使用设备级栅栏，当它们来自两个不同设备的 CUDA 线程时必须使用系统级栅栏。
+
+一个常见用例由以下代码示例说明，其中线程消费由其他线程生产的数据。此内核在单次调用中计算 N 个数字数组的和。
+
+- 每个块首先对数组的一个子集求和，并将结果存储到全局内存。
+
+- 当所有块都完成后，最后一个块从全局内存读取每个部分和并将它们相加以获得最终结果。
+
+- 为确定哪个块最后完成，每个块原子地递增一个计数器，以表示其部分和的计算与存储已经完成（更多细节参见 :ref:`原子函数 <atomic-functions>` 部分）。最后一个块收到的计数器值等于 ``gridDim.x - 1`` 。
+
+如果在存储部分和与递增计数器之间没有栅栏，计数器可能在部分和存储之前递增。这可能导致计数器达到 ``gridDim.x - 1`` ，并使最后一个块在部分和更新到内存之前就开始读取它们。
+
+.. note::
+
+   内存栅栏只影响内存操作的执行顺序；它不保证这些操作对其他线程的可见性。
+
+在下面的代码示例中，通过将 ``result`` 变量声明为 ``volatile`` 来确保对其内存操作的可见性。更多细节请参见 :ref:`volatile 限定变量 <volatile-qualified-variables>` 部分。
+
 .. code-block:: c++
 
-   cuda::atomic_thread_fence(cuda::memory_order_seq_cst, cuda::thread_scope_system);
+   #include <cuda/atomic>
 
-确保：
+   __device__ int count = 0;
 
-- 调用线程在调用 ``cuda::atomic_thread_fence()`` 之前对所有内存的所有写入，被设备中的所有线程、主机线程和对等设备中的所有线程观察到发生在调用线程在调用 ``cuda::atomic_thread_fence()`` 之后对所有内存的所有写入之前。
+   __global__ void sum(const float*    array,
+                       int             N,
+                       volatile float* result) {
+       __shared__ bool isLastBlockDone;
+       // Each block sums a subset of the input array.
+       float partialSum = calculatePartialSum(array, N);
+
+       if (threadIdx.x == 0) {
+           // Thread 0 of each block stores the partial sum to global memory.
+           // The compiler will use a store operation that bypasses the L1 cache
+           // since the "result" variable is declared as volatile.
+           // This ensures that the threads of the last block will read the correct
+           // partial sums computed by all other blocks.
+           result[blockIdx.x] = partialSum;
+
+           // Thread 0 makes sure that the increment of the "count" variable is
+           // only performed after the partial sum has been written to global memory.
+           cuda::atomic_thread_fence(cuda::memory_order_seq_cst, cuda::thread_scope_device);
+
+           // Thread 0 signals that it is done.
+           int count_old = atomicInc(&count, gridDim.x);
+
+           // Thread 0 determines if its block is the last block to be done.
+           isLastBlockDone = (count_old == (gridDim.x - 1));
+       }
+       // Synchronize to make sure that each thread reads the correct value of
+       // isLastBlockDone.
+       __syncthreads();
+
+       if (isLastBlockDone) {
+           // The last block sums the partial sums stored in result[0 .. gridDim.x-1]
+           float totalSum = calculateTotalSum(result);
+
+           if (threadIdx.x == 0) {
+               // Thread 0 of last block stores the total sum to global memory and
+               // resets the count variable, so that the next kernel call works
+               // properly.
+               result[0] = totalSum;
+               count     = 0;
+           }
+       }
+   }
 
 .. _atomic-functions:
 
@@ -920,15 +1370,15 @@ CUDA 编程模型采用弱排序内存模型。换句话说，CUDA 线程将数�
 
 原子函数对共享数据执行读-修改-写操作，使其看起来像是在单个步骤中执行。原子性确保每个操作要么完全完成，要么根本不发生，为所有参与线程提供数据的一致视图。
 
-CUDA 以四种方式提供原子函数：
+CUDA 以五种方式提供原子函数：
 
-扩展 CUDA C++ 原子函数，`cuda::atomic <https://nvidia.github.io/cccl/libcudacxx/extended_api/synchronization_primitives/atomic.html>`__ 和 `cuda::atomic_ref <https://nvidia.github.io/cccl/libcudacxx/extended_api/synchronization_primitives/atomic_ref.html>`__。
+扩展 CUDA C++ 原子函数，`cuda::atomic <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/synchronization_primitives/atomic.html>`__ 和 `cuda::atomic_ref <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/synchronization_primitives/atomic_ref.html>`__ 。
 
 - 允许在主机和设备代码中使用。
 
 - 遵循 `C++ 标准原子操作 <https://en.cppreference.com/w/cpp/atomic/atomic.html>`__ 语义。
 
-- 允许指定原子操作的 `线程作用域 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__。
+- 允许指定原子操作的 `线程作用域 <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__。
 
 标准 C++ 原子函数，`cuda::std::atomic <https://en.cppreference.com/w/cpp/atomic/atomic.html>`__ 和 `cuda::std::atomic_ref <https://en.cppreference.com/w/cpp/atomic/atomic_ref.html>`__。
 
@@ -936,9 +1386,9 @@ CUDA 以四种方式提供原子函数：
 
 - 遵循 `C++ 标准原子操作 <https://en.cppreference.com/w/cpp/atomic/atomic.html>`__ 语义。
 
-- 不允许指定原子操作的 `线程作用域 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__。
+- 不允许指定原子操作的 `线程作用域 <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__。
 
-编译器 `内置原子函数 <#built-in-atomic-functions>`__， ``__nv_atomic_<op>()`` 。
+编译器 :ref:`内置原子函数 <built-in-atomic-functions>` ， ``__nv_atomic_<op>()`` 。
 
 - 自 CUDA 12.8 可用。
 
@@ -946,27 +1396,37 @@ CUDA 以四种方式提供原子函数：
 
 - 遵循 `C++ 标准原子内存序 <https://en.cppreference.com/w/cpp/atomic/memory_order.html>`__ 语义。
 
-- 允许指定原子操作的 `线程作用域 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__。
+- 允许指定原子操作的 `线程作用域 <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__。
 
 - 与 `C++ 标准原子操作 <https://en.cppreference.com/w/cpp/atomic/atomic.html>`__ 具有相同的内存排序语义。
 
 - 支持 `cuda::std::atomic <https://nvidia.github.io/cccl/libcudacxx/extended_api/synchronization_primitives/atomic.html>`__ 和 `cuda::std::atomic_ref <https://nvidia.github.io/cccl/libcudacxx/extended_api/synchronization_primitives/atomic_ref.html>`__ 允许的数据类型子集，但不支持 128 位数据类型。
 
-`遗留原子函数 <#legacy-atomic-functions>`__， ``atomic<Op>()`` 。
+- 在 tile 代码中不受支持。
+
+CUDA Tile C++ 原子函数（例如 ``cuda::tiles::atomic_load`` ）：
+
+- 仅允许在 tile 代码中使用。
+
+- 遵循 `C++ 标准原子内存序 <https://en.cppreference.com/w/cpp/atomic/memory_order.html>`__ 语义。
+
+- 允许通过 ``cuda::tiles::thread_scope`` 指定线程作用域。
+
+:ref:`遗留原子函数 <legacy-atomic-functions>` ， ``atomic<Op>()`` 。
 
 - 仅允许在设备代码中使用。
 
 - 仅支持 ``memory_order_relaxed`` `C++ 原子内存语义 <https://en.cppreference.com/w/cpp/atomic/memory_order.html>`__。
 
-- 允许在函数名中指定原子操作的 `线程作用域 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__。
+- 允许在函数名中指定原子操作的 `线程作用域 <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__。
 
-- 与 `内置原子函数 <#built-in-atomic-functions>`__ 不同，遗留原子函数仅确保原子性，不引入同步点（栅栏）。
+- 与 :ref:`内置原子函数 <built-in-atomic-functions>` 不同，遗留原子函数仅确保原子性，不引入同步点（栅栏）。
 
-- 支持 `内置原子函数 <#built-in-atomic-functions>`__ 允许的数据类型子集。原子 ``add`` 操作支持额外的数据类型。
+- 支持 :ref:`内置原子函数 <built-in-atomic-functions>` 允许的数据类型子集。原子 ``add`` 操作支持额外的数据类型。
 
 .. hint::
 
-   建议使用 ``libcu++`` 提供的 `扩展 CUDA C++ 原子函数 <https://nvidia.github.io/cccl/libcudacxx/extended_api/synchronization_primitives.html>`__ 以提高效率、安全性和可移植性。
+   建议使用 ``libcu++`` 提供的 `扩展 CUDA C++ 原子函数 <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/synchronization_primitives.html>`__ 以提高效率、安全性和可移植性。
 
 .. _legacy-atomic-functions:
 
@@ -979,13 +1439,13 @@ CUDA 以四种方式提供原子函数：
 
 - 对于向量类型（如 ``__half2`` 、 ``__nv_bfloat162`` 、 ``float2`` 和 ``float4`` ），读-修改-写操作对向量的每个元素执行。不保证整个向量在单个访问中是原子的。
 
-本节描述的原子函数具有 `内存排序 <https://en.cppreference.com/w/cpp/atomic/memory_order>`__ ``cuda::std::memory_order_relaxed`` ，并且仅在特定的 `线程作用域 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_model.html#thread-scopes>`__ 内是原子的：
+本节描述的原子函数具有 `内存排序 <https://en.cppreference.com/w/cpp/atomic/memory_order>`__ ``cuda::std::memory_order_relaxed`` ，并且仅在特定的 `线程作用域 <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/memory_model.html#thread-scopes>`__ 内是原子的：
 
 - 无后缀的原子 API，例如 ``atomicAdd`` ，在作用域 ``cuda::thread_scope_device`` 内是原子的。
 
 - 带 ``_block`` 后缀的原子 API，例如 ``atomicAdd_block`` ，在作用域 ``cuda::thread_scope_block`` 内是原子的。
 
-- 带 ``_system`` 后缀的原子 API，例如 ``atomicAdd_system`` ，如果满足特定 `条件 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_model.html#atomicity>`__，则在作用域 ``cuda::thread_scope_system`` 内是原子的。
+- 带 ``_system`` 后缀的原子 API，例如 ``atomicAdd_system`` ，如果满足特定 `条件 <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/memory_model.html#atomicity>`__ ，则在作用域 ``cuda::thread_scope_system`` 内是原子的。
 
 以下示例显示 CPU 和 GPU 原子更新地址 ``addr`` 处的整数值：
 
@@ -1005,11 +1465,11 @@ CUDA 以四种方式提供原子函数：
        cudaDeviceProp deviceProp;
        cudaGetDeviceProperties(&deviceProp, device_id);
        if (deviceProp.concurrentManagedAccess != 1) {
-           return; // 设备不能与 CPU 并发一致地访问托管内存
+           return; // the device does not coherently access managed memory concurrently with the CPU
        }
 
        atomicAdd_kernel<<<...>>>(addr);
-       __sync_fetch_and_add(addr, 10);  // CPU 原子操作
+       __sync_fetch_and_add(addr, 10);  // CPU atomic operation
    }
 
 ---
@@ -1031,10 +1491,12 @@ CUDA 以四种方式提供原子函数：
            float    expected_value          = assumed_float + value;
            unsigned expected_value_unsigned = cuda::std::bit_cast<unsigned>(expected_value);
            old_value                        = atomicCAS(d_ptr_unsigned, assumed, expected_value_unsigned);
-       // 注意：使用整数比较以避免 NaN 情况下的挂起（因为 NaN != NaN）
+       // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
        } while (assumed != old_value);
        return cuda::std::bit_cast<float>(old_value);
    }
+
+另请参阅 `Compiler Explorer <https://godbolt.org/z/676e5bc7a>`__ 上的示例。
 
 .. _atomicadd:
 
@@ -1250,8 +1712,10 @@ CUDA 以四种方式提供原子函数：
 
    T atomicExch(T* address, T val);
 
+.. code-block:: c++
+
    template<typename T>
-   T atomicExch(T* address, T val); // 仅 128 位类型，计算能力 9.x 及更高版本
+   T atomicExch(T* address, T val); // only 128-bit types, compute capability 9.x and higher
 
 该函数在一个原子事务中执行以下操作：
 
@@ -1284,8 +1748,10 @@ C++ 模板函数 ``atomicExch()`` 支持 128 位类型，具有以下要求：
 
    T atomicCAS(T* address, T compare, T val);
 
+.. code-block:: c++
+
    template<typename T>
-   T atomicCAS(T* address, T compare, T val);  // 仅 128 位类型，计算能力 9.x 及更高版本
+   T atomicCAS(T* address, T compare, T val);  // only 128-bit types, compute capability 9.x and higher
 
 该函数在一个原子事务中执行以下操作：
 
@@ -1316,15 +1782,15 @@ C++ 模板函数 ``atomicCAS()`` 支持 128 位类型，具有以下要求：
 5.4.5.2. 内置原子函数
 ^^^^^^^^^^^^^^^^^^^^^
 
-CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵循与 `C++ 标准原子操作 <https://en.cppreference.com/w/cpp/atomic/atomic.html>`__ 相同的内存排序语义和 CUDA `线程作用域 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__。这些函数遵循 `GNU 的原子内置函数签名 <https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html>`__，并额外添加了一个线程作用域参数。
+CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵循与 `C++ 标准原子操作 <https://en.cppreference.com/w/cpp/atomic/atomic.html>`__ 相同的内存排序语义和 CUDA `线程作用域 <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__。这些函数遵循 `GNU 的原子内置函数签名 <https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html>`__，并额外添加了一个线程作用域参数。
 
 当支持内置原子函数时， ``nvcc`` 定义宏 ``__CUDACC_DEVICE_ATOMIC_BUILTINS__`` 。
 
-以下是用于内置原子函数的 ``order`` 和 ``scope`` 参数的原始枚举器，对应 `内存序 <https://en.cppreference.com/w/cpp/atomic/atomic.html>`__ 和 `线程作用域 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__：
+以下是用于内置原子函数的 ``order`` 和 ``scope`` 参数的原始枚举器，对应 `内存序 <https://en.cppreference.com/w/cpp/atomic/atomic.html>`__ 和 `线程作用域 <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/memory_model.html#libcudacxx-extended-api-memory-model-thread-scopes>`__：
 
 .. code-block:: c++
 
-   // 原子内存序
+   // atomic memory orders
    enum {
       __NV_ATOMIC_RELAXED,
       __NV_ATOMIC_CONSUME,
@@ -1334,7 +1800,9 @@ CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵�
       __NV_ATOMIC_SEQ_CST
    };
 
-   // 线程作用域
+.. code-block:: c++
+
+   // thread scopes
    enum {
       __NV_THREAD_SCOPE_THREAD,
       __NV_THREAD_SCOPE_BLOCK,
@@ -1345,7 +1813,7 @@ CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵�
 
 - 内存序对应 `C++ 标准原子操作的内存序 <https://en.cppreference.com/w/cpp/atomic/memory_order>`__。
 
-- 线程作用域遵循 ``cuda::thread_scope`` `定义 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_model.html#thread-scopes>`__。
+- 线程作用域遵循 ``cuda::thread_scope`` `定义 <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/memory_model.html#thread-scopes>`__。
 
 - ``__NV_ATOMIC_CONSUME`` 内存序目前使用更强的 ``__NV_ATOMIC_ACQUIRE`` 内存序实现。
 
@@ -1375,26 +1843,26 @@ CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵�
 
 .. code-block:: c++
 
-   // 不允许在主机函数中使用
+   // Not permitted in a host function
    __host__ void bar() {
        unsigned u1 = 1, u2 = 2;
        __nv_atomic_load(&u1, &u2, __NV_ATOMIC_RELAXED, __NV_THREAD_SCOPE_SYSTEM);
    }
 
-   // 不允许应用于本地内存
+   // Not permitted to be applied to local memory
    __device__ void foo() {
      unsigned a = 1, b;
      __nv_atomic_load(&a, &b, __NV_ATOMIC_RELAXED, __NV_THREAD_SCOPE_SYSTEM);
    }
 
-   // 不允许作为模板默认参数。
-   // 函数地址不能被获取。
+   // Not permitted as a template default argument.
+   // The function address cannot be taken.
    template<void *F = __nv_atomic_load_n>
    class X {
-       void *f = F; // 函数地址不能被获取。
+       void *f = F; // The function address cannot be taken.
    };
 
-   // 不允许在构造函数初始化列表中调用。
+   // Not permitted to be called in a constructor initialization list.
    class Y {
        int a;
      public:
@@ -1453,61 +1921,9 @@ CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵�
 
 - ``int`` 、 ``unsigned`` 、 ``unsigned long long`` 、 ``float`` 、 ``double`` 。
 
-.. _nv-atomic-fetch-min-nv-atomic-min:
-
-5.4.5.2.3. ``__nv_atomic_fetch_min()`` 、 ``__nv_atomic_min()``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: c++
-
-   __device__ T    __nv_atomic_fetch_min(T* address, T val, int order, int scope = __NV_THREAD_SCOPE_SYSTEM);
-   __device__ void __nv_atomic_min      (T* address, T val, int order, int scope = __NV_THREAD_SCOPE_SYSTEM);
-
-这些函数在一个原子事务中执行以下操作：
-
-1. 读取位于全局或共享内存中地址 ``address`` 处的 ``old`` 值。
-
-2. 计算 ``old`` 和 ``val`` 的最小值。
-
-3. 将结果存储回同一地址的内存。
-
-- ``__nv_atomic_fetch_min`` 返回 ``old`` 值。
-
-- ``__nv_atomic_min`` 无返回值。
-
-这些函数支持以下数据类型：
-
-- ``unsigned`` 、 ``int`` 、 ``unsigned long long`` 、 ``long long`` 。
-
-.. _nv-atomic-fetch-max-nv-atomic-max:
-
-5.4.5.2.4. ``__nv_atomic_fetch_max()`` 、 ``__nv_atomic_max()``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: c++
-
-   __device__ T    __nv_atomic_fetch_max(T* address, T val, int order, int scope = __NV_THREAD_SCOPE_SYSTEM);
-   __device__ void __nv_atomic_max      (T* address, T val, int order, int scope = __NV_THREAD_SCOPE_SYSTEM);
-
-这些函数在一个原子事务中执行以下操作：
-
-1. 读取位于全局或共享内存中地址 ``address`` 处的 ``old`` 值。
-
-2. 计算 ``old`` 和 ``val`` 的最大值。
-
-3. 将结果存储回同一地址的内存。
-
-- ``__nv_atomic_fetch_max`` 返回 ``old`` 值。
-
-- ``__nv_atomic_max`` 无返回值。
-
-这些函数支持以下数据类型：
-
-- ``unsigned`` 、 ``int`` 、 ``unsigned long long`` 、 ``long long`` 。
-
 .. _nv-atomic-fetch-and-nv-atomic-and:
 
-5.4.5.2.5. ``__nv_atomic_fetch_and()`` 、 ``__nv_atomic_and()``
+5.4.5.2.3. ``__nv_atomic_fetch_and()`` 、 ``__nv_atomic_and()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: c++
@@ -1533,7 +1949,7 @@ CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵�
 
 .. _nv-atomic-fetch-or-nv-atomic-or:
 
-5.4.5.2.6. ``__nv_atomic_fetch_or()`` 、 ``__nv_atomic_or()``
+5.4.5.2.4. ``__nv_atomic_fetch_or()`` 、 ``__nv_atomic_or()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: c++
@@ -1559,7 +1975,7 @@ CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵�
 
 .. _nv-atomic-fetch-xor-nv-atomic-xor:
 
-5.4.5.2.7. ``__nv_atomic_fetch_xor()`` 、 ``__nv_atomic_xor()``
+5.4.5.2.5. ``__nv_atomic_fetch_xor()`` 、 ``__nv_atomic_xor()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: c++
@@ -1582,6 +1998,58 @@ CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵�
 这些函数支持以下数据类型：
 
 - 任何大小为 4 或 8 字节的整数类型。
+
+.. _nv-atomic-fetch-min-nv-atomic-min:
+
+5.4.5.2.6. ``__nv_atomic_fetch_min()`` 、 ``__nv_atomic_min()``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: c++
+
+   __device__ T    __nv_atomic_fetch_min(T* address, T val, int order, int scope = __NV_THREAD_SCOPE_SYSTEM);
+   __device__ void __nv_atomic_min      (T* address, T val, int order, int scope = __NV_THREAD_SCOPE_SYSTEM);
+
+这些函数在一个原子事务中执行以下操作：
+
+1. 读取位于全局或共享内存中地址 ``address`` 处的 ``old`` 值。
+
+2. 计算 ``old`` 和 ``val`` 的最小值。
+
+3. 将结果存储回同一地址的内存。
+
+- ``__nv_atomic_fetch_min`` 返回 ``old`` 值。
+
+- ``__nv_atomic_min`` 无返回值。
+
+这些函数支持以下数据类型：
+
+- ``unsigned`` 、 ``int`` 、 ``unsigned long long`` 、 ``long long`` 。
+
+.. _nv-atomic-fetch-max-nv-atomic-max:
+
+5.4.5.2.7. ``__nv_atomic_fetch_max()`` 、 ``__nv_atomic_max()``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: c++
+
+   __device__ T    __nv_atomic_fetch_max(T* address, T val, int order, int scope = __NV_THREAD_SCOPE_SYSTEM);
+   __device__ void __nv_atomic_max      (T* address, T val, int order, int scope = __NV_THREAD_SCOPE_SYSTEM);
+
+这些函数在一个原子事务中执行以下操作：
+
+1. 读取位于全局或共享内存中地址 ``address`` 处的 ``old`` 值。
+
+2. 计算 ``old`` 和 ``val`` 的最大值。
+
+3. 将结果存储回同一地址的内存。
+
+- ``__nv_atomic_fetch_max`` 返回 ``old`` 值。
+
+- ``__nv_atomic_max`` 无返回值。
+
+这些函数支持以下数据类型：
+
+- ``unsigned`` 、 ``int`` 、 ``unsigned long long`` 、 ``long long`` 。
 
 .. _nv-atomic-exchange-nv-atomic-exchange-n:
 
@@ -1694,6 +2162,7 @@ CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵�
    __device__ void __nv_atomic_thread_fence(int order, int scope = __NV_THREAD_SCOPE_SYSTEM);
 
 此原子函数基于指定的内存序在此线程请求的内存访问之间建立排序。线程作用域参数指定可能观察到此操作排序效果的线程集合。
+
 .. _warp-functions:
 
 5.4.6. Warp 函数
@@ -1701,9 +2170,9 @@ CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵�
 
 以下章节描述了 warp 函数，这些函数允许 warp 内的线程相互通信并执行计算。
 
-.. note::
+.. hint::
 
-   建议尽可能使用 `CUB` Warp 级"集合"原语 <https://nvidia.github.io/cccl/cub/api_docs/warp_wide.html#warp-wide-collective-primitives>`__ 来执行 warp 操作，以保证效率、安全性和可移植性。
+   建议尽可能使用 ``CUB`` `Warp 级「集合」原语 <https://nvidia.github.io/cccl/unstable/cub/api_docs/warp_wide.html#warp-wide-collective-primitives>`__ 来执行 warp 操作，以保证效率、安全性和可移植性。
 
 .. _warp-active-mask:
 
@@ -1722,10 +2191,10 @@ CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵�
 
 .. code-block:: cuda
 
-   // 检查是否至少有一个线程的 predicate 为 true
+   // Check whether at least one thread's predicate evaluates to true
    if (pred) {
-       // 无效：'at_least_one' 的值是不确定的
-       // 可能会在不同执行之间变化。
+       // Invalid: the value of 'at_least_one' is non-deterministic
+       // and could vary between executions.
        at_least_one = __activemask() > 0;
    }
 
@@ -1735,9 +2204,9 @@ CUDA 12.8 及更高版本支持 CUDA 编译器原子操作的内置函数，遵�
 
 .. code-block:: cuda
 
-   unsigned mask      = __activemask();              // 假设 mask == 0xFFFFFFFF (所有位设置，所有线程活动)
-   int      predicate = threadIdx.x % 2 == 0;        // 奇数线程为 1，偶数线程为 0
-   int      result    = __any_sync(mask, predicate); // 活动线程可能不会被保留
+   unsigned mask      = __activemask();              // Assume mask == 0xFFFFFFFF (all bits set, all threads active)
+   int      predicate = threadIdx.x % 2 == 0;        // 1 for even threads, 0 for odd threads
+   int      result    = __any_sync(mask, predicate); // Active threads might not be preserved
 
 .. _warp-vote-functions:
 
@@ -1764,7 +2233,7 @@ Warp 投票函数使给定 warp 的线程能够执行归约和广播操作。这
 
 对 ``mask`` 中所有未退出的线程评估 ``predicate`` ，返回一个整数，如果第 N 个线程的 ``predicate`` 评估为非零值且第 N 个线程处于活动状态，则第 N 位被设置为 1。否则，第 N 位为零。
 
-这些函数受 Warp ``__sync`` 内联函数约束 的限制。
+这些函数受 :ref:`Warp __sync 内建约束 <warp-sync-intrinsic-constraints>` 限制。
 
 .. warning::
 
@@ -1775,9 +2244,9 @@ Warp 投票函数使给定 warp 的线程能够执行归约和广播操作。这
 5.4.6.3. Warp 匹配函数
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. note::
+.. hint::
 
-   建议使用 libcu++ <https://nvidia.github.io/cccl/libcudacxx/extended_api/warp/warp_match_all.html>`__ 的 ``cuda::device::warp_match_all()`` 函数作为 ``__match_all_sync`` 函数的通用且更安全的替代。
+   建议使用 `libcu++ <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/warp/warp_match_all.html>`__ 的 ``cuda::device::warp_match_all()`` 函数作为 ``__match_all_sync`` 函数的通用且更安全的替代。
 
 .. code-block:: cuda
 
@@ -1796,7 +2265,7 @@ Warp 匹配函数在 warp 内的未退出线程之间执行变量的广播和比
 
 ``T`` 可以是 ``int`` 、 ``unsigned`` 、 ``long`` 、 ``unsigned long`` 、 ``long long`` 、 ``unsigned long long`` 、 ``float`` 或 ``double`` 。
 
-这些函数受 Warp ``__sync`` 内联函数约束 的限制。
+这些函数受 :ref:`Warp __sync 内建约束 <warp-sync-intrinsic-constraints>` 限制。
 
 .. warning::
 
@@ -1807,9 +2276,9 @@ Warp 匹配函数在 warp 内的未退出线程之间执行变量的广播和比
 5.4.6.4. Warp 归约函数
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. note::
+.. hint::
 
-   建议尽可能使用 `CUB` Warp 级"集合"原语 <https://nvidia.github.io/cccl/cub/api/classcub_1_1WarpReduce.html#_CPPv4I0_iEN3cub10WarpReduceE>`__ 来执行 Warp 归约，以保证效率、安全性和可移植性。
+   建议尽可能使用 ``CUB`` `Warp 级「集合」原语 <https://nvidia.github.io/cccl/unstable/cub/api/classcub_1_1WarpReduce.html#_CPPv4I0_iEN3cub10WarpReduceE>`__ 来执行 Warp 归约，以保证效率、安全性和可移植性。
 
 计算能力 8.x 或更高的设备支持。
 
@@ -1833,7 +2302,7 @@ Warp 匹配函数在 warp 内的未退出线程之间执行变量的广播和比
 
 对 ``mask`` 中命名的每个未退出线程在 ``value`` 中提供的值执行按位 AND、OR 或 XOR 归约操作后返回结果。
 
-这些函数受 Warp ``__sync`` 内联函数约束 的限制。
+这些函数受 :ref:`Warp __sync 内建约束 <warp-sync-intrinsic-constraints>` 限制。
 
 .. warning::
 
@@ -1844,9 +2313,9 @@ Warp 匹配函数在 warp 内的未退出线程之间执行变量的广播和比
 5.4.6.5. Warp 洗牌函数
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. note::
+.. hint::
 
-   建议使用 libcu++ <https://nvidia.github.io/cccl/libcudacxx/extended_api/warp/warp_shuffle.html#libcudacxx-extended-api-warp-warp-shuffle>`__ 的 ``cuda::device::warp_shuffle()`` 函数作为 ``__shfl_sync()`` 和 ``__shfl_<op>_sync()`` 内联函数的通用且更安全的替代。
+   建议使用 `libcu++ <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/warp/warp_shuffle.html#libcudacxx-extended-api-warp-warp-shuffle>`__ 的 ``cuda::device::warp_shuffle()`` 函数作为 ``__shfl_sync()`` 和 ``__shfl_<op>_sync()`` 内联函数的通用且更安全的替代。
 
 .. code-block:: cuda
 
@@ -1907,7 +2376,7 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
 
 ``width`` 必须是 ``[1, warpSize]`` 范围内的 2 的幂，即 1、2、4、8、16 或 32。其他值将产生未定义的结果。
 
-这些函数受 Warp ``__sync`` 内联函数约束 的限制。
+这些函数受 :ref:`Warp __sync 内建约束 <warp-sync-intrinsic-constraints>` 限制。
 
 **有效的 warp 洗牌使用示例：**
 
@@ -1916,20 +2385,20 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
    int laneId = threadIdx.x % warpSize;
    int data   = ...
 
-   // 所有 warp 程程从通道 0 获取 'data'
+   // all warp threads get 'data' from lane 0
    int result1 = __shfl_sync(0xFFFFFFFF, data, 0);
 
    if (laneId < 4) {
-       // 通道 0、1、2、3 从通道 1 获取 'data'
+       // lanes 0, 1, 2, 3 get 'data' from lane 1
        int result2 = __shfl_sync(0xb1111, data, 1);
    }
 
-   // 通道 [0 - 15] 从通道 0 获取 'data'
-   // 通道 [16 - 31] 从通道 16 获取 'data'
+   // lanes [0 - 15] get 'data' from lane 0
+   // lanes [16 - 31] get 'data' from lane 16
    int result3 = __shfl_sync(0xFFFFFFFF, value, warpSize / 2);
 
-   // 每个通道从上方两个位置的通道获取 'data'
-   // 通道 30、31 获取它们的原始值
+   // each lane gets 'data' from the lane two positions above
+   // lanes 30, 31 get their original value
    int result4 = __shfl_down_sync(0xFFFFFFFF, data, 2);
 
 **无效的 warp 洗牌使用示例：**
@@ -1938,20 +2407,191 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
 
    int laneId = threadIdx.x % warpSize;
    int value  = ...
-    // 未定义行为：通道 0 不参与调用
+    // undefined behavior: lane 0 does not participate in the call
    int result = (laneId > 0) ? __shfl_sync(0xFFFFFFFF, value, 0) : 0;
 
    if (laneId <= 4) {
-       // 未定义行为：目标通道 5、6 对于通道 3、4 不活动
+       // undefined behavior: destination lanes 5, 6 are not active for lanes 3, 4
        result = __shfl_down_sync(0b11111, value, 2);
    }
 
-   // 未定义行为：width 不是 2 的幂
+   // undefined behavior: width is not a power of 2
    __shfl_sync(0xFFFFFFFF, value, 0, /*width=*/31);
 
 .. warning::
 
    这些内联函数不暗示内存屏障。它们不保证任何内存排序。
+
+**示例 1：在 warp 内广播单个值**
+
+.. tab-set::
+
+   .. tab-item:: CUDA C++
+
+      .. code-block:: c++
+
+         #include <cassert>
+         #include <cuda/warp>
+
+         __global__ void warp_broadcast_kernel(int input) {
+             int laneId = threadIdx.x % 32;
+             int value;
+             if (laneId == 0) { // unused variable for all threads except lane 0
+                 value = input;
+             }
+             value = cuda::device::warp_shuffle_idx(value, 0); // Synchronize all threads in warp, and get "value" from lane 0
+             assert(value == input);
+         }
+
+         int main() {
+             warp_broadcast_kernel<<<1, 32>>>(1234);
+             cudaDeviceSynchronize();
+             return 0;
+         }
+
+   .. tab-item:: 内建函数
+
+      .. code-block:: c++
+
+         #include <assert.h>
+
+         __global__ void warp_broadcast_kernel(int input) {
+             int laneId = threadIdx.x % 32;
+             int value;
+             if (laneId == 0) { // unused variable for all threads except lane 0
+                 value = input;
+             }
+             value = __shfl_sync(0xFFFFFFFF, value, 0); // Synchronize all threads in warp, and get "value" from lane 0
+             assert(value == input);
+         }
+
+         int main() {
+             warp_broadcast_kernel<<<1, 32>>>(1234);
+             cudaDeviceSynchronize();
+             return 0;
+         }
+
+另请参阅 `Compiler Explorer <https://cuda.godbolt.org/z/E3E3Y5e4e>`__ 上的示例。
+
+**示例 2：跨 8 线程子分区的包含式加法扫描**
+
+.. hint::
+
+   建议使用 `cub::WarpScan <https://nvidia.github.io/cccl/unstable/cub/api/classcub_1_1WarpScan.html>`__ 函数以获得高效且通用的 warp 扫描功能。
+
+.. tab-set::
+
+   .. tab-item:: CUDA C++
+
+      .. code-block:: c++
+
+         #include <cstdio>
+         #include <cub/cub.cuh>
+
+         __global__ void scan_sub_partition_with_8_threads_kernel() {
+             using WarpScan    = cub::WarpScan<int, 8>;
+             using TempStorage = typename WarpScan::TempStorage;
+             __shared__ TempStorage temp_storage;
+
+             int laneId = threadIdx.x % 32;
+             int value  = 31 - laneId; // starting value to accumulate
+             int partial_sum;
+             WarpScan(temp_storage).InclusiveSum(value, partial_sum);
+             printf("Thread %d final value = %d\n", threadIdx.x, partial_sum);
+         }
+
+         int main() {
+             scan_sub_partition_with_8_threads_kernel<<<1, 32>>>();
+             cudaDeviceSynchronize();
+             return 0;
+         }
+
+   .. tab-item:: 内建函数
+
+      .. code-block:: c++
+
+         #include <stdio.h>
+
+         __global__ void scan_sub_partition_with_8_threads_kernel() {
+             int laneId = threadIdx.x % 32;
+             int value  = 31 - laneId; // starting value to accumulate
+             // Loop to accumulate scan within my partition.
+             // Scan requires log2(8) == 3 steps for 8 threads
+             for (int delta = 1; delta <= 4; delta *= 2) {
+                 int tmp         = __shfl_up_sync(0xFFFFFFFF, value, delta, /*width=*/8); // read from laneId - delta
+                 int source_lane = laneId % 8 - delta;
+                 if (source_lane >= 0) // lanes with 'source_lane < 0' have their value unchanged
+                     value += tmp;
+             }
+             printf("Thread %d final value = %d\n", threadIdx.x, value);
+         }
+
+         int main() {
+             scan_sub_partition_with_8_threads_kernel<<<1, 32>>>();
+             cudaDeviceSynchronize();
+             return 0;
+         }
+
+另请参阅 `Compiler Explorer <https://cuda.godbolt.org/z/Tohd38edc>`__ 上的示例。
+
+**示例 3：跨 warp 的归约**
+
+.. hint::
+
+   建议使用 `cub::WarpReduce <https://nvidia.github.io/cccl/unstable/cub/api/classcub_1_1WarpReduce.html>`__ 函数以获得高效且通用的 warp 归约功能。
+
+.. tab-set::
+
+   .. tab-item:: CUDA C++
+
+      .. code-block:: c++
+
+         #include <cstdio>
+         #include <cub/cub.cuh>
+         #include <cuda/warp>
+
+         __global__ void warp_reduce_kernel() {
+             using WarpReduce  = cub::WarpReduce<int>;
+             using TempStorage = typename WarpReduce::TempStorage;
+             __shared__ TempStorage temp_storage;
+
+             int laneId     = threadIdx.x % 32;
+             int value      = 31 - laneId; // starting value to accumulate
+             auto aggregate = WarpReduce(temp_storage).Sum(value);
+             aggregate      = cuda::device::warp_shuffle_idx(aggregate, 0);
+             printf("Thread %d final value = %d\n", threadIdx.x, aggregate);
+         }
+
+         int main() {
+             warp_reduce_kernel<<<1, 32>>>();
+             cudaDeviceSynchronize();
+             return 0;
+         }
+
+   .. tab-item:: 内建函数
+
+      .. code-block:: c++
+
+         #include <stdio.h>
+
+         __global__ void warp_reduce_kernel() {
+             int laneId = threadIdx.x % 32;
+             int value  = 31 - laneId; // starting value to accumulate
+             // Use XOR mode to perform butterfly reduction
+             // A full-warp reduction requires log2(32) == 5 steps
+             for (int i = 1; i <= 16; i *= 2)
+                 value += __shfl_xor_sync(0xFFFFFFFF, value, i);
+             // "value" now contains the sum across all threads
+             printf("Thread %d final value = %d\n", threadIdx.x, value);
+         }
+
+         int main() {
+             warp_reduce_kernel<<<1, 32>>>();
+             cudaDeviceSynchronize();
+             return 0;
+         }
+
+另请参阅 `Compiler Explorer <https://cuda.godbolt.org/z/T94nfGMzG>`__ 上的示例。
 
 .. _warp-sync-intrinsic-constraints:
 
@@ -1999,13 +2639,13 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
 .. code-block:: cuda
 
    __global__ void valid_examples() {
-       if (threadIdx.x < 4) {        // 线程 0、1、2、3 活动
-           __all_sync(0b1111, pred); // 正确，线程 0、1、2、3 参与调用
+       if (threadIdx.x < 4) {        // threads 0, 1, 2, 3 are active
+           __all_sync(0b1111, pred); // CORRECT, threads 0, 1, 2, 3 participate in the call
        }
 
        if (threadIdx.x == 0)
-           return; // 退出
-       // 正确，所有未退出线程参与调用
+           return; // exit
+       // CORRECT, all non-exited threads participate in the call
        __all_sync(0xFFFFFFFF, pred);
    }
 
@@ -2018,12 +2658,14 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
            __shared__ int shared_data[warpSize];
            shared_data[threadIdx.x] = input_data[threadIdx.x];
 
-           unsigned mask = threadIdx.x < 16 ? 0xFFFF : 0xFFFF0000; // 正确
+           unsigned mask = threadIdx.x < 16 ? 0xFFFF : 0xFFFF0000; // CORRECT
            __syncwarp(mask);
            if (threadIdx.x == 0 || threadIdx.x == 16)
                output_data[threadIdx.x] = shared_data[threadIdx.x + 1];
        }
    }
+
+.. code-block:: cuda
 
    __global__ void example_syncwarp_with_mask_branches(int* input_data, int* output_data) {
        if (threadIdx.x < warpSize) {
@@ -2031,12 +2673,12 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
            shared_data[threadIdx.x] = input_data[threadIdx.x];
 
            if (threadIdx.x < 16) {
-               unsigned mask = 0xFFFF; // 正确
+               unsigned mask = 0xFFFF; // CORRECT
                __syncwarp(mask);
                output_data[threadIdx.x] = shared_data[15 - threadIdx.x];
            }
            else {
-               unsigned mask = 0xFFFF0000; // 正确
+               unsigned mask = 0xFFFF0000; // CORRECT
                __syncwarp(mask);
                output_data[threadIdx.x] = shared_data[31 - threadIdx.x];
            }
@@ -2047,12 +2689,12 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
 
 .. code-block:: cuda
 
-   if (threadIdx.x < 4) {           // 线程 0、1、2、3 活动
-       __all_sync(0b0000011, pred); // 错误，线程 2、3 活动但未在 mask 中设置
-       __all_sync(0b1111111, pred); // 错误，线程 4、5、6 不活动但在 mask 中设置
+   if (threadIdx.x < 4) {           // threads 0, 1, 2, 3 are active
+       __all_sync(0b0000011, pred); // WRONG, threads 2, 3 are active but not set in mask
+       __all_sync(0b1111111, pred); // WRONG, threads 4, 5, 6 are not active but set in mask
    }
 
-   // 错误，参与线程具有不同且重叠的 mask
+   // WRONG, participating threads have a different and overlapping mask
    __all_sync(threadIdx.x == 0 ? 1 : 0xFFFFFFFF, pred);
 
 .. _cuda-specific-macros:
@@ -2099,13 +2741,13 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
        typedef double my_type;
    #endif
 
-   __device__ my_type my_var;           // 错误：my_var 的类型依赖于 __CUDA_ARCH__
+   __device__ my_type my_var;           // ERROR: my_var's type depends on __CUDA_ARCH__
 
-   __global__ void kernel(my_type in) { // 错误：kernel 的类型依赖于 __CUDA_ARCH__
+   __global__ void kernel(my_type in) { // ERROR: kernel's type depends on __CUDA_ARCH__
        ...
    }
 
-**2.** 如果 ``__global__`` 函数模板从主机实例化并启动，则必须使用相同的模板参数实例化，无论 ``__CUDA_ARCH__`` 是否定义或其值如何。
+**2.** ``__global__`` 函数模板的实例化不应依赖于 ``__CUDA_ARCH__`` 是否定义或其值。也就是说，相同的实例化（具有等价的模板参数）必须在*所有*设备程序和主机程序中都存在（无论这些实例化是否在运行时曾被启动）。
 
 示例：
 
@@ -2120,8 +2762,8 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
 
    __host__ __device__ void host_device_function(void) {
    #if !defined(__CUDA_ARCH__)
-       kernel<<<1, 1>>>(1); // 错误："kernel<int>" 实例化仅在
-                               //        __CUDA_ARCH__ 未定义时发生！
+       kernel<<<1, 1>>>(1); // ERROR: "kernel<int>" instantiation only
+                            //        when __CUDA_ARCH__ is undefined!
    #endif
    }
 
@@ -2131,6 +2773,8 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
        return 0;
    }
 
+通过将计算本身从 ``__global__`` 函数移入由前者调用的 ``__device__`` 函数模板，可以避免此问题。在 ``__global__`` 函数内，随后可以使用 ``__CUDA_ARCH__`` 以不同参数有条件地实例化该 ``__device__`` 函数模板。
+
 **3.** 在单独编译模式下，具有外部链接的函数或变量定义的存在或缺少不应依赖于 ``__CUDA_ARCH__`` 的定义或其值。
 
 示例：
@@ -2138,12 +2782,36 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
 .. code-block:: cuda
 
    #if !defined(__CUDA_ARCH__)
-       void host_function(void) {} // 错误：host_function() 的定义
-                                   //        仅在 __CUDA_ARCH__
-                                   //        未定义时存在
+       void host_function(void) {} // ERROR: The definition of host_function()
+                                   //        is only present when __CUDA_ARCH__
+                                   //        is undefined
    #endif
 
-**4.** 在单独编译中，预处理器宏 ``__CUDA_ARCH__`` 不应在头文件中使用，以防止对象具有不同的行为。或者，所有对象必须为相同的虚拟架构编译。
+**4.** 在单独编译中，预处理器宏 ``__CUDA_ARCH__`` 不应在头文件中使用，以防止对象具有不同的行为。或者，所有对象必须为相同的虚拟架构编译。如果在头文件中定义了一个弱函数或模板函数且其行为依赖于 ``__CUDA_ARCH__`` ，那么当这些对象为不同的计算架构编译时，该函数在不同对象中的实例可能会发生冲突。
+
+例如，如果头文件 ``a.h`` 包含：
+
+.. code-block:: cuda
+
+   template<typename T>
+   __device__ T* get_ptr() {
+   #if __CUDA_ARCH__ == 900
+       return nullptr; /* no address */
+   #else
+       __shared__ T arr[256];
+       return arr;
+   #endif
+   }
+
+然后如果 ``a.cu`` 和 ``b.cu`` 都包含 ``a.h`` 并为同一类型实例化 ``get_ptr()`` ，且 ``b.cu`` 期望一个非 ``NULL`` 地址，并使用以下命令编译：
+
+.. code-block:: bash
+
+   nvcc -arch=compute_70 -dc a.cu
+   nvcc -arch=compute_80 -dc b.cu
+   nvcc -arch=sm_80 a.o b.o
+
+链接时只会使用 ``get_ptr()`` 函数的一个版本，因此行为取决于选择了哪个版本。要避免此问题，要么 ``a.cu`` 和 ``b.cu`` 必须为相同的计算架构编译，要么不应在共享的头文件函数中使用 ``__CUDA_ARCH__`` 。
 
 编译器不保证为上述 ``__CUDA_ARCH__`` 的不支持使用生成诊断。
 
@@ -2152,7 +2820,7 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
 5.4.7.2. ``__CUDA_ARCH_SPECIFIC__`` 和 ``__CUDA_ARCH_FAMILY_SPECIFIC__``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-宏 ``__CUDA_ARCH_SPECIFIC__`` 和 ``__CUDA_ARCH_FAMILY_SPECIFIC__`` 定义用于识别具有架构特定功能和家族特定功能的 GPU 设备。
+宏 ``__CUDA_ARCH_SPECIFIC__`` 和 ``__CUDA_ARCH_FAMILY_SPECIFIC__`` 定义用于分别识别具有 :ref:`架构 <compute-capabilities-architecture-specific-features>` 特定功能和 :ref:`家族 <compute-capabilities-family-specific-features>` 特定功能的 GPU 设备。更多信息请参见 :ref:`特性集编译目标 <compute-capabilities-feature-set-compiler-targets>` 部分。
 
 与 ``__CUDA_ARCH__`` 类似， ``__CUDA_ARCH_SPECIFIC__`` 和 ``__CUDA_ARCH_FAMILY_SPECIFIC__`` 仅在设备代码中定义，即在 ``__device__`` 、 ``__host__ __device__`` 和 ``__global__`` 函数中。这些宏与 ``nvcc`` 选项 ``compute_<version>a`` 和 ``compute_<version>f`` 相关联。
 
@@ -2175,6 +2843,28 @@ Warp 洗牌函数在 warp 内的未退出线程之间交换值，无需使用共
 - ``__CUDA_ARCH_FAMILY_SPECIFIC__ == 1000`` 。
 
 - ``__CUDA_ARCH_SPECIFIC__`` 未定义。
+
+.. code-block:: bash
+
+   nvcc -arch=sm_100 prog.cu
+
+- ``__CUDA_ARCH__ == 1000`` 。
+
+- ``__CUDA_ARCH_FAMILY_SPECIFIC__`` 未定义。
+
+- ``__CUDA_ARCH_SPECIFIC__`` 未定义。
+
+.. code-block:: bash
+
+   nvcc -arch=sm_100a prog.cu
+   # equivalent to:
+   nvcc --generate-code arch=sm_100a,compute_100,compute_100a prog.cu
+
+- ``__CUDA_ARCH__ == 1000`` 。
+
+- ``__CUDA_ARCH_FAMILY_SPECIFIC__`` 未定义。
+
+- ``__CUDA_ARCH_SPECIFIC__ == 1000`` 和 ``__CUDA_ARCH_SPECIFIC__`` 未定义两种情况均会生成。
 
 .. _cuda-feature-testing-macros:
 
@@ -2219,9 +2909,9 @@ CUDA 提供主机和设备函数支持的 ``__nv_pure__`` 属性。编译器将 
 
 地址空间谓词函数用于确定指针的地址空间。
 
-.. note::
+.. hint::
 
-   建议使用 libcu++ <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory/is_address_from.html>`__ 提供的 ``cuda::device::is_address_from()`` 和 ``cuda::device::is_object_from()`` 函数作为地址空间谓词内联函数的可移植且更安全的替代。
+   建议使用 `libcu++ <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/memory/is_address_from.html>`__ 提供的 ``cuda::device::is_address_from()`` 和 ``cuda::device::is_object_from()`` 函数作为地址空间谓词内联函数的可移植且更安全的替代。
 
 .. code-block:: cuda
 
@@ -2259,6 +2949,8 @@ CUDA 指针（ ``T*`` ）可以访问对象，无论对象存储在哪里。例�
    __device__ size_t __cvta_generic_to_constant(const void* ptr); // PTX: cvta.to.const
    __device__ size_t __cvta_generic_to_local   (const void* ptr); // PTX: cvta.to.local
 
+.. code-block:: cuda
+
    __device__ void* __cvta_global_to_generic  (size_t raw_ptr); // PTX: cvta.global
    __device__ void* __cvta_shared_to_generic  (size_t raw_ptr); // PTX: cvta.shared
    __device__ void* __cvta_constant_to_generic(size_t raw_ptr); // PTX: cvta.const
@@ -2274,6 +2966,21 @@ CUDA 指针（ ``T*`` ）可以访问对象，无论对象存储在哪里。例�
    int    output;
    asm volatile("ld.shared.s32 %0, [%1];" : "=r"(output) : "l"(smem_ptr) : "memory");
    assert(output == 42);
+
+利用这些地址表示的一种常见优化是：共享、本地和常量空间的地址范围小于 32 位，因此可以存储 32 位地址而不是 64 位指针以缩小数据结构并节省寄存器。此外，32 位算术运算比 64 位算术运算更快。要获得这些地址的 32 位整数表示，请将 64 位值截断为 32 位，即从无符号 64 位整数强制转换为无符号 32 位整数：
+
+.. code-block:: cuda
+
+   __shared__ int smem_var;
+   uint32_t       smem_ptr_32bit = static_cast<uint32_t>(__cvta_generic_to_shared(&smem_var));
+
+要从这样的 32 位表示恢复泛型地址，请将地址零扩展回无符号 64 位整数，然后调用相应的地址空间转换函数：
+
+.. code-block:: cuda
+
+   size_t smem_ptr_64bit = static_cast<size_t>(smem_ptr_32bit); // zero-extend to 64 bits
+   void*  generic_ptr    = __cvta_shared_to_generic(smem_ptr_64bit);
+   assert(generic_ptr == &smem_var);
 
 .. _low-level-load-store-functions:
 
@@ -2296,7 +3003,7 @@ CUDA 指针（ ``T*`` ）可以访问对象，无论对象存储在哪里。例�
    T __ldlu(const T* address);
    T __ldcv(const T* address);
 
-这些函数使用 PTX ISA 指南 中指定的缓存操作符执行加载。它们支持所有 C++ 基本类型、CUDA 向量类型（除 x3 分量外）和扩展浮点类型，如 ``__half`` 、 ``__half2`` 、 ``__nv_bfloat16`` 和 ``__nv_bfloat162`` 。
+这些函数使用 `PTX ISA 指南 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#cache-operators>`__ 中指定的缓存操作符执行加载。它们支持所有 C++ 基本类型、CUDA 向量类型（除 x3 分量外）和扩展浮点类型，如 ``__half`` 、 ``__half2`` 、 ``__nv_bfloat16`` 和 ``__nv_bfloat162`` 。
 
 ---
 
@@ -2307,16 +3014,16 @@ CUDA 指针（ ``T*`` ）可以访问对象，无论对象存储在哪里。例�
    void __stcs(T* address, T value);
    void __stwt(T* address, T value);
 
-这些函数使用 PTX ISA 指南 中指定的缓存操作符执行存储。它们支持所有 C++ 基本类型、CUDA 向量类型（除 x3 分量外）和扩展浮点类型，如 ``__half`` 、 ``__half2`` 、 ``__nv_bfloat16`` 和 ``__nv_bfloat162`` 。
+这些函数使用 `PTX ISA 指南 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#cache-operators>`__ 中指定的缓存操作符执行存储。它们支持所有 C++ 基本类型、CUDA 向量类型（除 x3 分量外）和扩展浮点类型，如 ``__half`` 、 ``__half2`` 、 ``__nv_bfloat16`` 和 ``__nv_bfloat162`` 。
 
 .. _trap-function:
 
 5.4.8.4. ``__trap()``
 ^^^^^^^^^^^^^^^^^^^^^
 
-.. note::
+.. hint::
 
-   建议使用 libcu++ 提供的 ``cuda::std::terminate()`` 函数 <https://nvidia.github.io/cccl/libcudacxx/standard_api.html>`__（C++ 参考）作为 ``__trap()`` 的可移植替代。
+   建议使用 `libcu++ <https://nvidia.github.io/cccl/unstable/libcudacxx/standard_api.html>`__ 提供的 ``cuda::std::terminate()`` 函数（ `C++ 参考 <https://en.cppreference.com/w/cpp/error/terminate.html>`__ ）作为 ``__trap()`` 的可移植替代。
 
 可以通过从任何设备线程调用 ``__trap()`` 函数来启动陷阱操作。
 
@@ -2362,11 +3069,132 @@ CUDA 指针（ ``T*`` ）可以访问对象，无论对象存储在哪里。例�
 5.4.8.6. 动态编程扩展 (DPX) 指令
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-DPX 函数集使得能够查找最小和最大值，以及为最多三个 16 位或 32 位有符号或无符号整数参数执行融合加法和最小/最大值。有一个可选的 ReLU，即钳位到零，特性。
+DPX 函数集支持查找最小值和最大值，以及最多对三个 16 位或 32 位有符号或无符号整数参数执行融合加法与最小/最大值运算。还具有可选的 ReLU（即钳位到零）特性。
 
-完整的 API 可以在 CUDA Math API 文档 中找到。
+比较函数：
 
-DPX 是实现动态编程算法的非常有用的工具，例如基因组学中的 Smith-Waterman 和 Needleman-Wunsch 算法以及路由优化中的 Floyd-Warshall 算法。
+- 三个参数。语义：``max(a, b, c)`` 、 ``min(a, b, c)`` 。
+
+   .. code-block:: c++
+
+      int      __vimax3_s32  (int,      int,      int);
+      unsigned __vimax3_s16x2(unsigned, unsigned, unsigned);
+      unsigned __vimax3_u32  (unsigned, unsigned, unsigned);
+      unsigned __vimax3_u16x2(unsigned, unsigned, unsigned);
+
+      int      __vimin3_s32  (int,      int,      int);
+      unsigned __vimin3_s16x2(unsigned, unsigned, unsigned);
+      unsigned __vimin3_u32  (unsigned, unsigned, unsigned);
+      unsigned __vimin3_u16x2(unsigned, unsigned, unsigned);
+
+- 两个参数，带 ReLU。语义：``max(a, b, 0)`` 、 ``max(min(a, b), 0)`` 。
+
+   .. code-block:: c++
+
+      int      __vimax_s32_relu  (int,      int);
+      unsigned __vimax_s16x2_relu(unsigned, unsigned);
+
+      int      __vimin_s32_relu  (int,      int);
+      unsigned __vimin_s16x2_relu(unsigned, unsigned);
+
+- 三个参数，带 ReLU。语义：``max(a, b, c, 0)`` 、 ``max(min(a, b, c), 0)`` 。
+
+   .. code-block:: c++
+
+      int      __vimax3_s32_relu  (int,      int,      int);
+      unsigned __vimax3_s16x2_relu(unsigned, unsigned, unsigned);
+
+      int      __vimin3_s32_relu  (int,      int,      int);
+      unsigned __vimin3_s16x2_relu(unsigned, unsigned, unsigned);
+
+- 两个参数，同时返回哪个参数更小/更大：
+
+   .. code-block:: c++
+
+      int      __vibmax_s32  (int,      int,      bool* pred);
+      unsigned __vibmax_u32  (unsigned, unsigned, bool* pred);
+      unsigned __vibmax_s16x2(unsigned, unsigned, bool* pred);
+      unsigned __vibmax_u16x2(unsigned, unsigned, bool* pred);
+
+      int      __vibmin_s32  (int,      int,      bool* pred);
+      unsigned __vibmin_u32  (unsigned, unsigned, bool* pred);
+      unsigned __vibmin_s16x2(unsigned, unsigned, bool* pred);
+      unsigned __vibmin_u16x2(unsigned, unsigned, bool* pred);
+
+融合加法与最小/最大值：
+
+- 三个参数，将（第一个 + 第二个）与第三个比较。语义：``max(a + b, c)`` 、 ``min(a + b, c)`` 。
+
+   .. code-block:: c++
+
+      int      __viaddmax_s32  (int,      int,      int);
+      unsigned __viaddmax_s16x2(unsigned, unsigned, unsigned);
+      unsigned __viaddmax_u32  (unsigned, unsigned, unsigned);
+      unsigned __viaddmax_u16x2(unsigned, unsigned, unsigned);
+
+      int      __viaddmin_s32  (int,      int,      int);
+      unsigned __viaddmin_s16x2(unsigned, unsigned, unsigned);
+      unsigned __viaddmin_u32  (unsigned, unsigned, unsigned);
+      unsigned __viaddmin_u16x2(unsigned, unsigned, unsigned);
+
+- 三个参数，带 ReLU，将（第一个 + 第二个）与第三个以及零比较。语义：``max(a + b, c, 0)`` 、 ``max(min(a + b, c), 0)`` 。
+
+   .. code-block:: c++
+
+      int      __viaddmax_s32_relu  (int,      int,      int);
+      unsigned __viaddmax_s16x2_relu(unsigned, unsigned, unsigned);
+
+      int      __viaddmin_s32_relu  (int,      int,      int);
+      unsigned __viaddmin_s16x2_relu(unsigned, unsigned, unsigned);
+
+根据计算能力的不同，这些指令或由硬件加速，或由软件模拟。计算能力要求参见 `算术指令 <https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#throughput-of-native-arithmetic-instructions>`__ 部分。
+
+完整 API 可在 `CUDA Math API 文档 <https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__INTRINSIC__SIMD.html>`__ 中找到。
+
+---
+
+对于实现动态编程算法，DPX 是一款极为有用的工具，例如基因组学中的 Smith-Waterman 和 Needleman-Wunsch 算法，以及路径优化中的 Floyd-Warshall 算法。
+
+三个有符号 32 位整数的最大值，带 ReLU：
+
+.. code-block:: c++
+
+   int a           = -15;
+   int b           = 8;
+   int c           = 5;
+   int max_value_0 = __vimax3_s32_relu(a, b, c); // max(-15, 8, 5, 0) = 8
+   int d           = -2;
+   int e           = -4;
+   int max_value_1 = __vimax3_s32_relu(a, d, e); // max(-15, -2, -4, 0) = 0
+
+两个 32 位有符号整数之和、另一个 32 位有符号整数与零（ReLU）的最小值：
+
+.. code-block:: c++
+
+   int a           = -5;
+   int b           = 6;
+   int c           = -2;
+   int max_value_0 = __viaddmax_s32_relu(a, b, c); // max(-5 + 6, -2, 0) = max(1, -2, 0) = 1
+   int d           = 4;
+   int max_value_1 = __viaddmax_s32_relu(a, d, c); // max(-5 + 4, -2, 0) = max(-1, -2, 0) = 0
+
+两个无符号 32 位整数的最小值，并确定哪个值更小：
+
+.. code-block:: c++
+
+   unsigned a = 9;
+   unsigned b = 6;
+   bool     smaller_value;
+   unsigned min_value = __vibmin_u32(a, b, &smaller_value); // min_value is 6, smaller_value is true
+
+三对无符号 16 位整数的最大值：
+
+.. code-block:: c++
+
+   unsigned a         = 0x00050002;
+   unsigned b         = 0x00070004;
+   unsigned c         = 0x00020006;
+   unsigned max_value = __vimax3_u16x2(a, b, c); // max(5, 7, 2) and max(2, 4, 6), so max_value is 0x00070006
 
 .. _compiler-optimization-hints:
 
@@ -2402,31 +3230,33 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
    inline constexpr int Count = 4;
 
    __device__ void foo(int* p1, int* p2) {
-       // 未指定参数，循环将完全展开
+       // no argument specified, the loop will be completely unrolled
        #pragma unroll
        for (int i = 0; i < 12; ++i)
            p1[i] += p2[i] * 2;
 
-       // 展开值 = 5
+       // unroll value = 5
        #pragma unroll (Count + 1)
        for (int i = 0; i < 12; ++i)
            p1[i] += p2[i] * 4;
 
-       // 展开值 = 1，循环展开被禁用
+       // unroll value = 1, loop unrolling disabled
        #pragma unroll 1
        for (int i = 0; i < 12; ++i)
            p1[i] += p2[i] * 8;
 
-       // 展开值 = 4
+       // unroll value = 4
        #pragma unroll (MyStruct::value)
        for (int i = 0; i < 12; ++i)
            p1[i] += p2[i] * 16;
 
-       // 负值，pragma unroll 被忽略
+       // negative value, pragma unroll ignored
        #pragma unroll -1
        for (int i = 0; i < 12; ++i)
            p1[i] += p2[i] * 2;
    }
+
+另请参阅 `Compiler Explorer <https://godbolt.org/z/fPMK55PxE>`__ 上的示例。
 
 .. _builtin-assume-aligned:
 
@@ -2435,7 +3265,7 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
 
 .. hint::
 
-   建议使用 libcu++ 提供的 `cuda::std::assume_aligned()` 函数作为内置函数的便携且更安全的替代方案。
+   建议使用 `libcu++ <https://nvidia.github.io/cccl/unstable/libcudacxx/standard_api.html>`__ 提供的 ``cuda::std::assume_aligned()`` 函数（ `C++ 参考 <https://en.cppreference.com/w/cpp/memory/assume_aligned.html>`__ ）作为内置函数的可移植且更安全的替代方案。
 
 .. code-block:: cpp
 
@@ -2452,8 +3282,8 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
 
 .. code-block:: cpp
 
-   void* res1 = __builtin_assume_aligned(ptr, 32);    // 编译器可以假定 'res1' 至少为 32 字节对齐
-   void* res2 = __builtin_assume_aligned(ptr, 32, 8); // 编译器可以假定 'res2 = (char*) ptr - 8' 至少为 32 字节对齐
+   void* res1 = __builtin_assume_aligned(ptr, 32);    // compiler can assume 'res1' is at least 32-byte aligned
+   void* res2 = __builtin_assume_aligned(ptr, 32, 8); // compiler can assume 'res2 = (char*) ptr - 8' is at least 32-byte aligned
 
 .. _builtin-assume:
 
@@ -2463,7 +3293,7 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
 .. code-block:: cpp
 
    void __builtin_assume(bool predicate)
-   void __assume        (bool predicate) // 仅适用于 Microsoft 编译器
+   void __assume        (bool predicate) // only with Microsoft Compiler
 
 内置函数使编译器能够假定布尔参数为真。如果参数在运行时为假，行为是未定义的。请注意，如果参数有副作用，行为是未指定的。
 
@@ -2477,7 +3307,7 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
 
    __device__ bool f(int value) {
        __builtin_assume(value > 0);
-       return is_greater_than_zero(value); // 返回 true，无需评估条件
+       return is_greater_than_zero(value); // returns true, without evaluating the condition
    }
 
 .. _builtin-expect:
@@ -2495,7 +3325,7 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
 
 .. code-block:: cpp
 
-   // 向编译器指示 "var == 0" 很可能成立
+   // indicate to the compiler that likely "var == 0"
    if (__builtin_expect(var, 0))
        doit();
 
@@ -2516,7 +3346,7 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
 
 .. code-block:: cpp
 
-   // 向编译器指示 default case 标签永远不会到达
+   // indicates to the compiler that the default case label is never reached.
    switch (in) {
        case 1:  return 4;
        case 2:  return 10;
@@ -2566,26 +3396,43 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
    };
 
    __device__ void test() {
-       auto* dev_func_ptr = &dev_func1; // 类型：int (*)(void)
+       auto* dev_func_ptr = &dev_func1; // type: int (*)(void)
        #pragma nv_abi preserve_n_control(8)
-       int v1 = dev_func_ptr();         // 正确，间接调用
+       int v1 = dev_func_ptr();         // CORRECT, indirect call
 
        #pragma nv_abi preserve_n_control(8)
-       int v2 = dev_func1();            // 错误，直接调用；pragma 无效
-                                        // dev_func1 的类型为：int(void)
+       int v2 = dev_func1();            // WRONG, direct call; the pragma has no effect
+                                        // dev_func1 has type: int(void)
 
-       auto& dev_func_ref = &dev_func1; // 类型：int (&)(void)
+       auto& dev_func_ref = &dev_func1; // type: int (&)(void)
        #pragma nv_abi preserve_n_control(8)
-       int v3 = dev_func_ref();         // 错误，对引用的调用
-                                        // pragma 无效
+       int v3 = dev_func_ref();         // WRONG, call to a reference
+                                        // the pragma has no effect
 
-       auto member_function_ptr = &MyStruct::member_func2; // 类型：int (MyStruct::*)(void)
+       auto member_function_ptr = &MyStruct::member_func2; // type: int (MyStruct::*)(void)
        #pragma nv_abi preserve_n_control(8)
-       int v4 = member_function_ptr();  // 错误，对成员函数的间接调用
-                                        // pragma 无效
+       int v4 = member_function_ptr();  // WRONG, indirect call to member function
+                                        // the pragma has no effect
    }
 
 当应用于设备函数的声明或定义时，该 pragma 会修改对该函数的任何调用的自定义 ABI 属性。当放置在间接函数调用位置时，它仅影响该特定调用的 ABI 属性。请注意，pragma 仅在放置在调用位置时影响间接函数调用；它对直接函数调用没有影响。
+
+.. code-block:: cuda
+
+   #pragma nv_abi preserve_n_control(8)
+   __device__ int dev_func3();
+
+   __device__ int dev_func4();
+
+   __device__ void test() {
+       int v1 = dev_func3();            // CORRECT, the pragma affects the direct call
+
+       auto* dev_func_ptr = &dev_func4; // type: int (*)(void)
+       #pragma nv_abi preserve_n_control(8)
+       int v2 = dev_func_ptr();         // CORRECT, the pragma affects the indirect call
+
+       int v3 = dev_func_ptr();         // WRONG, the pragma has no effect
+   }
 
 请注意，如果函数声明及其对应定义的 pragma 参数不匹配，程序是格式错误的。
 
@@ -2621,13 +3468,13 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
 
 .. code-block:: cpp
 
-   void assert(int expression);
+   #define assert(expression) /* unspecified */
 
-``assert()`` 宏在 ``expression`` 等于零时停止内核执行。如果程序在调试器中运行，会触发断点，允许使用调试器检查设备的当前状态。否则，对于每个 ``expression`` 等于零的线程，在与主机同步后，会向 stderr 打印一条消息。此消息的格式如下：
+``assert()`` 宏在 ``expression`` 等于零时停止内核执行。如果程序在调试器中运行，会触发断点，允许使用调试器检查设备的当前状态。否则，对于每个 ``expression`` 等于零的线程，在通过 ``cudaDeviceSynchronize()`` 、 ``cudaStreamSynchronize()`` 或 ``cudaEventSynchronize()`` 与主机同步后，会向 stderr 打印一条消息。此消息的格式如下：
 
 .. code-block:: text
 
-   <文件名>:<行号>:<函数名>:
+   <filename>:<line number>:<function>:
    block: [blockIdx.x,blockIdx.y,blockIdx.z],
    thread: [threadIdx.x,threadIdx.y,threadIdx.z]
    Assertion `<expression>` failed.
@@ -2646,10 +3493,10 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
        int is_one        = 1;
        int should_be_one = 0;
 
-       // 这不会有任何效果
+       // This will have no effect
        assert(is_one);
 
-       // 这将停止内核执行
+       // This will halt kernel execution
        assert(should_be_one);
    }
 
@@ -2666,6 +3513,8 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
    test.cu:11: void testAssert(): block: [0,0,0], thread: [0,0,0] Assertion `should_be_one` failed.
 
 断言用于调试目的。由于它们可能影响性能，建议在生产代码中禁用它们。可以在编译时通过在包含 ``assert.h`` 或 ``<cassert>`` 之前定义 ``NDEBUG`` 预处理器宏，或使用编译器标志 ``-DNDEBUG`` 来禁用它们。请注意，表达式不应有副作用；否则，禁用断言会影响代码的功能。
+
+``assert()`` 宏在 ``__device__`` 和 ``__tile__`` 代码中均可用。
 
 .. _breakpoint-function:
 
@@ -2697,13 +3546,13 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
 
 .. code-block:: cpp
 
-   #pragma nv_diag_xxx <错误号1>, <错误号2> ...
+   #pragma nv_diag_xxx <error_number1>, <error_number2> ...
 
 受影响的诊断通过警告消息中显示的错误号指定。任何诊断都可以改为错误，但只有警告在被改为错误后才能被抑制或恢复其严重程度。 ``nv_diag_default`` pragma 将诊断的严重程度恢复到发出任何其他 pragma 之前有效的严重程度，即消息的正常严重程度（可能已被任何命令行选项修改）。以下示例抑制了 ``foo()`` 的「已声明但从未引用」警告：
 
 .. code-block:: cuda
 
-   #pragma nv_diag_suppress 177 // "已声明但从未引用"
+   #pragma nv_diag_suppress 177 // "declared but never referenced"
    void foo() {
        int i = 0;
    }
@@ -2725,14 +3574,14 @@ DPX 是实现动态编程算法的非常有用的工具，例如基因组学中�
 .. code-block:: cuda
 
    #pragma nv_diagnostic push
-   #pragma nv_diag_suppress 177 // "已声明但从未引用"
+   #pragma nv_diag_suppress 177 // "declared but never referenced"
    void foo() {
        int i = 0;
    }
 
    #pragma nv_diagnostic pop
    void bar() {
-       int i = 0; // 引发警告
+       int i = 0; // raise a warning
    }
 
 请注意，这些指令仅影响 ``nvcc`` CUDA 前端编译器。它们对主机编译器没有影响。
@@ -2775,7 +3624,7 @@ C++ warp 矩阵操作利用 Tensor Core 来加速形式为 ``D=A*B+C`` 的矩阵
 
 ``m`` 、 ``n`` 和 ``k`` 大小描述参与乘加操作的 warp 级矩阵块的形状。每个块的维度取决于其角色。对于 ``matrix_a`` ，块的维度为 ``m x k`` ；对于 ``matrix_b`` ，维度为 ``k x n`` ； ``accumulator`` 块为 ``m x n`` 。
 
-数据类型 ``T`` 对于乘数可以是 ``double`` 、 ``float`` 、 ``__half`` 、 ``__nv_bfloat16`` 、 ``char`` 或 ``unsigned char`` ，对于累加器可以是 ``double`` 、 ``float`` 、 ``int`` 或 ``__half`` 。如元素类型和矩阵大小部分所述，只支持有限的累加器和乘数类型组合。对于 ``matrix_a`` 和 ``matrix_b`` 片段必须指定 Layout 参数。 ``row_major`` 或 ``col_major`` 分别表示矩阵行或列中的元素在内存中是连续的。 ``accumulator`` 矩阵的 ``Layout`` 参数应保留默认值 ``void`` 。行或列布局仅在如下所述加载或存储累加器时指定。
+数据类型 ``T`` 对于乘数可以是 ``double`` 、 ``float`` 、 ``__half`` 、 ``__nv_bfloat16`` 、 ``char`` 或 ``unsigned char`` ，对于累加器可以是 ``double`` 、 ``float`` 、 ``int`` 或 ``__half`` 。如 :ref:`元素类型和矩阵大小 <wmma-element-types-matrix-sizes>` 部分所述，只支持有限的累加器和乘数类型组合。对于 ``matrix_a`` 和 ``matrix_b`` 片段必须指定 Layout 参数。 ``row_major`` 或 ``col_major`` 分别表示矩阵行或列中的元素在内存中是连续的。 ``accumulator`` 矩阵的 ``Layout`` 参数应保留默认值 ``void`` 。行或列布局仅在如下所述加载或存储累加器时指定。
 
 **load_matrix_sync**
 
@@ -2811,7 +3660,7 @@ C++ warp 矩阵操作利用 Tensor Core 来加速形式为 ``D=A*B+C`` 的矩阵
 .. code-block:: cuda
 
    wmma::fragment<wmma::accumulator, 16, 16, 16, float> frag;
-   float alpha = 0.5f; // warp 中所有线程使用相同的值
+   float alpha = 0.5f; // Same value for all threads in warp
    /*...*/
    for(int t=0; t<frag.num_elements; t++)
        frag.x[t] *= alpha;
@@ -2918,6 +3767,8 @@ Tensor Core 所需的特殊格式对于每个主要和次要设备架构可能�
 
    fragA.cu: void foo() { wmma::fragment<...> mat_a; bar(&mat_a); }
    fragB.cu: void bar(wmma::fragment<...> *mat_a) { // operate on mat_a }
+
+.. code-block:: text
 
    // sm_70 fragment layout
    $> nvcc -dc -arch=compute_70 -code=sm_70 fragA.cu -o fragA.o
@@ -3076,21 +3927,21 @@ Tensor Core 支持多种元素类型和矩阵大小。下表展示了支持的 `
    using namespace nvcuda;
 
    __global__ void wmma_ker(half *a, half *b, float *c) {
-      // 声明片段
+      // Declare the fragments
       wmma::fragment<wmma::matrix_a, 16, 16, 16, half, wmma::col_major> a_frag;
       wmma::fragment<wmma::matrix_b, 16, 16, 16, half, wmma::row_major> b_frag;
       wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag;
 
-      // 将输出初始化为零
+      // Initialize the output to zero
       wmma::fill_fragment(c_frag, 0.0f);
 
-      // 加载输入
+      // Load the inputs
       wmma::load_matrix_sync(a_frag, a, 16);
       wmma::load_matrix_sync(b_frag, b, 16);
 
-      // 执行矩阵乘法
+      // Perform the matrix multiplication
       wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
 
-      // 存储输出
+      // Store the output
       wmma::store_matrix_sync(c, c_frag, 16, wmma::mem_row_major);
    }

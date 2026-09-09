@@ -19,8 +19,8 @@
 
 .. code-block:: c++
 
-   typedef /* 实现定义 */ __mbarrier_t;
-   typedef /* 实现定义 */ __mbarrier_token_t;
+   typedef /* implementation defined */ __mbarrier_t;
+   typedef /* implementation defined */ __mbarrier_token_t;
 
 .. _memory-barrier-primitives-api:
 
@@ -119,8 +119,8 @@
   .. code-block:: c++
 
      size_t i = 0;
-     for (; i < size_and_align - zfill; ++i) ((char*)dst_shared)[i] = ((char*)src_global)[i]; /* 复制 */
-     for (; i < size_and_align; ++i) ((char*)dst_shared)[i] = 0; /* 零填充 */
+      for (; i < size_and_align - zfill; ++i) ((char*)dst_shared)[i] = ((char*)src_global)[i]; /* copy */
+      for (; i < size_and_align; ++i) ((char*)dst_shared)[i] = 0; /* zero-fill */
 
 - 要求：
   
@@ -226,23 +226,25 @@
 
 .. code-block:: c++
 
-   /// 从全局内存加载整数到共享内存
+   /// Loading an integer from global into shared memory
    __global__ void kernel(int *globalInput) {
        __shared__ int x;
        thread_block g = this_thread_block();
-       // 在线程块中选择一个领导者
+       // Choose a leader in the thread block
        if (g.thread_rank() == 0) {
-           // 从全局加载到共享，供所有线程使用
+           // load from global into shared for all threads to work with
            x = (*globalInput);
        }
-       // 在将数据加载到共享内存后，如果要同步，
-       // 如果线程块中的所有线程都需要看到它
-       g.sync(); // 等效于 __syncthreads();
+       // After loading data into shared memory, you want to synchronize
+       // if all threads in your thread block need to see it
+       g.sync(); // equivalent to __syncthreads();
    }
 
 .. note::
 
    组中的所有线程都必须参与集体操作，否则行为未定义。
+
+**相关：** ``thread_block`` 数据类型派生自更通用的 ``thread_group`` 数据类型，后者可用于表示更广泛类别的组。
 
 .. _class-cluster-group:
 
@@ -286,6 +288,10 @@
 ``static unsigned int query_shared_rank(const void *addr)`` ：获取共享内存地址所属的块秩。
 
 ``static T* map_shared_rank(T *addr, int rank)`` ：获取集群中另一个块的共享内存变量地址。
+
+**遗留成员函数（别名）：**
+
+``static unsigned int size()`` ：组中线程的总数（ ``num_threads()`` 的别名）。
 
 .. _class-grid-group:
 
@@ -334,6 +340,12 @@
 
 ``static dim3 cluster_index()`` ：集群在启动 grid 中的 3 维索引。
 
+**遗留成员函数（别名）：**
+
+``static unsigned long long size()`` ：组中线程的总数（ ``num_threads()`` 的别名）。
+
+``static dim3 group_dim()`` ：启动 grid 的维度（ ``dim_blocks()`` 的别名）。
+
 .. _class-thread-block-tile:
 
 5.6.3.1.4. thread_block_tile 类
@@ -353,7 +365,7 @@
    template <unsigned int Size, typename ParentT>
    _CG_QUALIFIER thread_block_tile<Size, ParentT> tiled_partition(const ParentT& g)
 
-``Size`` 必须是 2 的幂，并且小于或等于 1024。注释部分描述了在计算能力 7.5 或更低版本的硬件上创建大于 32 的 tile 所需的额外步骤。
+``Size`` 必须是 2 的幂，并且小于或等于 1024。Notes 部分描述了在计算能力 7.5 或更低版本的硬件上创建大于 32 的 tile 所需的额外步骤。
 
 ``ParentT`` 是从中分区此组的父类型。它是自动推断的，但 ``void`` 值将此信息存储在组句柄中而不是类型中。
 
@@ -369,43 +381,70 @@
 
 ``unsigned long long meta_group_rank() const`` ：组在从父组分区的 tile 集合中的线性秩（由 meta_group_size 限定）。
 
-``T shfl(T var, unsigned int src_rank) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，**注意：对于大于 32 的大小，组中的所有线程必须指定相同的 src_rank，否则行为未定义。**
+``T shfl(T var, unsigned int src_rank) const`` ：参见 :ref:`Warp Shuffle 函数 <warp-shuffle-functions>`，**注意：对于大于 32 的大小，组中的所有线程必须指定相同的 src_rank，否则行为未定义。**
 
-``T shfl_up(T var, int delta) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，仅适用于小于或等于 32 的大小。
+``T shfl_up(T var, int delta) const`` ：参见 :ref:`Warp Shuffle 函数 <warp-shuffle-functions>`，仅适用于小于或等于 32 的大小。
 
-``T shfl_down(T var, int delta) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，仅适用于小于或等于 32 的大小。
+``T shfl_down(T var, int delta) const`` ：参见 :ref:`Warp Shuffle 函数 <warp-shuffle-functions>`，仅适用于小于或等于 32 的大小。
 
-``T shfl_xor(T var, int delta) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__，仅适用于小于或等于 32 的大小。
+``T shfl_xor(T var, int delta) const`` ：参见 :ref:`Warp Shuffle 函数 <warp-shuffle-functions>`，仅适用于小于或等于 32 的大小。
 
-``int any(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
+``int any(int predicate) const`` ：参见 :ref:`Warp Vote 函数 <warp-vote-functions>`。
 
-``int all(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
+``int all(int predicate) const`` ：参见 :ref:`Warp Vote 函数 <warp-vote-functions>`。
 
-``unsigned int ballot(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__，仅适用于小于或等于 32 的大小。
+``unsigned int ballot(int predicate) const`` ：参见 :ref:`Warp Vote 函数 <warp-vote-functions>`，仅适用于小于或等于 32 的大小。
 
-``unsigned int match_any(T val) const`` ：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__，仅适用于小于或等于 32 的大小。
+``unsigned int match_any(T val) const`` ：参见 :ref:`Warp Match 函数 <warp-match-functions>`，仅适用于小于或等于 32 的大小。
 
-``unsigned int match_all(T val, int &pred) const`` ：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__，仅适用于小于或等于 32 的大小。
+``unsigned int match_all(T val, int &pred) const`` ：参见 :ref:`Warp Match 函数 <warp-match-functions>`，仅适用于小于或等于 32 的大小。
+
+**遗留成员函数（别名）：**
+
+``unsigned long long size() const`` ：组中线程的总数（ ``num_threads()`` 的别名）。
+
+**说明：**
+
+- 这里使用的是 ``thread_block_tile`` 模板化数据结构，组的大小作为模板参数而不是实参传递给 ``tiled_partition`` 调用。
+- ``shfl`` 、 ``shfl_up`` 、 ``shfl_down`` 和 ``shfl_xor`` 函数在使用 C++11 或更高版本编译时接受任何类型的对象。这意味着只要满足以下约束，就可以对非整数类型进行 shuffle：
+
+  - 符合简单可复制条件，即 ``is_trivially_copyable<T>::value == true``
+  - 对于小于或等于 32 的 tile 大小 ``sizeof(T) <= 32`` ，对于更大的 tile ``sizeof(T) <= 8``
+
+- 在计算能力 7.5 或更低的硬件上，大于 32 的 tile 需要为其保留少量内存。这可以使用 ``cooperative_groups::block_tile_memory`` 结构模板来完成，该模板必须驻留在共享内存或全局内存中。
+
+  .. code-block:: c++
+
+     template <unsigned int MaxBlockSize = 1024>
+     struct block_tile_memory;
+
+  ``MaxBlockSize`` 指定当前线程块中的最大线程数。对于仅以较小线程数启动的内核，可以使用此参数来最小化 ``block_tile_memory`` 的共享内存使用量。
+
+  此 ``block_tile_memory`` 随后需要传递给 ``cooperative_groups::this_thread_block`` ，使生成的 ``thread_block`` 可以被分区为大于 32 的 tile。接受 ``block_tile_memory`` 参数的 ``this_thread_block`` 重载是集体操作，必须由 ``thread_block`` 中的所有线程调用。
+
+  ``block_tile_memory`` 可以在计算能力 8.0 或更高的硬件上使用，以便能够编写一个面向多种不同计算能力的源代码。在不需要它的情况下，在共享内存中实例化时它不应消耗任何内存。
 
 **示例：**
 
 .. code-block:: c++
 
-   /// 以下代码将创建两组平铺组，大小分别为 32 和 4：
-   /// 后者将来源编码在类型中，而前者将其存储在句柄中
+   /// The following code will create two sets of tiled groups, of size 32 and 4 respectively:
+   /// The latter has the provenance encoded in the type, while the first stores it in the handle
    thread_block block = this_thread_block();
    thread_block_tile<32> tile32 = tiled_partition<32>(block);
    thread_block_tile<4, thread_block> tile4 = tiled_partition<4>(block);
 
-   /// 以下代码将在所有计算能力上创建大小为 128 的 tile。
-   /// block_tile_memory 可以在计算能力 8.0 或更高版本上省略。
+.. code-block:: c++
+
+   /// The following code will create tiles of size 128 on all Compute Capabilities.
+   /// block_tile_memory can be omitted on Compute Capability 8.0 or higher.
    __global__ void kernel(...) {
-       // 为 thread_block_tile 使用保留共享内存，
-       //   指定块大小最多为 256 个线程。
+       // reserve shared memory for thread_block_tile usage,
+       //   specify that block size will be at most 256 threads.
        __shared__ block_tile_memory<256> shared;
        thread_block thb = this_thread_block(shared);
 
-       // 创建具有 128 个线程的 tile。
+       // Create tiles with 128 threads.
        auto tile = tiled_partition<128>(thb);
 
        // ...
@@ -442,35 +481,47 @@
 
 ``unsigned long long meta_group_rank() const`` ：组在从父组分区的 tile 集合中的线性秩（由 meta_group_size 限定）。如果此组是通过查询活动线程集创建的，例如 ``coalesced_threads()`` ，则 ``meta_group_rank()`` 的值将始终为 0。
 
-``T shfl(T var, unsigned int src_rank) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__。
+``T shfl(T var, unsigned int src_rank) const`` ：参见 :ref:`Warp Shuffle 函数 <warp-shuffle-functions>`。
 
-``T shfl_up(T var, int delta) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__。
+``T shfl_up(T var, int delta) const`` ：参见 :ref:`Warp Shuffle 函数 <warp-shuffle-functions>`。
 
-``T shfl_down(T var, int delta) const`` ：参见 `Warp Shuffle 函数 <cpp-language-extensions.html#warp-shuffle-functions>`__。
+``T shfl_down(T var, int delta) const`` ：参见 :ref:`Warp Shuffle 函数 <warp-shuffle-functions>`。
 
-``int any(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
+``int any(int predicate) const`` ：参见 :ref:`Warp Vote 函数 <warp-vote-functions>`。
 
-``int all(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
+``int all(int predicate) const`` ：参见 :ref:`Warp Vote 函数 <warp-vote-functions>`。
 
-``unsigned int ballot(int predicate) const`` ：参见 `Warp Vote 函数 <index.html#warp-vote-functions>`__。
+``unsigned int ballot(int predicate) const`` ：参见 :ref:`Warp Vote 函数 <warp-vote-functions>`。
 
-``unsigned int match_any(T val) const`` ：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__。
+``unsigned int match_any(T val) const`` ：参见 :ref:`Warp Match 函数 <warp-match-functions>`。
 
-``unsigned int match_all(T val, int &pred) const`` ：参见 `Warp Match 函数 <cpp-language-extensions.html#warp-match-functions>`__。
+``unsigned int match_all(T val, int &pred) const`` ：参见 :ref:`Warp Match 函数 <warp-match-functions>`。
+
+**遗留成员函数（别名）：**
+
+``unsigned long long size() const`` ：组中线程的总数（ ``num_threads()`` 的别名）。
+
+**说明：**
+
+- ``shfl`` 、 ``shfl_up`` 和 ``shfl_down`` 函数在使用 C++11 或更高版本编译时接受任何类型的对象。这意味着只要满足以下约束，就可以对非整数类型进行 shuffle：
+
+  - 符合简单可复制条件，即 ``is_trivially_copyable<T>::value == true``
+  - ``sizeof(T) <= 32``
 
 **示例：**
 
 .. code-block:: c++
 
-   /// 考虑这样一种情况：代码中有一个分支，
-   /// 其中每个 warp 中只有第 2、4 和 8 个线程是活动的。
-   /// 放置在该分支中的 coalesced_threads() 调用将为每个
-   /// warp 创建一个组 active，它有三个线程（秩为 0-2）。
+   /// Consider a situation whereby there is a branch in the
+   /// code in which only the 2nd, 4th and 8th threads in each warp are
+   /// active. The coalesced_threads() call, placed in that branch, will create (for each
+   /// warp) a group, active, that has three threads (with
+   /// ranks 0-2 inclusive).
    __global__ void kernel(int *globalInput) {
-       // 假设 globalInput 表示线程 2、4、8 应该处理数据
+       // Lets say globalInput says that threads 2, 4, 8 should handle the data
        if (threadIdx.x == *globalInput) {
            coalesced_group active = coalesced_threads();
-           // active 包含 0-2（含）
+           // active contains 0-2 inclusive
            active.sync();
        }
    }
@@ -487,7 +538,7 @@
 
 ``memcpy_async`` 是组范围的集体 memcpy，利用硬件加速支持从全局内存到共享内存的非阻塞内存事务。给定组中命名的一组线程， ``memcpy_async`` 将通过单个流水线阶段移动指定数量的字节或输入类型的元素。此外，为了在使用 ``memcpy_async`` API 时实现最佳性能，共享内存和全局内存都需要 16 字节的对齐。重要的是要注意，虽然这通常是一个 memcpy，但只有当源是全局内存且目标是共享内存并且两者都可以用 16、8 或 4 字节对齐寻址时，它才是异步的。异步复制的数据只能在调用 wait 或 wait_prior 后读取，这表示相应阶段已完成将数据移动到共享内存。
 
-必须等待所有未完成的请求可能会失去一些灵活性（但获得简单性）。为了有效地重叠数据传输和执行，重要的是能够在等待和操作请求 **N** 的同时启动 **N+1** 个 ``memcpy_async`` 请求。为此，使用 ``memcpy_async`` 并使用基于阶段的集体 ``wait_prior`` API 等待它。有关更多详细信息，请参阅 `wait 和 wait_prior <#cg-api-async-wait>`__。
+必须等待所有未完成的请求可能会失去一些灵活性（但获得简单性）。为了有效地重叠数据传输和执行，重要的是能够在等待和操作请求 **N** 的同时启动 **N+1** 个 ``memcpy_async`` 请求。为此，使用 ``memcpy_async`` 并使用基于阶段的集体 ``wait_prior`` API 等待它。有关更多详细信息，请参阅 :ref:`wait 和 wait_prior <wait-and-wait-prior>` 。
 
 **用法 1**
 
@@ -530,8 +581,8 @@
 
 .. code-block:: c++
 
-   /// 此示例从全局内存流式传输每个线程块的数据
-   /// 到有限大小的共享内存块（elementsInShared）中进行操作。
+   /// This example streams elementsPerThreadBlock worth of data from global memory
+   /// into a limited sized shared memory (elementsInShared) block to operate on.
    #include <cooperative_groups.h>
    #include <cooperative_groups/memcpy_async.h>
 
@@ -549,7 +600,7 @@
            cg::memcpy_async(tb, local_smem, elementsInShared, global_data + index, elementsPerThreadBlock - index);
            copy_count = min(elementsInShared, elementsPerThreadBlock - index);
            cg::wait(tb);
-           // 使用 local_smem 工作
+           // Work with local_smem
            index += copy_count;
        }
    }
@@ -572,6 +623,51 @@
 **代码生成要求：** 最低计算能力 5.0，计算能力 8.0 以实现异步，C++11
 
 需要包含 ``cooperative_groups/memcpy_async.h`` 头文件。
+
+**示例：**
+
+.. code-block:: c++
+
+   /// This example streams elementsPerThreadBlock worth of data from global memory
+   /// into a limited sized shared memory (elementsInShared) block to operate on in
+   /// multiple (two) stages. As stage N is kicked off, we can wait on and operate on stage N-1.
+   #include <cooperative_groups.h>
+   #include <cooperative_groups/memcpy_async.h>
+
+   namespace cg = cooperative_groups;
+
+   __global__ void kernel(int* global_data) {
+       cg::thread_block tb = cg::this_thread_block();
+       const size_t elementsPerThreadBlock = 16 * 1024 + 64;
+       const size_t elementsInShared = 128;
+       __align__(16) __shared__ int local_smem[2][elementsInShared];
+       int stage = 0;
+       // First kick off an extra request
+       size_t copy_count = elementsInShared;
+       size_t index = copy_count;
+       cg::memcpy_async(tb, local_smem[stage], elementsInShared, global_data, elementsPerThreadBlock - index);
+       while (index < elementsPerThreadBlock) {
+           // Now we kick off the next request...
+           cg::memcpy_async(tb, local_smem[stage ^ 1], elementsInShared, global_data + index, elementsPerThreadBlock - index);
+           // ... but we wait on the one before it
+           cg::wait_prior<1>(tb);
+
+           // Its now available and we can work with local_smem[stage] here
+           // (...)
+           //
+
+           // Calculate the amount of data that was actually copied, for the next iteration.
+           copy_count = min(elementsInShared, elementsPerThreadBlock - index);
+           index += copy_count;
+
+           // A cg::sync(tb) might be needed here depending on whether
+           // the work done with local_smem[stage] can release threads to race ahead or not
+           // Wrap to the next stage
+           stage ^= 1;
+       }
+       cg::wait(tb);
+       // The last local_smem[stage] can be handled here
+   }
 
 .. _cooperative-groups-partition-h:
 
@@ -1080,7 +1176,7 @@ CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 C
 5.6.4.2.1. 配置选项
 """""""""""""""""""
 
-设备运行时系统软件的资源分配通过主机程序的 ``cudaDeviceSetLimit()`` API 控制。必须在启动任何内核之前设置限制，并且在 GPU  actively 运行程序时不得更改。
+设备运行时系统软件的资源分配通过主机程序的 ``cudaDeviceSetLimit()`` API 控制。必须在启动任何内核之前设置限制，并且在 GPU 主动运行程序时不得更改。
 
 可以设置以下命名限制：
 
@@ -1136,7 +1232,7 @@ CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 C
 5.6.4.2.2.1.2. 纹理和表面
 """""""""""""""""""""""""
 
-  设备运行时不允许从设备代码内部创建或销毁纹理或表面对象。从主机创建的纹理和表面对象可以在设备上自由使用和传递。无论在何处创建，动态创建的纹理对象始终有效，并且可以从父内核传递给子内核。
+设备运行时不允许从设备代码内部创建或销毁纹理或表面对象。从主机创建的纹理和表面对象可以在设备上自由使用和传递。无论在何处创建，动态创建的纹理对象始终有效，并且可以从父内核传递给子内核。
 
 .. note::
 
@@ -1283,7 +1379,11 @@ CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 C
    * - ``cudaFuncGetAttributes``
      -
    * - ``cudaMemcpyAsync``
-     - 关于所有 ``memcpy/set`` 函数的说明：仅支持异步 ``memcpy/set`` 函数；仅允许设备到设备的 ``memcpy`` ；不能传入本地或共享内存指针
+     - 关于所有 ``memcpy/memset`` 函数的说明：
+
+       - 仅支持异步 ``memcpy/set`` 函数
+       - 仅允许设备到设备的 ``memcpy``
+       - 不能传入本地或共享内存指针
    * - ``cudaMemcpy2DAsync``
      - 同上
    * - ``cudaMemcpy3DAsync``

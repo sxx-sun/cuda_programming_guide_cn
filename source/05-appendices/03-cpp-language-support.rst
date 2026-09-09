@@ -33,7 +33,7 @@
    * - 语言特性
      - C++11 提案
      - NVCC/CUDA Toolkit 7.x
-   * - 右值引用
+   * - :ref:`右值引用 <move-forward-restrictions>`
      - `N2118 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2118.html>`__
      - ✅
    * - ``*this`` 的右值引用
@@ -51,7 +51,7 @@
    * - 扩展可变参数模板模板参数
      - `N2555 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2555.pdf>`__
      - ✅
-   * - 初始化列表
+   * - :ref:`初始化列表 <initializer-list-restrictions>`
      - `N2672 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2672.htm>`__
      - ✅
    * - 静态断言
@@ -69,7 +69,7 @@
    * - 新函数声明器语法
      - `N2541 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2541.htm>`__
      - ✅
-   * - Lambda 表达式
+   * - :ref:`Lambda 表达式 <lambda-expressions>`
      - `N2927 <http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2927.pdf>`__
      - ✅
    * - 表达式的声明类型
@@ -106,7 +106,7 @@
    * - 标准化属性语法
      - `N2761 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2761.pdf>`__
      - ✅
-   * - 广义常量表达式
+   * - :ref:`广义常量表达式 <constexpr-functions-restrictions>`
      - `N2235 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2235.pdf>`__
      - ✅
    * - 对齐支持
@@ -145,7 +145,7 @@
    * - 标准布局类型
      - `N2342 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2342.htm>`__
      - ✅
-   * - 默认函数
+   * - :ref:`默认函数 <defaulted-functions>`
      - `N2346 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2346.htm>`__
      - ✅
    * - 删除函数
@@ -158,13 +158,13 @@
      - | `N2253 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2253.html>`__
        | `DR850 <http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#850>`__
      - ✅
-   * - 内联命名空间
+   * - :ref:`内联命名空间 <inline-namespaces-restrictions>`
      - `N2535 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2535.htm>`__
      - ✅
    * - 无限制联合
      - `N2544 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2544.pdf>`__
      - ✅
-   * - 局部和未命名类型作为模板参数
+   * - :ref:`局部和未命名类型作为模板参数 <templates>`
      - `N2657 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2657.htm>`__
      - ✅
    * - 基于范围的 for 循环
@@ -265,7 +265,7 @@
    * - 二进制字面量
      - `N3472 <http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3472.pdf>`__
      - ✅
-   * - 推导返回类型的函数
+   * - :ref:`推导返回类型的函数 <functions-with-deduced-return-type>`
      - `N3638 <https://isocpp.org/files/papers/N3638.html>`__
      - ✅
    * - 广义 lambda 捕获（init-capture）
@@ -274,7 +274,7 @@
    * - 泛型（多态）lambda 表达式
      - `N3649 <https://isocpp.org/files/papers/N3649.html>`__
      - ✅
-   * - 变量模板
+   * - :ref:`变量模板 <variable-templates-restrictions>`
      - `N3651 <https://isocpp.org/files/papers/N3651.pdf>`__
      - ✅
    * - 放宽 constexpr 函数的要求
@@ -332,6 +332,9 @@
    * - ``auto`` 从花括号初始化列表推导的新规则
      - `N3922 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3922.html>`__
      - ✅
+   * - 允许在模板模板参数中使用 ``typename``
+     - `N4051 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4051.html>`__
+     - ✅
    * - ``[[fallthrough]]`` 属性
      - `P0188R1 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0188r1.pdf>`__
      - ✅
@@ -362,8 +365,14 @@
    * - C++ 十六进制浮点字面量
      - `P0245R1 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0245r1.html>`__
      - ✅
+   * - 过度对齐数据的动态内存分配
+     - `P0035R4 <https://wg21.link/p0035>`__
+     - ✅
    * - 保证复制省略
      - `P0135R1 <https://wg21.link/p0135>`__
+     - ✅
+   * - 改进惯用 C++ 的表达式求值顺序
+     - `P0145R3 <https://wg21.link/p0145>`__
      - ✅
    * - ``constexpr if``
      - `P0292R2 <https://wg21.link/p0292>`__
@@ -372,34 +381,19 @@
      - `P0305R1 <https://wg21.link/p0305>`__
      - ✅
    * - 类模板参数推导
-     - `P0091R3 <https://wg21.link/p0091>`__
+     - `P0091R3 <https://wg21.link/p0091>`__ ， `P0512R0 <https://wg21.link/p0512r0>`__
      - ✅
    * - 使用 ``auto`` 声明非类型模板参数
      - `P0127R2 <https://wg21.link/p0127>`__
-     - ✅
-   * - 结构化绑定
-     - `P0217R3 <https://wg21.link/p0217>`__
-     - ✅
-   * - 内联变量
-     - `P0386R2 <https://wg21.link/p0386r2>`__
-     - ✅
-   * - 允许在模板模板参数中使用 ``typename``
-     - `N4051 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4051.html>`__
-     - ✅
-   * - 过度对齐数据的动态内存分配
-     - `P0035R4 <https://wg21.link/p0035>`__
-     - ✅
-   * - 改进惯用 C++ 的表达式求值顺序
-     - `P0145R3 <https://wg21.link/p0145>`__
-     - ✅
-   * - 类模板参数推导（补充）
-     - `P0512R0 <https://wg21.link/p0512r0>`__
      - ✅
    * - 使用属性命名空间时无需重复
      - `P0028R4 <https://wg21.link/p0028>`__
      - ✅
    * - 忽略不支持的非标准属性
      - `P0283R2 <https://wg21.link/p0283>`__
+     - ✅
+   * - :ref:`结构化绑定 <structured-binding-restrictions>`
+     - `P0217R3 <https://wg21.link/p0217>`__
      - ✅
    * - 移除 ``register`` 关键字的弃用用法
      - `P0001R1 <https://wg21.link/p0001>`__
@@ -415,6 +409,9 @@
      - ✅
    * - 重新措辞继承构造函数（核心问题 1941 等）
      - `P0136R1 <https://wg21.link/p0136>`__
+     - ✅
+   * - :ref:`内联变量 <inline-variables-restrictions>`
+     - `P0386R2 <https://wg21.link/p0386r2>`__
      - ✅
    * - DR 150，模板模板参数的匹配
      - `P0522R0 <https://wg21.link/p0522r0>`__
@@ -460,7 +457,7 @@
      - `P0409R2 <https://wg21.link/p0409r2>`__
      - ✅
    * - 预处理逗号省略的 ``__VA_OPT__``
-     - `P0306R4 <https://wg21.link/p0306r4>`__
+     - `P0306R4 <https://wg21.link/p0306r4>`__ ， `P1042R1 <https://wg21.link/p1042r1>`__
      - ✅
    * - 指定初始化器
      - `P0329R4 <https://wg21.link/p0329r4>`__
@@ -468,35 +465,22 @@
    * - 泛型 lambda 的熟悉模板语法
      - `P0428R2 <https://wg21.link/p0428r2>`__
      - ✅
-   * - 概念
-     - `P0734R0 <https://wg21.link/p0734r0>`__
-     - ✅
-   * - 一致比较（ ``operator<=>`` ）
-     - `P0515R3 <https://wg21.link/p0515r3>`__
-     - ✅
-   * - 立即函数（ ``consteval`` ）
-     - `P1073R3 <https://wg21.link/p1073r3>`__
-     - ✅
-   * - ``std::is_constant_evaluated``
-     - `P0595R2 <https://wg21.link/p0595r2>`__
-     - ✅
-   * - constexpr 限制放宽
-     - `P1002R1 <https://wg21.link/p1002r1>`__
-     - ✅
-   * - 特性测试宏
-     - `P0941R2 <https://wg21.link/p0941r2>`__
-     - ✅
-   * - 模块
-     - `P1103R3 <https://wg21.link/p1103r3>`__
-     - ❌
-   * - 协程
-     - `P0912R5 <https://wg21.link/p0912r5>`__
-     - ❌
-   * - ``constinit``
-     - `P1143R2 <https://wg21.link/p1143r2>`__
-     - ✅
    * - 向量的列表推导
      - `P0702R1 <https://wg21.link/p0702r1>`__
+     - ✅
+   * - 概念
+     - | `P0734R0 <https://wg21.link/p0734r0>`__
+       | `P0857R0 <https://wg21.link/p0857r0>`__
+       | `P1084R2 <https://wg21.link/p1084r2>`__
+       | `P1141R2 <https://wg21.link/p1141r2>`__
+       | `P0848R3 <https://wg21.link/p0848r3>`__
+       | `P1616R1 <https://wg21.link/p1616r1>`__
+       | `P1452R2 <https://wg21.link/p1452r2>`__
+       | `P1972R0 <https://wg21.link/p1972r0>`__
+       | `P1980R0 <https://wg21.link/p1980r0>`__
+       | `P2092R0 <https://wg21.link/p2092r0>`__
+       | `P2103R0 <https://wg21.link/p2103r0>`__
+       | `P2113R0 <https://wg21.link/p2113r0>`__
      - ✅
    * - 带初始化器的基于范围的 for 语句
      - `P0614R1 <https://wg21.link/p0614r1>`__
@@ -513,6 +497,18 @@
    * - 减少 ``constexpr`` 函数的急切实例化
      - `P0859R0 <https://wg21.link/p0859r0>`__
      - ✅
+   * - :ref:`一致比较 <three-way-comparison-operator>` （ ``operator<=>`` ）
+     - | `P0515R3 <https://wg21.link/p0515r3>`__
+       | `P0905R1 <https://wg21.link/p0905r1>`__
+       | `P1120R0 <https://wg21.link/p1120r0>`__
+       | `P1185R2 <https://wg21.link/p1185r2>`__
+       | `P1186R3 <https://wg21.link/p1186r3>`__
+       | `P1630R1 <https://wg21.link/p1630r1>`__
+       | `P1946R0 <https://wg21.link/p1946r0>`__
+       | `P1959R0 <https://wg21.link/p1959r0>`__
+       | `P2002R1 <https://wg21.link/p2002r1>`__
+       | `P2085R0 <https://wg21.link/p2085r0>`__
+     - ✅
    * - 特化的访问检查
      - `P0692R1 <https://wg21.link/p0692r1>`__
      - ✅
@@ -528,7 +524,7 @@
    * - 放宽 range-for 循环自定义点查找规则
      - `P0962R1 <https://wg21.link/p0962r1>`__
      - ✅
-   * - 允许结构化绑定访问可访问成员
+   * - :ref:`允许结构化绑定访问可访问成员 <structured-binding-restrictions>`
      - `P0969R0 <https://wg21.link/p0969r0>`__
      - ✅
    * - 放宽结构化绑定自定义点查找规则
@@ -573,9 +569,41 @@
    * - ``char8_t``
      - `P0482R6 <https://wg21.link/p0482r6>`__
      - ✅
+   * - :ref:`立即函数 <consteval-functions>` （ ``consteval`` ）
+     - `P1073R3 <https://wg21.link/p1073r3>`__ ， `P1937R2 <https://wg21.link/p1937r2>`__
+     - ✅
+   * - ``std::is_constant_evaluated``
+     - `P0595R2 <https://wg21.link/p0595r2>`__
+     - ✅
    * - 嵌套 ``inline`` 命名空间
      - `P1094R2 <https://wg21.link/p1094r2>`__
      - ✅
+   * - ``constexpr`` 限制放宽
+     - | `P1002R1 <https://wg21.link/p1002r1>`__
+       | `P1327R1 <https://wg21.link/p1327r1>`__
+       | `P1330R0 <https://wg21.link/p1330r0>`__
+       | `P1331R2 <https://wg21.link/p1331r2>`__
+       | `P1668R1 <https://wg21.link/p1668r1>`__
+       | `P0784R7 <https://wg21.link/p0784r7>`__
+     - ✅
+   * - 特性测试宏
+     - `P0941R2 <https://wg21.link/p0941r2>`__
+     - ✅
+   * - 模块
+     - | `P1103R3 <https://wg21.link/p1103r3>`__
+       | `P1766R1 <https://wg21.link/p1766r1>`__
+       | `P1811R0 <https://wg21.link/p1811r0>`__
+       | `P1703R1 <https://wg21.link/p1703r1>`__
+       | `P1874R1 <https://wg21.link/p1874r1>`__
+       | `P1979R0 <https://wg21.link/p1979r0>`__
+       | `P1779R3 <https://wg21.link/p1779r3>`__
+       | `P1857R3 <https://wg21.link/p1857r3>`__
+       | `P2115R0 <https://wg21.link/p2115r0>`__
+       | `P1815R2 <https://wg21.link/p1815r2>`__
+     - ❌
+   * - 协程
+     - `P0912R5 <https://wg21.link/p0912r5>`__
+     - ❌
    * - 聚合的括号初始化
      - `P0960R3 <https://wg21.link/p0960r3>`__ ， `P1975R0 <https://wg21.link/p1975r0>`__
      - ✅
@@ -611,6 +639,9 @@
      - ✅
    * - 允许转换为未知边界的数组
      - `P0388R4 <https://wg21.link/p0388r4>`__
+     - ✅
+   * - ``constinit``
+     - `P1143R2 <https://wg21.link/p1143r2>`__
      - ✅
    * - 布局兼容性和指针可互换性特性
      - `P0466R5 <https://wg21.link/p0466r5>`__
@@ -819,7 +850,7 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
    __host__ __device__ clock_t   clock();
    __device__          long long clock64();
 
-在设备代码中执行时，返回每个多处理器的计数器值，该计数器每个时钟周期递增一次。在核函数开始和结束时采样此计数器，减去两个值，核函数中的并为每个线程记录结果，可以估算设备执行该线程所花费的时钟周期数。但是，此值并不代表设备执行该线程指令所花费的实际时钟周期数。前者大于后者，因为线程是时间片轮转的。
+在设备代码中执行时，返回每个多处理器的计数器值，该计数器每个时钟周期递增一次。在核函数开始和结束时采样此计数器，减去两个值，并为每个线程记录结果，可以估算设备执行该线程所花费的时钟周期数。但是，此值并不代表设备执行该线程指令所花费的实际时钟周期数。前者大于后者，因为线程是时间片轮转的。
 
 .. hint::
 
@@ -834,7 +865,7 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 .. code-block:: c++
 
-   int printf(const char* format[, arg, ...]);
+   __host__ __device__ __tile__ int printf(const char* format[, arg, ...]);
 
 该函数将核函数中的格式化输出打印到主机端输出流。
 
@@ -845,6 +876,18 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 与返回打印字符数的 C 标准 ``printf()`` 不同，CUDA 的 ``printf()`` 返回解析的参数数量。如果格式字符串后没有参数，则返回 0。如果格式字符串为 ``NULL`` ，则返回 -1。如果发生内部错误，则返回 -2。
 
 在内部， ``printf()`` 使用共享数据结构，因此调用 ``printf()`` 可能会改变线程的执行顺序。特别是，调用 ``printf()`` 的线程可能比不调用 ``printf()`` 的线程执行路径更长，该路径的长度取决于 ``printf()`` 的参数。但是，请注意，CUDA 不保证线程执行顺序，除非在显式的 ``__syncthreads()`` 屏障处。因此，无法判断执行顺序是否被 ``printf()`` 或硬件中的其他调度行为修改。
+
+``printf()`` 函数在 tile 代码中的行为与在 SIMT 设备代码中不同。在 tile 代码中，
+
+- 除标量外，参数还可以是 tile。传递 tile 参数时，tile 的每个元素都会按照相应的格式说明符打印。
+
+- 返回值始终是所提供的参数数量，即使格式字符串为 ``NULL`` 或发生内部错误也是如此。
+
+- 格式字符串必须是字面量。
+
+- 如果参数数量与格式说明符数量不匹配，则会发出错误。在 SIMT 设备代码中，这种情况会导致警告。
+
+----
 
 **格式说明符**
 
@@ -858,6 +901,8 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 - 大小： ``h`` 、 ``l`` 、 ``ll``
 - 类型： ``%cdiouxXpeEfgGaAs``
 
+----
+
 **限制**
 
 ``printf()`` 输出的最终格式化在主机系统上进行。这意味着格式字符串必须被主机系统的编译器和 C 库理解。虽然已尽力确保 CUDA 的 ``printf()`` 函数支持的格式说明符是最常见主机编译器支持的通用子集，但确切的行为将取决于主机操作系统。
@@ -867,6 +912,8 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 ``printf()`` 函数最多可以接受 32 个参数，此外还有格式字符串。任何额外的参数将被忽略，格式说明符将按原样输出。
 
 由于 Windows 平台（32 位）和 Linux 平台（64 位）上 ``long`` 类型的不同大小，在 Linux 机器上编译然后在 Windows 机器上运行的核函数将产生包含 ``%ld`` 的所有格式字符串的损坏输出。为确保安全，建议编译和执行平台匹配。
+
+----
 
 **主机端缓冲区**
 
@@ -885,6 +932,8 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 - ``cudaDeviceGetLimit(size_t* size, cudaLimitPrintfFifoSize)``
 - ``cudaDeviceSetLimit(cudaLimitPrintfFifoSize, size_t size)``
+
+----
 
 **示例**
 
@@ -916,6 +965,65 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 注意每个线程都遇到 ``printf()`` 命令。因此，输出行数与网格中的线程数相同。
 
+在 `Compiler Explorer <https://cuda.godbolt.org/z/d4MPj7qG8>`__ 上查看示例。
+
+----
+
+以下代码示例：
+
+.. code-block:: c++
+
+   #include <stdio.h>
+
+   __global__ void helloCUDA(float value) {
+       if (threadIdx.x == 0)
+           printf("Hello thread %d, value=%f\n", threadIdx.x, value);
+   }
+
+   int main() {
+       helloCUDA<<<1, 5>>>(1.2345f);
+       cudaDeviceSynchronize();
+       return 0;
+   }
+
+将输出：
+
+.. code-block:: text
+
+   Hello thread 0, value=1.2345
+
+显然， ``if()`` 语句限制了哪些线程调用 ``printf()`` ，因此只看到一行输出。
+
+在 `Compiler Explorer <https://cuda.godbolt.org/z/YqEss81sf>`__ 上查看示例。
+
+----
+
+以下代码示例：
+
+.. code-block:: c++
+
+   #include "cuda_tile.h"
+   #include <cstdio>
+
+   namespace ct = cuda::tiles;
+
+   __tile_global__ void kernel() {
+     auto ints = ct::iota<ct::tile<int, ct::shape<4, 4>>>();
+     printf("%i\n", ints);
+   }
+
+   int main() {
+     kernel<<<1,1>>>();
+     cudaDeviceSynchronize();
+     return 0;
+   }
+
+将输出：
+
+.. code-block:: text
+
+   [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]]
+
 .. _memcpy-and-memset:
 
 5.3.7.3. ``memcpy()`` 和 ``memset()``
@@ -923,13 +1031,13 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 .. code-block:: c++
 
-   __host__ __device__ void* memcpy(void* dest, const void* src, size_t size);
+   __host__ __device__ __tile__ void* memcpy(void* dest, const void* src, size_t size);
 
 该函数从 ``src`` 指向的内存位置复制 ``size`` 字节到 ``dest`` 指向的内存位置。
 
 .. code-block:: c++
 
-   __host__ __device__ void* memset(void* ptr, int value, size_t size);
+   __host__ __device__ __tile__ void* memset(void* ptr, int value, size_t size);
 
 该函数将 ``ptr`` 指向的内存块的 ``size`` 字节设置为 ``value`` ，解释为 ``unsigned char`` 。
 
@@ -970,10 +1078,12 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 此内存可由其他 CUDA 线程使用，即使是来自后续核函数启动的线程。
 任何 CUDA 线程都可以释放由另一个线程分配的内存；但是，应注意确保同一指针不被多次释放。
 
+----
+
 **堆内存 API**
 
-设备堆内存的大小必须在任何在设备代码中分配或释放内存的操作之前指定，包括 ``new`` 和 ``delete`` 关键字。
-如果未显式指定堆大小，则分配 8 MB 的默认堆。
+设备内存堆的大小必须在使用设备代码中分配或释放内存的任何程序之前指定，包括 ``new`` 和 ``delete`` 关键字。
+如果任何程序在未显式指定堆大小的情况下使用设备内存堆，则会分配 8 MB 的默认堆。
 
 以下 API 函数获取和设置堆大小：
 
@@ -982,15 +1092,19 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 授予的堆大小将至少为 ``size`` 字节。`cuCtxGetLimit() <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__CTX.html#group__CUDA__CTX_1g9f2d47d1745752aa16da7ed0d111b6a8>`__ 和 `cudaDeviceGetLimit() <https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__DEVICE.html#group__CUDART__DEVICE_1g720e159aeb125910c22aa20fe9611ec2>`__ 返回当前请求的堆大小。
 
-堆的实际内存分配发生在模块加载到上下文时，无论是通过 CUDA 驱动程序 API 显式加载（参见 `模块 <../03-advanced/driver-api.html#driver-api-module>`__），还是通过 CUDA 运行时 API 隐式加载。如果内存分配失败，模块加载将生成 ``CUDA_ERROR_SHARED_OBJECT_INIT_FAILED`` 错误。
+堆的实际内存分配发生在模块加载到上下文时，无论是通过 CUDA 驱动程序 API 显式加载（参见 :ref:`模块 <driver-api-module>`），还是通过 CUDA 运行时 API 隐式加载。如果内存分配失败，模块加载将生成 ``CUDA_ERROR_SHARED_OBJECT_INIT_FAILED`` 错误。
 
 堆大小在模块加载后无法更改，并且不会根据需要动态调整大小。
 
 为设备堆保留的内存是通过主机端 CUDA API 调用（如 ``cudaMalloc()`` ）分配的内存之外的。
 
+----
+
 **与主机内存 API 的互操作性**
 
 通过设备端函数 ``malloc()`` 、 ``cuda::std::malloc()`` 、 ``cuda::std::calloc()`` 、 ``__nv_aligned_device_malloc()`` 、 ``cuda::std::aligned_alloc()`` 或 ``new`` 关键字分配的内存不能与运行时或驱动程序 API 调用（如 ``cudaMalloc`` 、 ``cudaMemcpy`` 或 ``cudaMemset`` ）一起使用或释放。同样，通过主机运行时 API 分配的内存不能使用设备端函数 ``free()`` 、 ``cuda::std::free()`` 或 ``delete`` 关键字释放。
+
+----
 
 **每线程分配示例：**
 
@@ -1028,6 +1142,111 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 注意每个线程如何遇到 ``malloc()`` 和 ``memset()`` 命令，因此接收并初始化自己的分配。
 
+在 `Compiler Explorer <https://cuda.godbolt.org/z/z7K191z58>`__ 上查看示例。
+
+----
+
+**每线程块分配示例：**
+
+.. code-block:: c++
+
+   #include <stdlib.h>
+
+   __global__ void block_level_allocation_kernel() {
+       __shared__ int* data;
+       // The first thread in the block performs the allocation and shares the pointer
+       // with all other threads through shared memory, so that access can be coalesced.
+       if (threadIdx.x == 0) {
+           size_t size = blockDim.x * 64; // 64 bytes per thread are allocated.
+           data = (int*) malloc(size);
+       }
+       __syncthreads();
+       // Check for failure
+       if (data == nullptr)
+           return;
+
+       // Threads index into the memory, ensuring coalescence
+       for (int i = 0; i < 64; ++i)
+           data[i * blockDim.x + threadIdx.x] = threadIdx.x;
+       // Ensure all threads complete before freeing
+       __syncthreads();
+
+       // Only one thread may free the memory!
+       if (threadIdx.x == 0)
+           free(data);
+   }
+
+   int main() {
+       cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+       block_level_allocation_kernel<<<10, 128>>>();
+       cudaDeviceSynchronize();
+       return 0;
+   }
+
+在 `Compiler Explorer <https://cuda.godbolt.org/z/7s8x7oonz>`__ 上查看示例。
+
+----
+
+**核函数启动之间持久分配示例：**
+
+.. code-block:: c++
+
+   #include <stdlib.h>
+   #include <stdio.h>
+
+   const int NUM_BLOCKS = 20;
+
+   __device__ int* data_ptrs[NUM_BLOCKS]; // Per-block pointer
+
+   __global__ void allocate_memory_kernel() {
+       // Only the first thread in the block performs the allocation
+       // since we need only one allocation per block.
+       if (threadIdx.x == 0)
+           data_ptrs[blockIdx.x] = (int*) malloc(blockDim.x * 4);
+       __syncthreads();
+       // Check for failure
+       if (data_ptrs[blockIdx.x] == nullptr)
+           return;
+       // Zero the data with all threads in parallel
+       data_ptrs[blockIdx.x][threadIdx.x] = 0;
+   }
+
+   // Simple example: store the thread ID into each element
+   __global__ void use_memory_kernel() {
+       int* ptr = data_ptrs[blockIdx.x];
+       if (ptr != nullptr)
+           ptr[threadIdx.x] += threadIdx.x;
+   }
+
+   // Print the content of the buffer before freeing it
+   __global__ void free_memory_kernel() {
+       int* ptr = data_ptrs[blockIdx.x];
+       if (ptr != nullptr)
+           printf("Block %d, Thread %d: final value = %d\n",
+               blockIdx.x, threadIdx.x, ptr[threadIdx.x]);
+       // Only free from one thread!
+       if (threadIdx.x == 0)
+           free(ptr);
+   }
+
+   int main() {
+       cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128*1024*1024);
+       // Allocate memory
+       allocate_memory_kernel<<<NUM_BLOCKS, 10>>>();
+
+       // Use memory
+       use_memory_kernel<<<NUM_BLOCKS, 10>>>();
+       use_memory_kernel<<<NUM_BLOCKS, 10>>>();
+       use_memory_kernel<<<NUM_BLOCKS, 10>>>();
+
+       // Free memory
+       free_memory_kernel<<<NUM_BLOCKS, 10>>>();
+       cudaDeviceSynchronize();
+       return 0;
+   }
+
+在 `Compiler Explorer <https://cuda.godbolt.org/z/h7r6G3dGP>`__ 上查看示例。
+
 .. _alloca:
 
 5.3.7.5. ``alloca()``
@@ -1053,7 +1272,7 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
        int4* ptr = (int4*) alloca(num_items * sizeof(int4));
        // use of ptr
        ...
-   }  // ptr is freed on the return of device_function
+   }
 
 .. _lambda-expressions:
 
@@ -1206,6 +1425,8 @@ CUDA 提供了 C++ 标准库 (STL) 的实现，称为 `libcu++ <https://nvidia.g
 
 如果 ``type`` 是为扩展 ``__host__ __device__`` lambda 创建的闭包类，则函数返回 ``true`` ，否则返回 ``false`` 。
 
+----
+
 lambda 类型特性可在所有编译模式下使用，无论是否启用了 lambda 或扩展 lambda。如果扩展 lambda 模式未激活，这些特性将始终返回 ``false`` 。
 
 示例：
@@ -1293,6 +1514,8 @@ lambda 类型特性可在所有编译模式下使用，无论是否启用了 lam
    auto global_lambda = [] {
        auto lambda5 = [] __host__ __device__ { }; // enclosing function for lambda5 does not exist
    };
+
+----
 
 **扩展 Lambda 限制**
 
@@ -1907,6 +2130,8 @@ C++17 通过引入新的 ``*this`` 捕获模式解决了这个问题。在此模
        *result                    = fn1() + fn2() + fn3();
    }
 
+----
+
 **无效情况：**
 
 - 主机代码中的 ``nvstd::function`` 实例不能用 ``__device__`` 函数的地址初始化，也不能用 ``operator()`` 是 ``__device__`` 函数的函数对象初始化。
@@ -1943,6 +2168,8 @@ C++17 通过引入新的 ``*this`` 捕获模式解决了这个问题。在此模
                                                      //        __device__ operator() function
        kernel<<<1, 1>>>(fn2);                        // ERROR, passing nvstd::function from host to device
    }
+
+----
 
 ``nvstd::function`` 在 ``nvfunctional`` 头文件中定义如下：
 
@@ -2051,6 +2278,8 @@ C++17 通过引入新的 ``*this`` 捕获模式解决了这个问题。在此模
 
    } // namespace cuda
 
+.. code-block:: c++
+
    namespace utils {
    namespace cuda {
 
@@ -2070,7 +2299,7 @@ C++17 通过引入新的 ``*this`` 捕获模式解决了这个问题。在此模
 
 指针解引用（``*pointer``、``pointer->member``、``pointer[0]``）仅允许在相关内存所在的同一执行空间中进行。以下情况会导致未定义行为，通常是段错误和应用程序终止。
 
-- 在主机上解引用指向全局内存、共享内存或常量内存的指针。
+- 在主机上解引用指向 :ref:`全局内存 <writing-cuda-kernels-global-memory>`、:ref:`共享内存 <writing-cuda-kernels-shared-memory>` 或 :ref:`常量内存 <writing-cuda-kernels-constant-memory>` 的指针。
 
 - 在设备代码中解引用指向主机内存的指针。
 
@@ -2080,7 +2309,7 @@ C++17 通过引入新的 ``*this`` 捕获模式解决了这个问题。在此模
 
 - 在主机代码中获取的 ``__global__`` 函数地址不能用于设备代码。类似地，在设备代码中获取的 ``__global__`` 函数地址不能用于主机代码。
 
-如内存空间说明符一节所述，通过 ``cudaGetSymbolAddress()`` 获取的 ``__device__`` 或 ``__constant__`` 变量的地址只能用于主机代码。
+如 :ref:`内存空间说明符 <memory-space-specifiers>` 一节所述，通过 ``cudaGetSymbolAddress()`` 获取的 ``__device__`` 或 ``__constant__`` 变量的地址只能用于主机代码。
 
 .. _variables:
 
@@ -2119,7 +2348,7 @@ C++17 通过引入新的 ``*this`` 捕获模式解决了这个问题。在此模
        extern __device__ int k; // CORRECT, extern __device__ variable
    }
 
-另请参见 ``static`` 变量一节。
+另请参见 :ref:`static 变量 <static-variables>` 一节。
 
 .. _const-qualified-variables:
 
@@ -2182,9 +2411,9 @@ C++17 通过引入新的 ``*this`` 捕获模式解决了这个问题。在此模
 
 .. note::
 
-   支持 ``volatile`` 关键字是为了保持与 ISO C++ 的兼容性。但是，其剩余的非弃用用法（如果有的话）几乎都不适用于 GPU。
+   支持 ``volatile`` 关键字是为了保持与 ISO C++ 的兼容性。但是，其`剩余的非弃用用法 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1152r0.html#prop>`__（如果有的话）几乎都不适用于 GPU。
 
-对 ``volatile`` 限定对象的读写不是原子的，会被编译为一条或多条不保证以下情况的 volatile 指令：
+对 ``volatile`` 限定对象的读写不是原子的，会被编译为一条或多条不保证以下情况的 `volatile 指令 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#volatile-operation>`__：
 
 - 内存操作的顺序，或
 
@@ -2194,7 +2423,7 @@ C++17 通过引入新的 ``*this`` 捕获模式解决了这个问题。在此模
 
 CUDA C++ ``volatile`` 不适用于：
 
-**线程间同步**：请改用通过 ``cuda::atomic_ref``、``cuda::atomic`` 或原子函数提供的原子操作。
+**线程间同步**：请改用通过 `cuda::atomic_ref <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/synchronization_primitives/atomic_ref.html>`__、`cuda::atomic <https://nvidia.github.io/cccl/unstable/libcudacxx/extended_api/synchronization_primitives/atomic.html>`__ 或 :ref:`原子函数 <atomic-functions>` 提供的原子操作。
 
 原子内存操作提供线程间同步保证，并且比 ``volatile`` 操作具有更好的性能。但是，CUDA C++ ``volatile`` 操作不提供任何线程间同步保证，因此不适用于此目的。以下示例展示了如何使用原子操作在两个线程之间传递消息。
 
@@ -2263,7 +2492,7 @@ CUDA C++ ``volatile`` 不适用于：
              }
          }
 
-**内存映射 IO** （MMIO）：请改用通过内联 PTX 提供的 PTX MMIO 操作。
+**内存映射 IO** （MMIO）：请改用通过内联 PTX 提供的 `PTX MMIO 操作 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#mmio-operation>`__。
 
 PTX MMIO 操作严格保留执行的内存访问次数。但是，CUDA C++ ``volatile`` 操作不保留执行的内存访问次数，可能以不确定的方式执行比请求更多或更少的访问。这使它们不适用于 MMIO。以下示例展示了如何使用 PTX MMIO 操作读取和写入寄存器。
 
@@ -2330,6 +2559,8 @@ PTX MMIO 操作严格保留执行的内存访问次数。但是，CUDA C++ ``vol
 
 在 `Compiler Explorer <https://godbolt.org/z/TdYKaTq3f>`__ 上查看示例。
 
+----
+
 .. code-block:: c++
 
    __host__ __device__ void host_device_function() {
@@ -2343,6 +2574,8 @@ PTX MMIO 操作严格保留执行的内存访问次数。但是，CUDA C++ ``vol
    }
 
 在 `Compiler Explorer <https://godbolt.org/z/18qhjn8P1>`__ 上查看示例。
+
+----
 
 .. code-block:: c++
 
@@ -2375,9 +2608,9 @@ PTX MMIO 操作严格保留执行的内存访问次数。但是，CUDA C++ ``vol
 5.3.10.4.5. ``extern`` 变量
 """""""""""""""""""""""""""
 
-在整个程序编译模式下编译时，不能使用 ``extern`` 关键字定义具有外部链接的 ``__device__``、``__tile__``、``__shared__``、``__managed__`` 和 ``__constant__`` 变量。对于 ``__tile__`` 变量，此限制在分离编译模式下也适用。
+在 :ref:`整个程序编译模式 <nvcc-separate-compilation>` 下编译时，不能使用 ``extern`` 关键字定义具有外部链接的 ``__device__``、``__tile__``、``__shared__``、``__managed__`` 和 ``__constant__`` 变量。对于 ``__tile__`` 变量，此限制在 :ref:`分离编译模式 <nvcc-separate-compilation>` 下也适用。
 
-唯一的例外是动态共享内存分配一节中描述的动态分配的 ``__shared__`` 变量。
+唯一的例外是 :ref:`动态共享内存分配 <writing-cuda-kernels-dynamic-allocation-shared-memory>` 一节中描述的动态分配的 ``__shared__`` 变量。
 
 .. code-block:: c++
 
@@ -2402,7 +2635,7 @@ PTX MMIO 操作严格保留执行的内存访问次数。但是，CUDA C++ ``vol
 5.3.10.5.2. 外部链接
 """"""""""""""""""""
 
-具有外部链接的设备变量或函数需要跨多个翻译单元的分离编译模式。
+具有外部链接的设备变量或函数需要跨多个翻译单元的 :ref:`分离编译模式 <nvcc-separate-compilation>`。
 
 在分离编译模式下，如果 ``__device__`` 或 ``__global__`` 函数定义需要存在于特定翻译单元中，则该函数的参数和返回类型在该翻译单元中必须是完整的。此概念也称为单定义规则使用（One Definition Rule-use），即 ODR-use。
 
@@ -2416,6 +2649,8 @@ PTX MMIO 操作严格保留执行的内存访问次数。但是，CUDA C++ ``vol
    __device__ auto* ptr = foo; // ODR-use, address taken
 
    int main() {}
+
+.. code-block:: c++
 
    //second.cu:
    struct S {};               // struct definition
@@ -2448,15 +2683,15 @@ PTX MMIO 操作严格保留执行的内存访问次数。但是，CUDA C++ ``vol
 
 ``__global__`` 或 ``__tile_global__`` 函数有以下限制：
 
-- 它不能具有可变数量的参数，即 C 省略号语法 ``...`` 和 ``va_list`` 类型。C++11 可变参数模板是允许的，但须遵守 ``__global__`` 可变参数模板一节中描述的限制。
+- 它不能具有可变数量的参数，即 C 省略号语法 ``...`` 和 ``va_list`` 类型。C++11 可变参数模板是允许的，但须遵守 :ref:`__global__ 可变参数模板 <global-variadic-template>` 一节中描述的限制。
 
-- 函数参数通过常量内存传递给设备，其总大小限制为 32,764 字节。
+- 函数参数通过 :ref:`常量内存 <constant-memory>` 传递给设备，其总大小限制为 32,764 字节。
 
 - 函数参数不能是 ``std::initializer_list`` 类型。
 
 - 多态类参数（``virtual``）被视为未定义行为。
 
-- Lambda 表达式和闭包类型是允许的，但须遵守 Lambda 表达式和 ``__global__`` 函数参数一节中描述的限制。
+- Lambda 表达式和闭包类型是允许的，但须遵守 :ref:`Lambda 表达式和 __global__ 函数参数 <lambda-expressions-and-global-function-parameters>` 一节中描述的限制。
 
 - 对于 ``__tile_global__`` 函数，函数参数不能是按值传递的类、结构体或联合体。
 
@@ -2465,7 +2700,7 @@ PTX MMIO 操作严格保留执行的内存访问次数。但是，CUDA C++ ``vol
 5.3.10.5.5. ``__global__`` 函数参数传递
 """"""""""""""""""""""""""""""""""""""""
 
-从设备代码启动 ``__global__`` 函数时，每个参数必须是可平凡复制（trivially copyable）且可平凡析构（trivially destructible）的。
+从 :ref:`设备代码 <intro-cpp-launching-kernels>` 启动 ``__global__`` 函数时，每个参数必须是可平凡复制（trivially copyable）且可平凡析构（trivially destructible）的。
 
 从主机代码启动 ``__global__`` 函数时，每个参数类型可以是非平凡可复制或非平凡可析构的。但是，对这些类型的处理不遵循标准 C++ 模型，如下所述。用户代码必须确保此工作流不影响程序正确性。该工作流在两个方面与标准 C++ 存在差异：
 
@@ -2579,7 +2814,7 @@ PTX MMIO 操作严格保留执行的内存访问次数。但是，CUDA C++ ``vol
 
 ``__device__``、``__tile__``、``__shared__``、``__managed__`` 和 ``__constant__`` 内存空间说明符不允许用于 ``class``、``struct`` 和 ``union`` 数据成员。
 
-仅支持在编译时求值的 ``static`` 数据成员，例如 const 限定和 ``constexpr`` 变量。
+仅支持在编译时求值的 ``static`` 数据成员，例如 :ref:`const 限定 <const-qualified-variables>` 和 ``constexpr`` 变量。
 
 .. code-block:: c++
 
@@ -2698,6 +2933,8 @@ PTX MMIO 操作严格保留执行的内存访问次数。但是，CUDA C++ ``vol
 
 在 `Compiler Explorer <https://godbolt.org/z/To39sGTrW>`__ 上查看示例。
 
+----
+
 .. code-block:: c++
 
    struct BaseClass {
@@ -2719,11 +2956,11 @@ CUDA 编译器遵循 IA64 ABI 进行类布局，而 Microsoft Visual Studio 则�
 
 设 ``T`` 表示指向成员类型的指针，或满足以下任一条件的类类型：
 
-- ``T`` 是多态类
+- ``T`` 是 :ref:`多态类 <polymorphic-classes>`
 
-- ``T`` 具有多重继承，且有多个直接或间接的空基类。
+- ``T`` 具有多重继承，且有多个直接或间接的 :ref:`空基类 <class-type-variables>`。
 
-- 所有直接和间接基类 ``B`` 都是空的，且 ``T`` 的第一个字段 ``F`` 的类型在其定义中使用了 ``B``，使得 ``B`` 在 ``F`` 的定义中布局在偏移 0 处。
+- 所有直接和间接基类 ``B`` 都是 :ref:`空的 <class-type-variables>`，且 ``T`` 的第一个字段 ``F`` 的类型在其定义中使用了 ``B``，使得 ``B`` 在 ``F`` 的定义中布局在偏移 0 处。
 
 使用 Microsoft Visual Studio 编译时，类型为 ``T`` 的类、具有类型 ``T`` 基类的类或具有类型 ``T`` 数据成员的类，在主机和设备之间可能具有不同的类布局和大小。
 
@@ -3047,7 +3284,7 @@ CUDA 编译器遵循 IA64 ABI 进行类布局，而 Microsoft Visual Studio 则�
 
 .. warning::
 
-   由于上述限制以及缺乏针对错误用法的编译器诊断，建议避免从设备代码调用标准 C++ 头文件 ``std::`` 中的函数。此类函数的实现因主机平台而异。相反，强烈建议调用 CUDA C++ 标准库 libcu++ 中 ``cuda::std::`` 命名空间内的等效功能。
+   由于上述限制以及缺乏针对错误用法的编译器诊断，建议避免从设备代码调用标准 C++ 头文件 ``std::`` 中的函数。此类函数的实现因主机平台而异。相反，强烈建议调用 CUDA C++ 标准库 :ref:`libcu++ <cuda-c-standard-library>` 中 ``cuda::std::`` 命名空间内的等效功能。
 
 .. _constexpr-variables:
 
@@ -3237,15 +3474,77 @@ CUDA 编译器按 :ref:`隐式声明和显式默认函数 <implicitly-defaulted-
 5.3.12.1. 推导返回类型的函数
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ``__global__`` 函数不能有推导返回类型 ``auto``
-- 返回类型内省不允许在主机代码中使用
+- ``__global__`` 或 ``__tile_global__`` 函数不能有推导返回类型 ``auto`` 。
+
+- 不允许在主机代码中对具有推导返回类型的 ``__device__`` 函数的返回类型进行内省。
+
+.. note::
+
+   CUDA 前端编译器在调用主机编译器之前，会将函数声明更改为具有 ``void`` 返回类型。这可能会破坏主机代码中对 ``__device__`` 函数推导返回类型的内省。因此，对于在设备函数体之外引用此类推导返回类型，CUDA 编译器将发出编译时错误。
+
+示例：
+
+.. code-block:: c++
+
+   __device__ auto device_function(int x) { // deduced return type
+       return x;                            // decltype(auto) has the same behavior
+   }
+
+   __global__ void kernel() {
+       int x = sizeof(device_function(2));         // CORRECT, device code scope
+   }
+
+   // const int size = sizeof(device_function(2)); // ERROR, return type deduction on host
+
+   void host_function() {
+   //  using T = decltype(device_function(2));     // ERROR, return type deduction on host
+   }
+
+   void host_fn1() {
+     // ERROR, referenced outside device function bodies
+     int (*p1)(int) = fn1;
+
+     struct S_local_t {
+       // ERROR, referenced outside device function bodies
+       decltype(fn2(10)) m1;
+
+       S_local_t() : m1(10) { }
+     };
+   }
+
+   // ERROR, referenced outside device function bodies
+   template <typename T = decltype(fn2)>
+   void host_fn2() { }
+
+   template<typename T> struct MyStruct { };
+
+   // ERROR, referenced outside device function bodies
+   struct S1_derived_t : MyStruct<decltype(fn1)> { };
 
 .. _variable-templates-restrictions:
 
 5.3.12.2. 变量模板
 ^^^^^^^^^^^^^^^^^^
 
-``__device__`` 或 ``__constant__`` 变量模板在使用 Microsoft 编译器时不能是 ``const`` 限定的。
+``__device__`` 、 ``__tile__`` 或 ``__constant__`` 变量模板在使用 Microsoft 编译器时不能是 ``const`` 限定的。
+
+示例：
+
+.. code-block:: c++
+
+   // ERROR on Windows (non-portable), const-qualified
+   template <typename T>
+   __device__ const T var = 0;
+
+    // CORRECT, ptr1 is not const-qualified
+   template <typename T>
+   __device__ const T* ptr1 = nullptr;
+
+   // ERROR on Windows (non-portable), ptr2 is const-qualified
+   template <typename T>
+   __device__ const T* const ptr2 = nullptr;
+
+在 `Compiler Explorer <https://godbolt.org/z/8hM5Yh7db>`__ 上查看示例。
 
 .. _c-17-restrictions:
 
@@ -3257,14 +3556,52 @@ CUDA 编译器按 :ref:`隐式声明和显式默认函数 <implicitly-defaulted-
 5.3.13.1. ``inline`` 变量
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-仅在分离编译模式下或对于具有内部链接的变量允许。
+在单个翻译单元中，使用 ``inline`` 变量相比常规变量不提供任何额外功能，也不提供任何实际优势。
+
+``nvcc`` 仅在 :ref:`分离编译 <nvcc-separate-compilation>` 模式下，或对于具有内部链接的变量，允许使用带有 ``__device__`` 、 ``__tile__`` 、 ``__constant__`` 或 ``__managed__`` 内存空间的 ``inline`` 变量。
+
+.. note::
+
+   使用 gcc/g++ 主机编译器时，用 ``__managed__`` 内存空间说明符声明的 ``inline`` 变量可能对调试器不可见。
+
+示例：
+
+.. code-block:: c++
+
+   inline        __device__ int device_var1;  // CORRECT, when compiled in Separate Compilation mode (-rdc=true or -dc)
+                                              // ERROR, when compiled in Whole Program Compilation mode
+
+   static inline __device__ int device_var2;  // CORRECT, internal linkage
+
+   namespace {
+
+   inline __device__ int device_var3;         // CORRECT, internal linkage
+
+   inline __shared__ int shared_var;          // CORRECT, internal linkage
+
+   static inline __device__ int device_var4;  // CORRECT, internal linkage
+
+   inline __device__ int device_var5;         // CORRECT, internal linkage
+
+   } // namespace
+
+在 `Compiler Explorer <https://godbolt.org/z/oraqeGTzY>`__ 上查看示例。
 
 .. _structured-binding-restrictions:
 
 5.3.13.2. 结构化绑定
 ^^^^^^^^^^^^^^^^^^^^^
 
-不能用内存空间说明符（ ``__device__`` 、 ``__shared__`` 等）声明。
+结构化绑定不能用内存空间说明符声明，例如 ``__device__`` 、 ``__tile__`` 、 ``__shared__`` 、 ``__constant__`` 或 ``__managed__`` 。
+
+示例：
+
+.. code-block:: c++
+
+   struct S {
+       int x, y;
+   };
+   // __device__ auto [a, b] = S{4, 5}; // ERROR
 
 .. _c-20-restrictions:
 
@@ -3276,30 +3613,70 @@ CUDA 编译器按 :ref:`隐式声明和显式默认函数 <implicitly-defaulted-
 5.3.14.1. 三向比较运算符（ ``<=>`` ）
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-在设备代码中支持，但可能需要 ``--expt-relaxed-constexpr`` 标志和主机实现兼容性。
+三向比较运算符（ ``<=>`` ）在 ``__device__`` 和 ``__global__`` 函数中受支持，但某些用法隐式依赖 C++ 标准库中由主机实现提供的功能。使用这些运算符可能需要指定 ``--expt-relaxed-constexpr`` 标志以消除警告，并且该功能要求主机实现满足设备代码的要求。
+
+示例：
 
 .. code-block:: c++
 
+   #include <compare> // std::strong_ordering implementation
+
    struct S {
        int x, y;
-       auto operator<=>(const S&) const = default;
+
+       auto operator<=>(const S&) const = default; // (a)
+
+       __host__ __device__ bool operator<=>(int rhs) const { return false; } // (b)
    };
+
+   __host__ __device__ bool host_device_function(S a, S b) {
+       if (a <=> 1)  // CORRECT, calls a user-defined host-device overload (b)
+           return true;
+       return a < b; // CORRECT, call to an implicitly-declared function (a)
+                     // Note: it requires a device-compatible std::strong_ordering
+                     //       implementation provided in the header <compare>
+                     //       and the flag --expt-relaxed-constexpr
+   }
+
+在 `Compiler Explorer <https://godbolt.org/z/qzs5arfx4>`__ 上查看示例。
 
 .. _consteval-functions:
 
 5.3.14.2. ``consteval`` 函数
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-可以从主机和设备代码独立调用，无论其执行空间如何：
+``consteval`` 函数可以从主机和设备代码调用，与其执行空间无关。
+
+示例：
 
 .. code-block:: c++
 
-   consteval int host_consteval() { return 10; }
-
-   __device__ int device_function() {
-       return host_consteval();  // 正确
+   consteval int host_consteval() {
+       return 10;
    }
 
-.. note::
+   __device__ consteval int device_consteval() {
+       return 10;
+   }
 
-   有关 C++ 语言支持的详细内容，请参考 `CUDA 官方文档 <https://docs.nvidia.com/cuda/cuda-programming-guide/05-appendices/cpp-language-support.html>`_。
+   __device__ int device_function() {
+       return host_consteval();   // CORRECT, even if called from device code
+   }
+
+   __host__ __device__ int host_device_function() {
+       return device_function();  // CORRECT, even if called from host-device code
+   }
+
+.. _c-23-restrictions:
+
+5.3.15. C++23 限制
+------------------
+
+除了上方 :ref:`C++23 语言特性 <c-23-language-features>` 表中指出的不支持或不适用的特性之外，没有已知的 C++23 特有限制。该表中标记为 ❌ 或 N/A 的条目（包括缺陷报告的解决方案）反映的是缺失或不适用的特性，而不是额外的行为限制。
+
+.. _equality-operator-p2468r2:
+
+5.3.15.1. 相等运算符（P2468R2）
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+尽管 NVCC 没有完全实现 **DR：你正在寻找的相等运算符** （P2468R2），但它近似实现了该行为，并且这种近似尚未导致用户代码中已知的失败。

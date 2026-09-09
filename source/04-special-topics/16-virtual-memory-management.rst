@@ -23,13 +23,13 @@ VMM API 让复杂的应用程序能够跨多个 GPU（和 CPU 核心）更高效
 
 - 通过提供底层 API 来构建复杂的内存分配器和缓存管理系统，提高开发者生产力和应用程序性能，例如在大语言模型中动态管理键值缓存，改善吞吐量和延迟。
 
-- CUDA VMM API 在分布式多 GPU 设置中非常有价值，因为它支持跨多个 GPU 的高效内存共享和访问。通过将虚拟地址与物理内存解耦，API 允许开发者创建统一的虚拟地址空间，其中数据可以动态映射到不同的 GPU。这优化了内存使用并减少了数据传输开销。例如，NVIDIA 的 NCCL 和 NVShmem 库积极使用 VMM。
+- CUDA VMM API 在分布式多 GPU 设置中非常有价值，因为它支持跨多个 GPU 的高效内存共享和访问。通过将虚拟地址与物理内存解耦，API 允许开发者创建统一的虚拟地址空间，其中数据可以动态映射到不同的 GPU。这优化了内存使用并减少了数据传输开销。例如，NVIDIA 的 NCCL 和 NVSHMEM 库积极使用 VMM。
 
 总之，CUDA VMM API 为开发者提供了超越传统类 malloc 抽象的高级工具，用于精细调整、高效、灵活和可扩展的 GPU 内存管理，这对于高性能和大内存应用程序非常重要。
 
 .. note::
 
-    本节描述的 API 套件需要支持 UVA 的系统。参见 :ref:`Virtual Memory Management APIs <vmm-api-reference>`。
+    本节描述的 API 套件需要支持 UVA 的系统。参见 `Virtual Memory Management APIs <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__VA.html>`_。
 
 .. _virtual-memory-management-preliminaries:
 
@@ -41,13 +41,13 @@ VMM API 让复杂的应用程序能够跨多个 GPU（和 CPU 核心）更高效
 4.16.1.1. 定义
 ^^^^^^^^^^^^^^
 
-**Fabric 内存（Fabric Memory）：** Fabric 内存是指可通过高速互连结构（如 NVIDIA 的 NVLink 和 NVSwitch）访问的内存。该结构在多个 GPU 或节点之间提供内存一致性和高带宽容信层，使它们能够高效地共享内存，就像内存连接到统一的结构而不是隔离在各个设备上一样。
+**Fabric 内存（Fabric Memory）：** Fabric 内存是指可通过高速互连结构（如 NVIDIA 的 NVLink 和 NVSwitch）访问的内存。该结构在多个 GPU 或节点之间提供内存一致性和高带宽通信层，使它们能够高效地共享内存，就像内存连接到统一的结构而不是隔离在各个设备上一样。
 
 CUDA 12.4 及更高版本具有 VMM 分配句柄类型 ``CU_MEM_HANDLE_TYPE_FABRIC`` 。在支持的平台上，如果 NVIDIA IMEX 守护进程正在运行，此分配句柄类型不仅支持使用任何通信机制（如 MPI）进行节点内共享，还支持节点间共享。这允许多节点 NVLink 系统中的 GPU 映射属于同一 NVLink 结构的所有其他 GPU 的内存，即使它们位于不同的节点中。
 
 **内存句柄（Memory Handles）：** 在 VMM 中，句柄是表示物理内存分配的不透明标识符。这些句柄是底层 CUDA VMM API 中管理内存的核心。它们支持对可映射到虚拟地址空间的物理内存对象进行灵活控制。句柄唯一标识物理内存分配。句柄作为内存资源的抽象引用，不暴露直接指针。句柄允许跨进程或设备导出和导入内存等操作，促进内存共享和虚拟化。
 
-**IMEX 通道（IMEX Channels）：** IMEX 代表 *节点间内存交换（internode memory exchange）*，是 NVIDIA GPU 跨不同节点通信解决方案的一部分。IMEX 通道是 GPU 驱动程序功能，在 IMEX 域内的多用户或多节点环境中提供基于用户的内存隔离。IMex 通道作为安全和隔离机制。
+**IMEX 通道（IMEX Channels）：** IMEX 代表 *节点间内存交换（internode memory exchange）*，是 NVIDIA GPU 跨不同节点通信解决方案的一部分。IMEX 通道是 GPU 驱动程序功能，在 IMEX 域内的多用户或多节点环境中提供基于用户的内存隔离。IMEX 通道作为安全和隔离机制。
 
 IMEX 通道与 fabric 句柄直接相关，必须在多节点 GPU 通信中启用。当 GPU 分配内存并希望使其可被不同节点上的 GPU 访问时，它首先需要导出该内存的句柄。在此导出过程中使用 IMEX 通道生成安全的 fabric 句柄，该句柄只能由具有正确通道访问权限的远程进程导入。
 
@@ -69,7 +69,7 @@ IMEX 通道与 fabric 句柄直接相关，必须在多节点 GPU 通信中启�
     int deviceSupportsVmm;
     CUresult result = cuDeviceGetAttribute(&deviceSupportsVmm, CU_DEVICE_ATTRIBUTE_VIRTUAL_MEMORY_MANAGEMENT_SUPPORTED, device);
     if (deviceSupportsVmm != 0) {
-        // `device` 支持 Virtual Memory Management
+        // `device` supports Virtual Memory Management
     }
 
 **Fabric 内存支持：** 在尝试使用 fabric 内存之前，应用程序必须确保它们想要使用的设备支持 fabric 内存。以下代码示例展示了查询 fabric 内存支持：
@@ -79,14 +79,14 @@ IMEX 通道与 fabric 句柄直接相关，必须在多节点 GPU 通信中启�
     int deviceSupportsFabricMem;
     CUresult result = cuDeviceGetAttribute(&deviceSupportsFabricMem, CU_DEVICE_ATTRIBUTE_HANDLE_TYPE_FABRIC_SUPPORTED, device);
     if (deviceSupportsFabricMem != 0) {
-        // `device` 支持 Fabric Memory
+        // `device` supports Fabric Memory
     }
 
 除了使用 ``CU_MEM_HANDLE_TYPE_FABRIC`` 作为句柄类型且不需要 OS 原生机制进行进程间通信来交换可共享句柄外，使用 fabric 内存与其他分配句柄类型没有区别。
 
-**IMEX 通道支持** 在 IMEX 域内，IMex 通道支持多用户环境中的安全内存共享。NVIDIA 驱动程序通过创建字符设备 ``nvidia-caps-imex-channels`` 来实现这一点。要使用基于 fabric 句柄的共享，用户应验证两件事：
+**IMEX 通道支持** 在 IMEX 域内，IMEX 通道支持多用户环境中的安全内存共享。NVIDIA 驱动程序通过创建字符设备 ``nvidia-caps-imex-channels`` 来实现这一点。要使用基于 fabric 句柄的共享，用户应验证两件事：
 
-- 首先，应用程序必须验证该设备是否存在于 /proc/devices 下：
+- 首先，应用程序必须验证该设备是否存在于 ``/proc/devices`` 下：
 
 .. code-block:: bash
 
@@ -96,19 +96,20 @@ IMEX 通道与 fabric 句柄直接相关，必须在多节点 GPU 通信中启�
     234 nvidia-caps-imex-channels
     509 nvidia-nvswitch
 
-nvidia-caps-imex-channels 设备应该有一个主编号（例如 234）。
+    The nvidia-caps-imex-channels device should have a major number (e.g., 234).
 
-- 其次，对于两个 CUDA 进程（导出者和导入者）共享内存，它们都必须有权访问同一个 IMex 通道文件。这些文件（如 /dev/nvidia-caps-imex-channels/channel0）是表示各个 IMex 通道的节点。系统管理员必须创建这些文件，例如使用 mknod() 命令。
+- 其次，对于两个 CUDA 进程（导出者和导入者）共享内存，它们都必须有权访问同一个 IMEX 通道文件。这些文件（如 ``/dev/nvidia-caps-imex-channels/channel0`` ）是表示各个 IMEX 通道的节点。系统管理员必须创建这些文件，例如使用 ``mknod()`` 命令。
 
 .. code-block:: bash
 
     # mknod /dev/nvidia-caps-imex-channels/channelN c <major_number> 0
 
-此命令使用从 /proc/devices 获取的主编号创建 channelN。
+    This command creates channelN using the major number obtained from
+    /proc/devices.
 
 .. note::
 
-    默认情况下，如果指定了 NVreg_CreateImexChannel0 模块参数，驱动程序可以创建 channel0。
+    默认情况下，如果指定了 ``NVreg_CreateImexChannel0`` 模块参数，驱动程序可以创建 channel0。
 
 **多播对象支持：** 在尝试使用多播对象之前，应用程序必须确保它们想要使用的设备支持它们。以下代码示例展示了查询多播对象支持：
 
@@ -117,7 +118,7 @@ nvidia-caps-imex-channels 设备应该有一个主编号（例如 234）。
     int deviceSupportsMultiCast;
     CUresult result = cuDeviceGetAttribute(&deviceSupportsMultiCast, CU_DEVICE_ATTRIBUTE_MULTICAST_SUPPORTED, device);
     if (deviceSupportsMultiCast != 0) {
-        // `device` 支持 Multicast Objects
+        // `device` supports Multicast Objects
     }
 
 .. _vmm-api-overview:
@@ -125,7 +126,7 @@ nvidia-caps-imex-channels 设备应该有一个主编号（例如 234）。
 4.16.2. API 概述
 ----------------
 
-VMM API 为开发者提供对虚拟内存管理的精细控制。VMM 作为非常底层的 API，需要直接使用 :ref:`CUDA Driver API <sec:driver-api>`。这个多功能 API 可用于单节点和多节点环境。
+VMM API 为开发者提供对虚拟内存管理的精细控制。VMM 作为非常底层的 API，需要直接使用 :ref:`CUDA Driver API <driver-api>`。这个多功能 API 可用于单节点和多节点环境。
 
 要有效使用 VMM，开发者必须对内存管理的一些关键概念有扎实的理解：
 
@@ -140,9 +141,9 @@ VMM API 为开发者提供对虚拟内存管理的精细控制。VMM 作为非�
     :align: center
     :alt: VMM 使用概览图
 
-    图 52 VMM 使用概览。此图概述了 VMM 利用所需的步骤序列。该过程首先评估环境设置。基于此评估，用户必须做出关键的初始决定：是使用 fabric 内存句柄还是 OS 特定句柄。根据初始句柄选择，必须采取一系列不同的后续步骤。然而，最终的内存管理操作——特别是映射、保留和设置已分配内存的访问权限——与所选句柄类型相同。
+    图 55 VMM 使用概览。此图概述了 VMM 利用所需的步骤序列。该过程首先评估环境设置。基于此评估，用户必须做出关键的初始决定：是使用 fabric 内存句柄还是 OS 特定句柄。根据初始句柄选择，必须采取一系列不同的后续步骤。然而，最终的内存管理操作——特别是映射、保留和设置已分配内存的访问权限——与所选句柄类型相同。
 
-VMM API 工作流涉及一系列内存管理步骤，重点关注在不同设备或进程之间共享内存。首先，开发者必须在源设备上分配物理内存。为了促进共享，VMM API 使用句柄将必要信息传递给目标设备或进程。用户必须导出句柄以进行共享，该句柄可以是 OS 特定句柄或 fabric 特定句柄。OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄具有更大的通用性，可在单节点和多节点环境中使用。需要注意的是，使用 fabric 特定句柄需要启用 IMex 通道。
+VMM API 工作流涉及一系列内存管理步骤，重点关注在不同设备或进程之间共享内存。首先，开发者必须在源设备上分配物理内存。为了促进共享，VMM API 使用句柄将必要信息传递给目标设备或进程。用户必须导出句柄以进行共享，该句柄可以是 OS 特定句柄或 fabric 特定句柄。OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄具有更大的通用性，可在单节点和多节点环境中使用。需要注意的是，使用 fabric 特定句柄需要启用 IMEX 通道。
 
 一旦导出句柄，必须使用进程间通信协议将其共享给接收进程或进程，方法的选择留给开发者。然后，接收进程使用 VMM API 导入句柄。在句柄成功导出、共享和导入后，源进程和目标进程都必须保留虚拟地址空间，已分配的物理内存将映射到该空间。最后一步是为每个设备设置内存访问权限，确保建立适当的权限。整个过程（包括两种句柄方法）在附图中进一步详细说明。
 
@@ -169,7 +170,7 @@ VMM API 工作流涉及一系列内存管理步骤，重点关注在不同设备
     :align: center
     :alt: 单播内存共享示例
 
-    图 53 单播内存共享示例
+    图 56 单播内存共享示例
 
 .. _virtual-memory-management-unicast-allocate-export:
 
@@ -262,7 +263,7 @@ VMM API 工作流涉及一系列内存管理步骤，重点关注在不同设备
 
 .. note::
 
-    Fabric 特定句柄需要系统管理员启用 IMex 通道。
+    Fabric 特定句柄需要系统管理员启用 IMEX 通道。
 
 `memMapIpcDrv 示例 <https://github.com/NVIDIA/cuda-samples/tree/master/Samples/3_CUDA_Features/memMapIPCDrv/>`_ 可用作使用 VMM 分配的 IPC 示例。
 
@@ -294,7 +295,7 @@ VMM API 工作流涉及一系列内存管理步骤，重点关注在不同设备
         struct sockaddr_un cliaddr;
         socklen_t len = sizeof(cliaddr);
 
-        // Construct client address to send this Shareable handle to
+        // Construct client address to send this SHareable handle to
         memset(&cliaddr, 0, sizeof(cliaddr));
         cliaddr.sun_family = AF_UNIX;
         char temp[20];
@@ -457,8 +458,8 @@ VMM API 工作流涉及一系列内存管理步骤，重点关注在不同设备
 .. code-block:: cpp
 
     CUdeviceptr ptr;
-    // `ptr` 保存保留的虚拟地址范围的起始地址。
-    CUresult result = cuMemAddressReserve(&ptr, size, 0, 0, 0); // alignment = 0 表示默认对齐
+    // `ptr` holds the returned start of virtual address range reserved.
+    CUresult result = cuMemAddressReserve(&ptr, size, 0, 0, 0); // alignment = 0 for default alignment
 
 **映射内存**
 
@@ -469,8 +470,8 @@ VMM API 工作流涉及一系列内存管理步骤，重点关注在不同设备
 .. code-block:: cpp
 
     CUdeviceptr ptr;
-    // `ptr`：先前由 cuMemAddressReserve 保留的地址范围中的地址。
-    // `allocHandle`：先前调用 cuMemCreate 获取的 CUmemGenericAllocationHandle。
+    // `ptr`: address in the address range previously reserved by cuMemAddressReserve.
+    // `allocHandle`: CUmemGenericAllocationHandle obtained by a previous call to cuMemCreate.
     CUresult result = cuMemMap(ptr, size, 0, allocHandle, 0);
 
 .. _virtual-memory-management-unicast-access:
@@ -488,7 +489,7 @@ CUDA 的虚拟内存管理 API 使应用程序能够使用访问控制机制显�
         accessDesc.location.id = device;
         accessDesc.flags = CU_MEM_ACCESS_FLAGS_PROT_READWRITE;
 
-        // 使地址可访问
+        // Make the address accessible
         cuMemSetAccess(ptr, size, &accessDesc, 1);
     }
 
@@ -501,7 +502,7 @@ VMM 公开的访问控制机制允许用户明确指定他们希望与系统中�
 4.16.3.5. 释放内存
 ^^^^^^^^^^^^^^^^^^
 
-要释放分配的内存和地址空间，源进程和目标进程都应按顺序使用 cuMemUnmap、cuMemRelease 和 cuMemAddressFree 函数。cuMemUnmap 函数取消映射先前从地址范围映射的内存区域，有效地将物理内存与保留的虚拟地址空间分离。接下来，cuMemRelease 释放先前创建的物理内存，将其返回给系统。最后，cuMemAddressFree 释放先前保留的虚拟地址范围，使其可供将来使用。这个特定顺序确保物理内存和虚拟地址空间的完全和干净释放。
+要释放分配的内存和地址空间，源进程和目标进程都应按顺序使用 ``cuMemUnmap`` 、 ``cuMemRelease`` 和 ``cuMemAddressFree`` 函数。 ``cuMemUnmap`` 函数取消映射先前从地址范围映射的内存区域，有效地将物理内存与保留的虚拟地址空间分离。接下来， ``cuMemRelease`` 释放先前创建的物理内存，将其返回给系统。最后， ``cuMemAddressFree`` 释放先前保留的虚拟地址范围，使其可供将来使用。这个特定顺序确保物理内存和虚拟地址空间的完全和干净释放。
 
 .. code-block:: cpp
 
@@ -511,14 +512,14 @@ VMM 公开的访问控制机制允许用户明确指定他们希望与系统中�
 
 .. note::
 
-    在 OS 特定情况下，必须使用 fclose 关闭导出的句柄。此步骤不适用于基于 fabric 的情况。
+    在 OS 特定情况下，必须使用 ``fclose`` 关闭导出的句柄。此步骤不适用于基于 fabric 的情况。
 
 .. _virtual-memory-management-multicast:
 
 4.16.4. 多播内存共享
 --------------------
 
-`多播对象管理 API <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__MULTICAST.html#group__CUDA__MULTICAST/>`_ 为应用程序提供了一种创建多播对象的方法，结合上述 :ref:`虚拟内存管理 API <sec:vmm-api-overview>`，允许应用程序在支持 NVLink SHARP 的 NVLink 连接 GPU（通过 NVSwitch 连接）上利用 NVLink SHARP。NVLink SHARP 允许 CUDA 应用程序利用结构内计算来加速通过 NVSwitch 连接的 GPU 之间的广播和归约等操作。为此，多个 NVLink 连接的 GPU 形成多播团队，团队中的每个 GPU 用物理内存支持多播对象。因此，N 个 GPU 的多播团队有 N 个多播对象的物理副本，每个副本对参与的一个 GPU 是本地的。使用多播对象映射的 `multimem PTX 指令 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-multimem-ld-reduce-multimem-st-multimem-red/>`_ 与多播对象的所有副本一起工作。
+`多播对象管理 API <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__MULTICAST.html#group__CUDA__MULTICAST/>`_ 为应用程序提供了一种创建多播对象的方法，结合上述 `虚拟内存管理 API <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__VA.html>`_，允许应用程序在支持 NVLink SHARP 的 NVLink 连接 GPU（通过 NVSwitch 连接）上利用 NVLink SHARP。NVLink SHARP 允许 CUDA 应用程序利用结构内计算来加速通过 NVSwitch 连接的 GPU 之间的广播和归约等操作。为此，多个 NVLink 连接的 GPU 形成多播团队，团队中的每个 GPU 用物理内存支持多播对象。因此，N 个 GPU 的多播团队有 N 个多播对象的物理副本，每个副本对参与的一个 GPU 是本地的。使用多播对象映射的 `multimem PTX 指令 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-multimem-ld-reduce-multimem-st-multimem-red/>`_ 与多播对象的所有副本一起工作。
 
 要使用多播对象，应用程序需要：
 
@@ -532,9 +533,9 @@ VMM 公开的访问控制机制允许用户明确指定他们希望与系统中�
 
 - 对于每个参与的 GPU，将如上所述使用 ``cuMemCreate`` 分配的物理内存绑定到多播句柄。在绑定任何设备上的内存之前，需要将所有设备添加到多播团队。
 
-- 保留地址范围，映射多播句柄并设置访问权限，如常规单播映射所述。到同一物理内存的单播和多播映射是可能的。参见上面的 :ref:`虚拟别名支持 <sec:virtual-aliasing-support>` 节，了解如何确保到同一物理内存的多个映射之间的一致性。
+- 保留地址范围，映射多播句柄并设置访问权限，如常规单播映射所述。到同一物理内存的单播和多播映射是可能的。参见上面的 :ref:`虚拟别名支持 <virtual-aliasing-support>` 节，了解如何确保到同一物理内存的多个映射之间的一致性。
 
-- 使用带有 `multimem PTX 指令 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-multimem-ld-reduce-multimem-st-multimem-red/>`_ 的多播映射。
+- 在多播映射中使用 `multimem PTX 指令 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-multimem-ld-reduce-multimem-st-multimem-red/>`_。
 
 `Multi GPU Programming Models <https://github.com/NVIDIA/multi-gpu-programming-models/>`_ GitHub 仓库中的 ``multi_node_p2p`` 示例包含使用 fabric 内存（包括多播对象）利用 NVLink SHARP 的完整示例。请注意，此示例面向 NCCL 或 NVSHMEM 等库的开发者。它展示了 NVSHMEM 等高级编程模型如何在（多节点）NVLink 域内内部工作。应用程序开发者通常应使用更高级别的 MPI、NCCL 或 NVSHMEM 接口而不是此 API。
 
@@ -550,7 +551,7 @@ VMM 公开的访问控制机制允许用户明确指定他们希望与系统中�
     CUmemGenericAllocationHandle createMCHandle(int numDevices, size_t size) {
         CUmemAllocationProp mcProp = {};
         mcProp.numDevices = numDevices;
-        mcProp.handleTypes = CU_MEM_HANDLE_TYPE_FABRIC; // 或在单节点上使用 CU_MEM_HANDLE_TYPE_POSIX_FILE_DESCRIPTOR
+        mcProp.handleTypes = CU_MEM_HANDLE_TYPE_FABRIC; // or on single node CU_MEM_HANDLE_TYPE_POSIX_FILE_DESCRIPTOR
 
         size_t granularity = 0;
         cuMulticastGetGranularity(&granularity, &mcProp, CU_MEM_ALLOC_GRANULARITY_MINIMUM);
@@ -673,7 +674,7 @@ VMM 还为应用程序提供了一种机制来分配某些设备可能支持的�
 
     if (allocationProp.allocFlags.compressionType == CU_MEM_ALLOCATION_COMP_GENERIC)
     {
-        // 获得了可压缩内存分配
+        // Obtained compressible memory allocation
     }
 
 .. _virtual-aliasing-support:

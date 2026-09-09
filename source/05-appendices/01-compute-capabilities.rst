@@ -24,10 +24,13 @@
 
    nvidia-smi --query-gpu=name,compute_cap
 
-在运行时，可以使用以下接口获取计算能力：
-
-* CUDA Runtime 接口
-  `cudaDeviceGetAttribute <https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__DEVICE.html#group__CUDART__DEVICE_1gb22e8256592b836df9a9cc36c9db7151>`__
+在运行时，可以使用 CUDA Runtime 接口
+`cudaDeviceGetAttribute() <https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__DEVICE.html#group__CUDART__DEVICE_1gb22e8256592b836df9a9cc36c9db7151>`__ 、
+CUDA Driver 接口
+`cuDeviceGetAttribute() <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__DEVICE.html#group__CUDA__DEVICE_1g9c3e1414f0ad901d3278a4d6645fc266>`__ 或
+NVML 接口
+`nvmlDeviceGetCudaComputeCapability() <https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html#group__nvmlDeviceQueries_1g1f803a2fb4b7dfc0a8183b46b46ab03a>`__
+获取计算能力：
 
 .. code-block:: cuda
 
@@ -41,9 +44,6 @@
                           cudaDevAttrComputeCapabilityMinor,
                           device_id);
 
-* CUDA Driver 接口
-  `cuDeviceGetAttribute <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__DEVICE.html#group__CUDA__DEVICE_1g9c3e1414f0ad901d3278a4d6645fc266>`__
-
 .. code-block:: c++
 
    #include <cuda.h>
@@ -52,12 +52,9 @@
    cuDeviceGetAttribute(&computeCapabilityMajor,
                         CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
                         device_id);
-   cuDeviceGetAttribute(&computeCapabilityMinor,
-                        CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
-                        device_id);
-
-* NVML 接口
-  `nvmlDeviceGetCudaComputeCapability <https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html#group__nvmlDeviceQueries_1g1f803a2fb4b7dfc0a8183b46b46ab03a>`__
+    cuDeviceGetAttribute(&computeCapabilityMinor,
+                         CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+                         device_id);
 
 .. code-block:: c++
 
@@ -73,7 +70,7 @@
 5.1.2. 功能可用性
 -----------------
 
-大多数随计算架构引入的计算功能都在后续架构上可用。
+大多数随计算架构引入的计算功能都旨在后续的所有架构上可用。
 如 :numref:`compute-capabilities-table-features-and-technical-specifications-feature-support-per-compute-capability` 所示，
 ``yes`` 表示某项特性在其引入之后的各计算能力版本中可用。
 
@@ -120,6 +117,12 @@
 系列特定功能集是基准功能集的超集。
 系列特定编译器目标随计算能力 10.0 设备引入，通过在编译目标中使用 **f** 后缀选择，例如指定 `compute_100f` 或 `compute_120f` 作为计算目标。
 
+从计算能力 9.0 开始的所有设备都具有一组架构特定的功能。
+要在特定 GPU 上使用这些功能的完整集合，必须使用带有 **a** 后缀的架构特定编译器目标。
+此外，从计算能力 10.0 开始，存在一些出现在多个不同次计算能力设备上的功能集。
+这些指令集称为系列特定功能，共享这些功能的设备被称为属于同一系列。
+系列特定功能是架构特定功能的一个子集，由该 GPU 系列的所有成员共享。
+带有 **f** 后缀的系列特定编译器目标允许编译器生成使用该架构特定功能公共子集的代码。
 
 例如：
 
@@ -185,7 +188,7 @@
    * - | 对共享内存和全局内存中 128 位整数值的原子操作
        | （ :ref:`atomic-functions` ）
      - No
-     - Yes
+     - No
      - Yes
      - Yes
      - Yes
@@ -193,7 +196,7 @@
    * - | 对全局内存中 ``float2`` 和 ``float4`` 浮点向量的原子加法
        | （ :ref:`atomicadd` ）
      - No
-     - Yes
+     - No
      - Yes
      - Yes
      - Yes
@@ -214,8 +217,8 @@
      - Yes
    * - 128 位精度浮点运算
      - No
-     - Yes
-     - Yes
+     - No
+     - No
      - Yes
      - Yes
      - Yes
@@ -242,12 +245,12 @@
      - Yes
    * - | 用于加速动态规划的 DPX 指令
        | （ :ref:`dpx-instructions` ）
-     - | Multiple Instr.
-     - Native
+     - Multiple Instr.
      - Multiple Instr.
      - Native
      - Native
-     - Native
+     - Multiple Instr.
+     - Multiple Instr.
    * - 分布式共享内存
      - No
      - No
@@ -271,7 +274,7 @@
      - Yes
      - Yes
 
-注意，以下表格中使用的 KB 和 K 单位对应于 1024 字节（即 KiB）和 1024。
+注意，以下表格中使用的 KB 和 K 单位分别对应于 1024 字节（即 KiB）和 1024。
 
 .. _compute-capabilities-table-device-and-streaming-multiprocessor-sm-information-per-compute-capability:
 
@@ -294,13 +297,13 @@
      - 32:1
      - 2:1
      - 64:1
+     - 64:1
+     - 64:1
+     - 2:1
      - 2:1
      - 64:1
-     - 32:1
-     - 32:1
-     - 32:1
-     - 32:1
-     - 32:1
+     - 64:1
+     - 64:1
    * - 每个设备的最大驻留 grid 数（并发内核执行）
      - 128
      - 128
@@ -404,53 +407,53 @@
      - 16
      - 32
      - 16
-     - 24
      - 16
+     - 24
      - 32
-     - 24
-     - 24
+     - 32
+     - 32
      - 24
      - 24
    * - 每个 SM 的最大驻留 warp 数
      - 32
      - 64
      - 48
+     - 48
+     - 48
      - 64
-     - 48
      - 64
-     - 48
-     - 48
+     - 64
      - 48
      - 48
    * - 每个 SM 的最大驻留线程数
      - 1024
      - 2048
      - 1536
+     - 1536
+     - 1536
      - 2048
-     - 1536
      - 2048
-     - 1536
-     - 1536
+     - 2048
      - 1536
      - 1536
    * - Green contexts：useFlags 为 0 时的最小 SM 分区大小
-     - –
-     - –
-     - –
-     - –
-     - –
      - 2
+     - 4
      - 4
      - 4
      - 4
      - 8
+     - 8
+     - 8
+     - 8
+     - 8
    * - Green contexts：useFlags 为 0 时每个分区的 SM 共调度对齐
-     - –
-     - –
-     - –
-     - –
-     - –
      - 2
+     - 2
+     - 2
+     - 2
+     - 2
+     - 8
      - 8
      - 8
      - 8
@@ -513,8 +516,8 @@
      - 164 KB
      - 100 KB
      - 228 KB
-     - 100 KB
-     - 100 KB
+     - 228 KB
+     - 228 KB
      - 100 KB
    * - 每个线程块的最大共享内存量 [#fn33]_
      - 64 KB
@@ -523,8 +526,8 @@
      - 163 KB
      - 99 KB
      - 227 KB
-     - 99 KB
-     - 99 KB
+     - 227 KB
+     - 227 KB
      - 99 KB
    * - 共享内存存储体数量
      - 32
@@ -573,8 +576,8 @@
      - 28 KB ~ 192 KB
      - 28 KB ~ 128 KB
      - 28 KB ~ 256 KB
-     - 28 KB ~ 128 KB
-     - 28 KB ~ 128 KB
+     - 28 KB ~ 256 KB
+     - 28 KB ~ 256 KB
      - 28 KB ~ 128 KB
 
 .. rubric:: 脚注
@@ -642,44 +645,44 @@ Tensor Core 功能集可通过内联 PTX 在 CUDA 编译工具链中使用。
      - INT4
    * - 7.5
      -
-     - Yes
-     -
-     - Yes
-     -
      -
      -
      - Yes
      -
+     -
+     -
+     - Yes
+     - Yes
    * - 8.0
      - Yes
      - Yes
      - Yes
      - Yes
+     -
+     -
+     -
      - Yes
-     -
-     -
      - Yes
-     -
    * - 8.6
      -
      - Yes
      - Yes
      - Yes
+     -
+     -
+     -
      - Yes
-     -
-     -
      - Yes
-     -
    * - 8.7
      -
      - Yes
      - Yes
      - Yes
+     -
+     -
+     -
      - Yes
-     -
-     -
      - Yes
-     -
    * - 8.9
      -
      - Yes
@@ -689,7 +692,7 @@ Tensor Core 功能集可通过内联 PTX 在 CUDA 编译工具链中使用。
      -
      -
      - Yes
-     -
+     - Yes
    * - 9.0
      - Yes
      - Yes
@@ -709,9 +712,9 @@ Tensor Core 功能集可通过内联 PTX 在 CUDA 编译工具链中使用。
      - Yes
      - Yes
      - Yes
-     - Yes
+     -
    * - 10.3
-     - Yes
+     -
      - Yes
      - Yes
      - Yes
@@ -721,7 +724,7 @@ Tensor Core 功能集可通过内联 PTX 在 CUDA 编译工具链中使用。
      - Yes
      -
    * - 11.0
-     - Yes
+     -
      - Yes
      - Yes
      - Yes
@@ -731,7 +734,7 @@ Tensor Core 功能集可通过内联 PTX 在 CUDA 编译工具链中使用。
      - Yes
      -
    * - 12.x
-     - Yes
+     -
      - Yes
      - Yes
      - Yes

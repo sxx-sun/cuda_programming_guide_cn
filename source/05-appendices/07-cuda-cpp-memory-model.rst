@@ -7,14 +7,14 @@
 
 CUDA C++ 则不同：线程同步的成本随着线程之间的距离增加而增长。在线程块内的线程之间成本较低，但在多 GPU 和 CPU 上运行的任意线程之间成本较高。
 
-为了应对并非总是较低的非统一线程同步成本，CUDA C++ 在 ``cuda::`` 命名空间中通过**线程作用域 (thread scopes)** 扩展了标准 C++ 内存模型和并发设施，同时默认保留标准 C++ 的语法和语义。
+为了应对并非总是较低的非统一线程同步成本，CUDA C++ 在 ``cuda::`` 命名空间中通过 **线程作用域 (thread scopes)** 扩展了标准 C++ 内存模型和并发设施，同时默认保留标准 C++ 的语法和语义。
 
 .. _cuda-cplusplus-memory-model-thread-scopes:
 
 5.7.1. 线程作用域
 -----------------
 
-**线程作用域** 指定可以使用同步原语（如 :ref:`cuda::atomic <cuda-atomic>` 或 :ref:`cuda::barrier <cuda-barrier>` ）相互同步的线程类型。
+**线程作用域** 指定可以使用同步原语（如 `cuda::atomic`_ 或 `cuda::barrier`_ ）相互同步的线程类型。
 
 .. code-block:: cuda
 
@@ -37,7 +37,7 @@ CUDA C++ 则不同：线程同步的成本随着线程之间的距离增加而�
 每个程序线程通过一个或多个线程作用域关系与其他程序线程相关联：
 
 - 系统中的每个线程通过 *系统* 线程作用域与系统中的每个其他线程相关联： ``cuda::thread_scope_system`` 。
-- 每个 GPU 线程通过 *设备* 线程作用域与同一 CUDA 设备内且同一 :ref:`内存同步域 <memory-synchronization-domains>` 中的每个其他 GPU 线程相关联： ``cuda::thread_scope_device`` 。
+- 每个 GPU 线程通过 *设备* 线程作用域与同一 CUDA 设备内且同一 :ref:`内存同步域 <memory-sync-domains>` 中的每个其他 GPU 线程相关联： ``cuda::thread_scope_device`` 。
 - 每个 GPU 线程通过 *线程块* 线程作用域与同一 CUDA 线程块中的每个其他 GPU 线程相关联： ``cuda::thread_scope_block`` 。
 - 每个线程通过 *线程* 线程作用域与其自身相关联： ``cuda::thread_scope_thread`` 。
 
@@ -87,7 +87,7 @@ CUDA C++ 则不同：线程同步的成本随着线程之间的距离增加而�
 
 修改 ISO/IEC IS 14882（C++ 标准）的 `intro.races 第 21 段`_ 如下：
 
-   程序的执行包含数据竞争，如果它包含两个可能并发的冲突操作，其中至少有一个**在包含执行另一个操作的线程的作用域上**不是原子的，并且两者之间没有发生先于关系，除了下面描述的信号处理程序的特殊情况。任何此类数据竞争都会导致未定义行为。[...]
+   程序的执行包含数据竞争，如果它包含两个可能并发的冲突操作，其中至少有一个 **在包含执行另一个操作的线程的作用域上** 不是原子的，并且两者之间没有发生先于关系，除了下面描述的信号处理程序的特殊情况。任何此类数据竞争都会导致未定义行为。[...]
 
 修改 ISO/IEC IS 14882（C++ 标准）的 `thread.barrier.class 第 4 段`_ 如下：
 
@@ -103,7 +103,7 @@ CUDA C++ 则不同：线程同步的成本随着线程之间的距离增加而�
 
 修改 ISO/IEC IS 14882（C++ 标准）的 `thread.stoptoken.intro 第 5 段`_ 如下：
 
-   对函数 ``request_stop`` 、 ``stop_requested`` 和 ``stop_possible`` 的调用**就像它们是原子操作一样**不会引入数据竞争。[...]
+   对函数 ``request_stop`` 、 ``stop_requested`` 和 ``stop_possible`` 的调用 **就像它们是原子操作一样** 不会引入数据竞争。[...]
 
 修改 ISO/IEC IS 14882（C++ 标准）的 `atomics.fences 第 2 到 4 段`_ 如下：
 
@@ -147,7 +147,7 @@ CUDA C++ 则不同：线程同步的成本随着线程之间的距离增加而�
         while(flag.load(memory_order_acquire) != 1);
         assert(x == 42);
 
-在以下对前一示例的变体中，两个线程在没有同步的情况下并发访问 ``f`` 对象，这会导致**数据竞争**，并表现出**未定义行为**：
+在以下对前一示例的变体中，两个线程在没有同步的情况下并发访问 ``f`` 对象，这会导致 **数据竞争** ，并表现出 **未定义行为** ：
 
 .. list-table::
    :widths: 100
@@ -161,12 +161,12 @@ CUDA C++ 则不同：线程同步的成本随着线程之间的距离增加而�
 
         x = 42;
         cuda::atomic_ref<int, cuda::thread_scope_block> flag(f);
-        flag.store(1, memory_order_release); // UB: 数据竞争
+        flag.store(1, memory_order_release); // UB: data race
    * - **线程 0 线程块 1**
    * - .. code-block:: cpp
 
         cuda::atomic_ref<int, cuda::thread_scope_device> flag(f);
-        while(flag.load(memory_order_acquire) != 1); // UB: 数据竞争
+        while(flag.load(memory_order_acquire) != 1); // UB: data race
         assert(x == 42);
 
 虽然对 ``f`` 的内存操作——存储和加载——是原子的，但存储操作的作用域是「线程块作用域」。由于存储由线程块 0 的线程 0 执行，它只包含线程块 0 的所有其他线程。然而，执行加载的线程在线程块 1 中，即它不在线程块 0 中执行的操作所包含的作用域中，导致存储和加载不是「原子的」，从而引入数据竞争。
@@ -174,5 +174,5 @@ CUDA C++ 则不同：线程同步的成本随着线程之间的距离增加而�
 更多示例请参阅 `PTX 内存一致性模型 litmus 测试`_。
 
 .. _PTX 内存一致性模型 litmus 测试: https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#axioms
-.. _cuda-atomic: https://nvidia.github.io/cccl/libcudacxx/extended_api/synchronization_primitives/atomic.html
-.. _cuda-barrier: https://nvidia.github.io/cccl/libcudacxx/extended_api/synchronization_primitives/barrier.html
+.. _cuda::atomic: https://nvidia.github.io/cccl/libcudacxx/extended_api/synchronization_primitives/atomic.html
+.. _cuda::barrier: https://nvidia.github.io/cccl/libcudacxx/extended_api/synchronization_primitives/barrier.html

@@ -29,7 +29,7 @@
 
    cudaGetDeviceProperties(&prop, device_id);
    size_t size = min(int(prop.l2CacheSize * 0.75), prop.persistingL2CacheMaxSize);
-   cudaDeviceSetLimit(cudaLimitPersistingL2CacheSize, size); /* 将 L2 缓存的 3/4 预留用于持久化访问，或使用最大允许值 */
+   cudaDeviceSetLimit(cudaLimitPersistingL2CacheSize, size); /* set-aside 3/4 of L2 cache for persisting accesses or the max allowed*/
 
 当 GPU 配置为多实例 GPU（Multi-Instance GPU，MIG）模式时，L2 缓存预留功能将被禁用。
 
@@ -48,15 +48,15 @@
 
 .. code-block:: c++
 
-   cudaStreamAttrValue stream_attribute;                                          // Stream 级别属性数据结构
-   stream_attribute.accessPolicyWindow.base_ptr  = reinterpret_cast<void*>(ptr);  // 全局内存数据指针
-   stream_attribute.accessPolicyWindow.num_bytes = num_bytes;                     // 持久化访问的字节数
-                                                                                  // （必须小于 cudaDeviceProp::accessPolicyMaxWindowSize）
-   stream_attribute.accessPolicyWindow.hitRatio  = 0.6;                           // 缓存命中率的提示
-   stream_attribute.accessPolicyWindow.hitProp   = cudaAccessPropertyPersisting;  // 缓存命中时的访问属性类型
-   stream_attribute.accessPolicyWindow.missProp  = cudaAccessPropertyStreaming;   // 缓存未命中时的访问属性类型
+   cudaStreamAttrValue stream_attribute;                                         // Stream level attributes data structure
+   stream_attribute.accessPolicyWindow.base_ptr  = reinterpret_cast<void*>(ptr); // Global Memory data pointer
+   stream_attribute.accessPolicyWindow.num_bytes = num_bytes;                    // Number of bytes for persistence access.
+                                                                                 // (Must be less than cudaDeviceProp::accessPolicyMaxWindowSize)
+   stream_attribute.accessPolicyWindow.hitRatio  = 0.6;                          // Hint for cache hit ratio
+   stream_attribute.accessPolicyWindow.hitProp   = cudaAccessPropertyPersisting; // Type of access property on cache hit
+   stream_attribute.accessPolicyWindow.missProp  = cudaAccessPropertyStreaming;  // Type of access property on cache miss.
 
-   // 将属性设置到 cudaStream_t 类型的 CUDA stream
+   //Set the attributes to a CUDA stream of type cudaStream_t
    cudaStreamSetAttribute(stream, cudaStreamAttributeAccessPolicyWindow, &stream_attribute);
 
 当 kernel 随后在 CUDA ``stream`` 中执行时，全局内存范围 ``[ptr..ptr+num_bytes)`` 内的内存访问比其他全局内存位置的访问更有可能持久化在 L2 缓存中。
@@ -67,15 +67,15 @@ L2 持久性也可以为 CUDA Graph Kernel Node 设置，如下例所示：
 
 .. code-block:: c++
 
-   cudaKernelNodeAttrValue node_attribute;                                        // Kernel 级别属性数据结构
-   node_attribute.accessPolicyWindow.base_ptr  = reinterpret_cast<void*>(ptr);    // 全局内存数据指针
-   node_attribute.accessPolicyWindow.num_bytes = num_bytes;                       // 持久化访问的字节数
-                                                                                  // （必须小于 cudaDeviceProp::accessPolicyMaxWindowSize）
-   node_attribute.accessPolicyWindow.hitRatio  = 0.6;                             // 缓存命中率的提示
-   node_attribute.accessPolicyWindow.hitProp   = cudaAccessPropertyPersisting;    // 缓存命中时的访问属性类型
-   node_attribute.accessPolicyWindow.missProp  = cudaAccessPropertyStreaming;     // 缓存未命中时的访问属性类型
+   cudaKernelNodeAttrValue node_attribute;                                     // Kernel level attributes data structure
+   node_attribute.accessPolicyWindow.base_ptr  = reinterpret_cast<void*>(ptr); // Global Memory data pointer
+   node_attribute.accessPolicyWindow.num_bytes = num_bytes;                    // Number of bytes for persistence access.
+                                                                               // (Must be less than cudaDeviceProp::accessPolicyMaxWindowSize)
+   node_attribute.accessPolicyWindow.hitRatio  = 0.6;                          // Hint for cache hit ratio
+   node_attribute.accessPolicyWindow.hitProp   = cudaAccessPropertyPersisting; // Type of access property on cache hit
+   node_attribute.accessPolicyWindow.missProp  = cudaAccessPropertyStreaming;  // Type of access property on cache miss.
 
-   // 将属性设置到 cudaGraphNode_t 类型的 CUDA Graph Kernel 节点
+   //Set the attributes to a CUDA Graph Kernel node of type cudaGraphNode_t
    cudaGraphKernelNodeSetAttribute(node, cudaKernelNodeAttributeAccessPolicyWindow, &node_attribute);
 
 ``hitRatio`` 参数可用于指定接收 ``hitProp`` 属性的访问比例。在上面的两个示例中，全局内存区域 ``[ptr..ptr+num_bytes)`` 中 60% 的内存访问具有持久化属性，40% 的内存访问具有流式属性。哪些特定的内存访问被分类为持久化（即 ``hitProp`` ）是随机的，概率约为 ``hitRatio`` ；概率分布取决于硬件架构和内存范围。
@@ -112,35 +112,35 @@ L2 持久性也可以为 CUDA Graph Kernel Node 设置，如下例所示：
 .. code-block:: c++
 
    cudaStream_t stream;
-   cudaStreamCreate(&stream);                                                                  // 创建 CUDA stream
+   cudaStreamCreate(&stream);                                                                  // Create CUDA stream
 
-   cudaDeviceProp prop;                                                                        // CUDA 设备属性变量
-   cudaGetDeviceProperties( &prop, device_id);                                                 // 查询 GPU 属性
+   cudaDeviceProp prop;                                                                        // CUDA device properties variable
+   cudaGetDeviceProperties( &prop, device_id);                                                 // Query GPU properties
    size_t size = min( int(prop.l2CacheSize * 0.75) , prop.persistingL2CacheMaxSize );
-   cudaDeviceSetLimit( cudaLimitPersistingL2CacheSize, size);                                  // 将 L2 缓存的 3/4 预留用于持久化访问，或使用最大允许值
+   cudaDeviceSetLimit( cudaLimitPersistingL2CacheSize, size);                                  // set-aside 3/4 of L2 cache for persisting accesses or the max allowed
 
-   size_t window_size = min(prop.accessPolicyMaxWindowSize, num_bytes);                        // 选择用户定义的 num_bytes 和最大窗口大小中的较小值
+   size_t window_size = min(prop.accessPolicyMaxWindowSize, num_bytes);                        // Select minimum of user defined num_bytes and max window size.
 
-   cudaStreamAttrValue stream_attribute;                                                       // Stream 级别属性数据结构
-   stream_attribute.accessPolicyWindow.base_ptr  = reinterpret_cast<void*>(data1);            // 全局内存数据指针
-   stream_attribute.accessPolicyWindow.num_bytes = window_size;                                // 持久化访问的字节数
-   stream_attribute.accessPolicyWindow.hitRatio  = 0.6;                                        // 缓存命中率的提示
-   stream_attribute.accessPolicyWindow.hitProp   = cudaAccessPropertyPersisting;               // 持久化属性
-   stream_attribute.accessPolicyWindow.missProp  = cudaAccessPropertyStreaming;                // 缓存未命中时的访问属性类型
+   cudaStreamAttrValue stream_attribute;                                                       // Stream level attributes data structure
+   stream_attribute.accessPolicyWindow.base_ptr  = reinterpret_cast<void*>(data1);             // Global Memory data pointer
+   stream_attribute.accessPolicyWindow.num_bytes = window_size;                                // Number of bytes for persistence access
+   stream_attribute.accessPolicyWindow.hitRatio  = 0.6;                                        // Hint for cache hit ratio
+   stream_attribute.accessPolicyWindow.hitProp   = cudaAccessPropertyPersisting;               // Persistence Property
+   stream_attribute.accessPolicyWindow.missProp  = cudaAccessPropertyStreaming;                // Type of access property on cache miss
 
-   cudaStreamSetAttribute(stream, cudaStreamAttributeAccessPolicyWindow, &stream_attribute);  // 将属性设置到 CUDA Stream
+   cudaStreamSetAttribute(stream, cudaStreamAttributeAccessPolicyWindow, &stream_attribute);   // Set the attributes to a CUDA Stream
 
    for(int i = 0; i < 10; i++) {
-       cuda_kernelA<<<grid_size,block_size,0,stream>>>(data1);                                 // data1 被 kernel 多次使用
-   }                                                                                           // [data1 + num_bytes) 从 L2 持久化中受益
-   cuda_kernelB<<<grid_size,block_size,0,stream>>>(data1);                                      // 同一 stream 中的不同 kernel 也可以
-                                                                                               // 从 data1 的持久化中受益
+       cuda_kernelA<<<grid_size,block_size,0,stream>>>(data1);                                 // This data1 is used by a kernel multiple times
+   }                                                                                           // [data1 + num_bytes) benefits from L2 persistence
+   cuda_kernelB<<<grid_size,block_size,0,stream>>>(data1);                                     // A different kernel in the same stream can also benefit
+                                                                                               // from the persistence of data1
 
-   stream_attribute.accessPolicyWindow.num_bytes = 0;                                          // 将窗口大小设置为 0 以禁用它
-   cudaStreamSetAttribute(stream, cudaStreamAttributeAccessPolicyWindow, &stream_attribute);   // 覆盖 CUDA Stream 的访问策略属性
-   cudaCtxResetPersistingL2Cache();                                                            // 移除 L2 中的任何持久化行
+   stream_attribute.accessPolicyWindow.num_bytes = 0;                                          // Setting the window size to 0 disable it
+   cudaStreamSetAttribute(stream, cudaStreamAttributeAccessPolicyWindow, &stream_attribute);   // Overwrite the access policy attribute to a CUDA Stream
+   cudaCtxResetPersistingL2Cache();                                                            // Remove any persistent lines in L2
 
-   cuda_kernelC<<<grid_size,block_size,0,stream>>>(data2);                                      // data2 现在可以在正常模式下受益于完整的 L2
+   cuda_kernelC<<<grid_size,block_size,0,stream>>>(data2);                                     // data2 can now benefit from full L2 in normal mode
 
 .. _l2-reset-to-normal:
 
@@ -192,6 +192,6 @@ CUDA 设备属性包括：
 .. code-block:: c++
 
    enum cudaLimit {
-       /* 其他字段未显示 */
+       /* other fields not shown */
        cudaLimitPersistingL2CacheSize
    };

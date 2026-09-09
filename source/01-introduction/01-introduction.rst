@@ -22,7 +22,7 @@
 ----------------------
 
 GPU 在相似的价格和功耗范围内提供比 CPU 更高的指令吞吐量和内存带宽。
-许多应用程序利用这些能力在 GPU 上比在 CPU 上运行得更快（参见 `GPU 应用程序 <https://www.nvidia.com/en-us/accelerated-applications/>`_）。
+许多应用程序利用这些能力在 GPU 上比在 CPU 上运行得更快（参见 `GPU 应用程序 <https://www.nvidia.com/en-us/accelerated-applications/>`_ ）。
 其他计算设备，如 FPGA，也非常节能，但提供的编程灵活性远低于 GPU。
 
 GPU 和 CPU 的设计目标不同。CPU 旨在尽可能快地执行串行操作序列（称为线程），并且可以并行执行几十个这样的线程，而 GPU 旨在并行执行数千个线程，牺牲较低的单线程性能以实现更高的总吞吐量。
