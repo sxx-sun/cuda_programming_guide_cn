@@ -27,7 +27,7 @@
 LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 :ref:`共享内存屏障 <asynchronous-barriers>` 或 :ref:`管道 <pipelines>` 作为提供完成信号的机制。
 默认情况下，每个线程只等待自己的 LDGSTS 拷贝。因此，如果您使用 LDGSTS 预取一些将与其他线程共享的数据，则在同步 LDGSTS 完成机制后需要 ``__syncthreads()`` 。
 
-.. list-table:: 使用 LDGSTS 的异步拷贝的可能源和目标内存空间及完成机制。空白单元格表示不支持的源 - 目标对。
+.. list-table:: 使用 LDGSTS 的异步拷贝的可能源和目标内存空间及完成机制。空白单元格表示不支持。
    :widths: 20 20 40 20
    :header-rows: 2
 
@@ -115,6 +115,8 @@ LDGSTS 必须在操作完成时提供信号。LDGSTS 可以使用 :ref:`共享�
             auto block = cooperative_groups::this_thread_block();
             auto thread = cooperative_groups::this_thread();
             using barrier_t = cuda::barrier<cuda::thread_scope_block>;
+            const int tid = block.thread_rank();
+
             __shared__ barrier_t barrier;
             __shared__ float buffer[8 + 32 + 8];
 
