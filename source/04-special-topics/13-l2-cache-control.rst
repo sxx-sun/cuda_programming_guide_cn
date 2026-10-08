@@ -14,7 +14,8 @@
 - CUDA runtime API（从 CUDA 11.0 开始）提供对 L2 缓存持久性的编程控制。
 - ``libcu++`` 库中的 ``cuda::annotated_ptr`` API（从 CUDA 11.5 开始）在 CUDA kernel 中用内存访问属性注释指针，以达到类似的效果。
 
-以下部分主要介绍 CUDA runtime API。关于 ``cuda::annotated_ptr`` 方法的详细信息，请参阅 `libcu++ 文档 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_access_properties/annotated_ptr.html>`_。
+以下部分主要介绍 CUDA runtime API。关于 ``cuda::annotated_ptr`` 方法的详细信息，
+请参阅 `libcu++ 文档 <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_access_properties/annotated_ptr.html>`_。
 
 .. _l2-set-aside:
 
@@ -28,12 +29,15 @@
 .. code-block:: c++
 
    cudaGetDeviceProperties(&prop, device_id);
+
+   // set-aside 3/4 of L2 cache for persisting accesses or the max allowed
    size_t size = min(int(prop.l2CacheSize * 0.75), prop.persistingL2CacheMaxSize);
-   cudaDeviceSetLimit(cudaLimitPersistingL2CacheSize, size); /* set-aside 3/4 of L2 cache for persisting accesses or the max allowed*/
+   cudaDeviceSetLimit(cudaLimitPersistingL2CacheSize, size);
 
 当 GPU 配置为多实例 GPU（Multi-Instance GPU，MIG）模式时，L2 缓存预留功能将被禁用。
 
-当使用多进程服务（Multi-Process Service，MPS）时，L2 缓存预留大小不能通过 ``cudaDeviceSetLimit`` 更改。相反，预留大小只能在 MPS 服务器启动时通过环境变量 ``CUDA_DEVICE_DEFAULT_PERSISTING_L2_CACHE_PERCENTAGE_LIMIT`` 指定。
+当使用多进程服务（Multi-Process Service，MPS）时，L2 缓存预留大小不能通过 ``cudaDeviceSetLimit`` 更改。
+相反，预留大小只能在 MPS 服务器启动时通过环境变量 ``CUDA_DEVICE_DEFAULT_PERSISTING_L2_CACHE_PERCENTAGE_LIMIT`` 指定。
 
 .. _l2-access-policy:
 
@@ -100,7 +104,9 @@ L2 持久性也可以为 CUDA Graph Kernel Node 设置，如下例所示：
 
 2. ``cudaAccessPropertyPersisting`` ：以持久化属性发生的内存访问更有可能持久化在 L2 缓存中，因为这些访问会被优先保留在 L2 缓存的预留部分。
 
-3. ``cudaAccessPropertyNormal`` ：此访问属性强制将先前应用的持久化访问属性重置为正常状态。来自先前 CUDA kernel 的具有持久化属性的内存访问可能会在其预期用途之后很长时间仍保留在 L2 缓存中。这种使用后的持久性减少了不使用持久化属性的后续 kernel 可用的 L2 缓存量。使用 ``cudaAccessPropertyNormal`` 属性重置访问策略窗口可以移除先前访问的持久化（优先保留）状态，就像先前访问没有访问属性一样。
+3. ``cudaAccessPropertyNormal`` ：此访问属性强制将先前应用的持久化访问属性重置为正常状态。来自先前 CUDA kernel 的具有持久化属性的内存访问可能会在其预期用途之后很长时间仍保留在 L2 缓存中。
+   这种使用后的持久性减少了不使用持久化属性的后续 kernel 可用的 L2 缓存量。
+   使用 ``cudaAccessPropertyNormal`` 属性重置访问策略窗口可以移除先前访问的持久化（优先保留）状态，就像先前访问没有访问属性一样。
 
 .. _l2-simple-example:
 
@@ -147,7 +153,8 @@ L2 持久性也可以为 CUDA Graph Kernel Node 设置，如下例所示：
 4.13.5. 将 L2 访问重置为正常
 ----------------------------
 
-来自先前 CUDA kernel 的持久化 L2 缓存行可能会在使用后很长时间仍持久化在 L2 中。因此，将 L2 缓存重置为正常状态对于流式或正常内存访问以正常优先级利用 L2 缓存很重要。有三种方法可以将持久化访问重置为正常状态。
+来自先前 CUDA kernel 的持久化 L2 缓存行可能会在使用后很长时间仍持久化在 L2 中。
+因此，将 L2 缓存重置为正常状态对于流式或正常内存访问以正常优先级利用 L2 缓存很重要。有三种方法可以将持久化访问重置为正常状态。
 
 1. 使用访问属性 ``cudaAccessPropertyNormal`` 重置先前的持久化内存区域。
 
@@ -160,7 +167,9 @@ L2 持久性也可以为 CUDA Graph Kernel Node 设置，如下例所示：
 4.13.6. 管理 L2 预留缓存的利用率
 --------------------------------
 
-在不同 CUDA stream 中并发执行的多个 CUDA kernel 可能有不同的访问策略窗口分配给它们的 stream。然而，L2 预留缓存部分在所有这些并发 kernel 之间是共享的。因此，该预留缓存部分的净利用率是所有并发 kernel 单独使用的总和。随着持久化访问量超过预留 L2 缓存容量，将内存访问指定为持久化的好处会减少。
+在不同 CUDA stream 中并发执行的多个 CUDA kernel 可能有不同的访问策略窗口分配给它们的 stream。
+然而，L2 预留缓存部分在所有这些并发 kernel 之间是共享的。因此，该预留缓存部分的净利用率是所有并发 kernel 单独使用的总和。
+随着持久化访问量超过预留 L2 缓存容量，将内存访问指定为持久化的好处会减少。
 
 要管理预留 L2 缓存部分的利用率，应用程序必须考虑以下几点：
 
@@ -187,7 +196,8 @@ CUDA 设备属性包括：
 4.13.8. 控制持久化内存访问的 L2 缓存预留大小
 --------------------------------------------
 
-用于持久化内存访问的 L2 预留缓存大小使用 CUDA runtime API ``cudaDeviceGetLimit`` 查询，并使用 CUDA runtime API ``cudaDeviceSetLimit`` 作为 ``cudaLimit`` 设置。设置此限制的最大值是 ``cudaDeviceProp::persistingL2CacheMaxSize`` 。
+用于持久化内存访问的 L2 预留缓存大小使用 CUDA runtime API ``cudaDeviceGetLimit`` 查询，并使用 CUDA runtime API ``cudaDeviceSetLimit`` 作为 ``cudaLimit`` 设置。
+设置此限制的最大值是 ``cudaDeviceProp::persistingL2CacheMaxSize`` 。
 
 .. code-block:: c++
 
