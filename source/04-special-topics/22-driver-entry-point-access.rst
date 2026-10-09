@@ -1,11 +1,11 @@
 .. _driver-entry-point-access-details:
 
-4.20. Driver Entry Point Access
+4.22. Driver Entry Point Access
 ================================
 
 .. _introduction-driver-entry-point-access:
 
-4.20.1. 简介
+4.22.1. 简介
 ------------
 
 ``Driver Entry Point Access APIs`` 提供了一种获取 CUDA driver 函数地址的方法。从 CUDA 11.3 开始，用户可以使用通过这些 API 获取的函数指针调用可用的 CUDA driver API。
@@ -19,7 +19,7 @@
 
 .. _driver-function-typedefs:
 
-4.20.2. Driver Function Typedefs
+4.22.2. Driver Function Typedefs
 ---------------------------------
 
 为了帮助获取 CUDA Driver API 入口点，CUDA Toolkit 提供了包含所有 CUDA driver API 函数指针定义的头文件访问。这些头文件随 CUDA Toolkit 一起安装，位于 toolkit 的 ``include/`` 目录中。下表总结了每个 CUDA API 头文件对应的包含 ``typedefs`` 的头文件。
@@ -59,14 +59,14 @@ CUDA driver 符号采用基于版本的命名方案，在名称中带有 ``_v*``
 
 .. _driver-function-retrieval:
 
-4.20.3. Driver Function Retrieval
+4.22.3. Driver Function Retrieval
 ----------------------------------
 
 使用 Driver Entry Point Access API 和适当的 typedef，我们可以获取任何 CUDA driver API 的函数指针。
 
 .. _using-the-driver-api:
 
-4.20.3.1. 使用 Driver API
+4.22.3.1. 使用 Driver API
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 driver API 需要 CUDA 版本作为参数，以获取请求的 driver 符号的 ABI 兼容版本。CUDA Driver API 具有按函数划分的 ABI，用 ``_v*`` 扩展表示。例如，考虑 ``cuStreamBeginCapture`` 的版本及其在 ``cudaTypedefs.h`` 中对应的 ``typedefs`` ：
@@ -102,7 +102,7 @@ driver API 需要 CUDA 版本作为参数，以获取请求的 driver 符号的 
 
 .. _using-the-runtime-api:
 
-4.20.3.2. 使用 Runtime API
+4.22.3.2. 使用 Runtime API
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 runtime API ``cudaGetDriverEntryPointByVersion`` 使用用户提供的 CUDA 版本，以与 ``cuGetProcAddress`` 相同的方式获取请求的 driver 符号的 ABI 兼容版本。在下面的代码片段中，所需的最低 CUDA 版本是 CUDA 11.2，因为 ``cuMemAllocAsync`` 是在那时引入的。
@@ -130,7 +130,7 @@ runtime API ``cudaGetDriverEntryPointByVersion`` 使用用户提供的 CUDA 版�
 
 .. _retrieve-per-thread-default-stream-versions:
 
-4.20.3.3. 获取 Per-thread Default Stream 版本
+4.22.3.3. 获取 Per-thread Default Stream 版本
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 某些 CUDA driver API 可以配置为具有 *default stream* 或 *per-thread default stream* 语义。具有 *per-thread default stream* 语义的 driver API 在其名称中带有 *_ptsz* 或 *_ptds* 后缀。例如， ``cuLaunchKernel`` 有一个名为 ``cuLaunchKernel_ptsz`` 的 *per-thread default stream* 变体。使用 Driver Entry Point Access API，用户可以请求 driver API ``cuLaunchKernel`` 的 *per-thread default stream* 版本，而不是 *default stream* 版本。配置 CUDA driver API 的 *default stream* 或 *per-thread default stream* 语义会影响同步行为。更多详情可以在 `这里 <https://docs.nvidia.com/cuda/cuda-driver-api/stream-sync-behavior.html#stream-sync-behavior__default-stream>`_ 找到。
@@ -142,7 +142,7 @@ driver API 的 *default stream* 或 *per-thread default stream* 版本可以通�
 
 .. _access-new-cuda-features:
 
-4.20.3.4. 访问新的 CUDA 功能
+4.22.3.4. 访问新的 CUDA 功能
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 始终建议安装最新的 CUDA toolkit 以访问新的 CUDA driver 功能，但如果由于某种原因用户不想更新或无法访问最新的 toolkit，该 API 可以仅通过更新的 CUDA driver 来访问新的 CUDA 功能。为了讨论，假设用户使用的是 CUDA 12.3，并且想要使用 CUDA 12.5 driver 中可用的新 driver API ``cuFoo`` 。下面的代码片段说明了这个用例：
@@ -215,7 +215,7 @@ driver API 的 *default stream* 或 *per-thread default stream* 版本可以通�
 
 .. _guidelines-for-cugetprocaddress:
 
-4.20.4. cuGetProcAddress 的准则
+4.22.4. cuGetProcAddress 的准则
 -------------------------------
 
 下面是使用 ``cuGetProcAddress`` 时需要牢记的准则。
@@ -225,14 +225,14 @@ driver API 的 *default stream* 或 *per-thread default stream* 版本可以通�
 
 .. _guidelines-for-runtime-api-usage:
 
-4.20.4.1. Runtime API 使用的准则
+4.22.4.1. Runtime API 使用的准则
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 除非另有说明，CUDA runtime API ``cudaGetDriverEntryPointByVersion`` 将具有与 driver 入口点 ``cuGetProcAddress`` 类似的准则，因为它允许用户请求特定的 CUDA driver 版本。
 
 .. _determining-cugetprocaddress-failure-reasons:
 
-4.20.5. 确定 cuGetProcAddress 失败原因
+4.22.5. 确定 cuGetProcAddress 失败原因
 ---------------------------------------
 
 cuGetProcAddress 有两种类型的错误。它们是 (1) API/使用错误和 (2) 无法找到请求的 driver API。第一种错误类型将通过 CUresult 返回值从 API 返回错误代码。比如将 NULL 作为 ``pfn`` 变量传递或传递无效的 ``flags`` 。

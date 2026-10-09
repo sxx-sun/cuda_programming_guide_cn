@@ -1,6 +1,6 @@
 .. _cluster-launch-control:
 
-4.12. 使用 Cluster Launch Control 的工作窃取
+4.13. 使用 Cluster Launch Control 的工作窃取
 ==============================================
 
 处理可变数据和计算规模的问题是开发 CUDA 应用程序时的关键问题。
@@ -75,7 +75,7 @@
 
 .. _cluster-launch-control-api-details:
 
-4.12.1. API 详情
+4.13.1. API 详情
 ----------------
 
 通过 cluster launch control API 取消线程块是异步完成的，并使用共享内存屏障进行同步，遵循与 :ref:`异步数据复制 <asynchronous-data-copies>` 类似的编程模式。
@@ -90,7 +90,7 @@
 
 .. _thread-block-cancellation:
 
-4.12.1.1. 线程块取消
+4.13.1.1. 线程块取消
 ~~~~~~~~~~~~~~~~~~~~
 
 使用 Cluster Launch Control 的首选方式是从单个线程进行，即一次一个请求。
@@ -159,7 +159,7 @@
 
 .. _constraints-thread-block-cancellation:
 
-4.12.1.2. 线程块取消的约束
+4.13.1.2. 线程块取消的约束
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 这些约束与失败的取消请求有关：
@@ -210,14 +210,14 @@
 
 .. _cluster-launch-control-example:
 
-4.12.2. 示例：向量-标量乘法
+4.13.2. 示例：向量-标量乘法
 ---------------------------
 
 在以下小节中，我们通过向量-标量乘法 kernel 演示使用 cluster launch control 的工作窃取。我们展示了同一问题的两个变体：一个使用线程块，一个使用线程块集群。
 
 .. _use-case-thread-blocks:
 
-4.12.2.1. 用例：线程块
+4.13.2.1. 用例：线程块
 ~~~~~~~~~~~~~~~~~~~~~~
 
 下面的三个 kernel 演示了向量-标量乘法 :math:`\overline{v} := \alpha \overline{v}` 的 *固定每个线程块的工作量*、*固定线程块数量* 和 *Cluster Launch Control* 方法。
@@ -330,7 +330,7 @@
 
 .. _use-case-thread-block-clusters:
 
-4.12.2.2. 用例：线程块集群
+4.13.2.2. 用例：线程块集群
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 在 :ref:`thread-block-clusters` 的情况下，线程块取消步骤与非集群设置相同，只是略有调整。

@@ -418,7 +418,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 当起始对象为 GPU 设备时， ``wqConcurrencyLimit`` 的值将与环境变量 ``CUDA_DEVICE_MAX_CONNECTIONS`` 的设置值或其默认值一致。
 
 
-.. _green-contexts-split-sm-resources:
+.. _green-contexts-creation-example-step2:
 
 4.6.4.2. 步骤 2： SM 资源切分
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -430,10 +430,9 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 后续章节将详细介绍这两个接口的具体功能。需要注意的是，这两个接口仅适用于 SM 资源切分。
 
 
-4.6.4.2.1. cudaDevSmResourceSplitByCount
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**cudaDevSmResourceSplitByCount API**
 
-函数定义如下：
+``cudaDevSmResourceSplitByCount`` Runtime 接口签名如下：
 
 .. code-block:: c++
 
@@ -557,8 +556,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 请参考 Runtime 接口文档中关于 `cudaDevSmResourceSplitByCount <https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__EXECUTION__CONTEXT.html#group__CUDART__EXECUTION__CONTEXT_1g10ef763a79ff53245bec99b96a7abb73>`_
 的更多描述。
 
-4.6.4.2.2. cudaDevSmResourceSplit
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**cudaDevSmResourceSplit API**
 
 如前所述，单次 ``cudaDevSmResourceSplitByCount`` 接口调用只能创建同构分区（即具有相同 SM 数量的分区）加上一个可能的剩余分区。
 对于在不同 GC 上运行的工作负载具有不同 SM 数量需求的异构工作负载而言，这存在局限性。
@@ -567,7 +565,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 然后在步骤 3 中将所需数量的分组合并在一起。但不推荐采用最后这种方式，因为如果在初始时请求更大的 SM 数量，CUDA 驱动程序可能能够创建更优的分区。
 
 ``cudaDevSmResourceSplit`` 接口旨在解决这些局限，允许用户在单次调用中创建互不重叠的异构分区。
-其函数定义如下：
+``cudaDevSmResourceSplit`` Runtime 接口签名如下：
 
 .. code-block:: c++
 
@@ -601,10 +599,6 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 用户可以通过对应 ``groupParams`` 条目中的 ``preferredCoscheduledSmCount`` 字段来表达此首选簇维度提示。
 最后，在某些情况下，用户可能希望放宽 SM 数量要求并将更多可用 SM 拉入某个组中；
 用户可以通过将对应 ``groupParams`` 条目的 ``flags`` 字段设置为其非默认标志值来表达此回填（backfill）选项。
-
-.. _green-contexts-split-api-overview:
-
-**cudaDevSmResourceSplit API 概览**
 
 为提供更多灵活性， ``cudaDevSmResourceSplit`` 接口还提供了一种发现模式（discovery mode），
 用于在一个或多个组的精确 SM 数量预先未知的情况。
@@ -812,7 +806,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 
 .. _green-contexts-groupparams-fields:
 
-关于 ``cudaDevSmResourceGroupParams`` 各字段的详细信息如下：
+**关于 ``cudaDevSmResourceGroupParams`` 结构体各字段的详细信息**
 
 ``smCount`` ：
 
@@ -871,7 +865,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 
 - 注意：使用回填标志创建的组仍然可以支持簇（例如，保证至少支持一个 ``coscheduledSmCount`` 大小）。
 
-.. _green-contexts-add-workqueue-resources:
+.. _step-2-continued-add-workqueue-resources:
 
 4.6.4.3. 步骤 2（续）：添加工作队列资源
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -892,7 +886,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 工作队列并发限制为 4，向驱动程序提示用户期望最多 4 个并发流有序工作负载。
 驱动程序会尝试在 **可能** 的情况下遵从此提示来分配工作队列。
 
-.. _green-contexts-create-resource-desc:
+.. _green-contexts-creation-example-step3:
 
 4.6.4.4. 步骤 3：创建资源描述符
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -928,7 +922,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 
 - 最多只能存在一个工作队列配置或工作队列类型的资源。
 
-.. _green-contexts-create-green-ctx:
+.. _green-contexts-creation-example-step4:
 
 4.6.4.5. 步骤 4：创建 Green Context
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1035,7 +1029,7 @@ SM 超额分配应根据具体情况谨慎使用。
 **线程块簇**
 
 带有线程块簇（参见 :ref:`thread-block-clusters` ）的 kernel 可以像其他任何 kernel 一样在 GC 流上启动，从而使用该 GC 分配的资源。
-:ref:`green-contexts-split-sm-resources` 节展示了在切分设备资源时如何指定需要协同调度的 SM 数量以支持簇。
+:ref:`green-contexts-creation-example-step2` 节展示了在切分设备资源时如何指定需要协同调度的 SM 数量以支持簇。
 但与任何使用簇的 kernel 一样，用户应使用相关的占用率接口来确定 kernel 的最大潜在簇大小（通过 ``cudaOccupancyMaxPotentialClusterSize`` ），
 以及在需要时确定最大活跃簇数量（通过 ``cudaOccupancyMaxActiveClusters`` ）。
 如果用户将 GC 流指定为相关 ``cudaLaunchConfig`` 的 ``stream`` 字段，

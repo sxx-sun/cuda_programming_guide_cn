@@ -1,6 +1,6 @@
 .. _pipelines-details:
 
-4.10. Pipelines
+4.11. Pipelines
 ================
 
 Pipelines 在 :ref:`advanced-synchronization-primitives` 中介绍过，是一种用于将工作阶段化和协调多缓冲区生产者-消费者模式的机制，通常用于将计算与 :ref:`asynchronous-data-copies` 重叠执行。
@@ -9,7 +9,7 @@ Pipelines 在 :ref:`advanced-synchronization-primitives` 中介绍过，是一�
 
 .. _pipelines-init:
 
-4.10.1. 初始化
+4.11.1. 初始化
 --------------
 
 ``cuda::pipeline`` 可以在不同的线程作用域创建。
@@ -53,7 +53,7 @@ Pipelines 可以是统一（unified）或分区（partitioned）的。
 
 .. _pipelines-submit:
 
-4.10.2. 提交工作
+4.11.2. 提交工作
 ----------------
 
 将工作提交到 pipeline 阶段涉及：
@@ -66,7 +66,7 @@ Pipelines 可以是统一（unified）或分区（partitioned）的。
 
 .. _pipelines-consume:
 
-4.10.3. 消费工作
+4.11.3. 消费工作
 ----------------
 
 - 集体等待阶段完成， 例如使用 ``pipeline.consumer_wait()`` 例如等待一组消费者线程完成尾部（最旧的）阶段。
@@ -78,7 +78,7 @@ Pipelines 可以是统一（unified）或分区（partitioned）的。
 
 .. _pipelines-entanglement:
 
-4.10.4. Warp 纠缠
+4.11.4. Warp 纠缠
 -----------------
 
 Pipeline 机制在同一个 warp 中的 CUDA 线程之间共享。
@@ -127,14 +127,14 @@ Pipeline 机制在同一个 warp 中的 CUDA 线程之间共享。
 
 .. _pipelines-early-exit:
 
-4.10.5. 提前退出
+4.11.5. 提前退出
 ----------------
 
 当参与 pipeline 的线程必须提前退出时，该线程必须在退出前使用 ``cuda::pipeline::quit()`` 显式退出参与。剩余的参与线程可以正常进行后续操作。
 
 .. _pipelines-tracking:
 
-4.10.6. 跟踪异步内存操作
+4.11.6. 跟踪异步内存操作
 ------------------------
 
 以下示例演示了如何使用 pipeline 跟踪复制操作，通过异步内存复制集体将数据从全局内存复制到共享内存。
@@ -247,7 +247,7 @@ Pipeline 机制在同一个 warp 中的 CUDA 线程之间共享。
 
 .. _pipelines-producer-consumer:
 
-4.10.7. 使用 Pipelines 的生产者-消费者模式
+4.11.7. 使用 Pipelines 的生产者-消费者模式
 ------------------------------------------
 
 在 :ref:`async-barriers-producer-consumer` 中，我们展示了如何使用 :ref:`asynchronous-barriers` 对线程块进行空间分区以实现生产者-消费者模式。

@@ -1,11 +1,11 @@
 .. _memory-sync-domains:
 
-4.14. 内存同步域
+4.15. 内存同步域
 ====================
 
 .. _memory-fence-interference:
 
-4.14.1. 内存栅栏干扰
+4.15.1. 内存栅栏干扰
 --------------------
 
 部分 CUDA 应用可能会出现性能下降，原因是内存屏障（fence）或刷新（flush）操作等待的事务数量，超出了 CUDA 内存一致性模型实际需要的数量。
@@ -45,7 +45,7 @@ CUDA 内存一致性模型保证示例代码中的断言条件为真。
 
 .. _isolating-traffic-with-domains:
 
-4.14.2. 使用域隔离流量
+4.15.2. 使用域隔离流量
 ----------------------
 
 从计算能力 9.0（Hopper 架构）GPU 和 CUDA 12.0 开始，内存同步域功能提供了一种缓解这种干扰的方法。
@@ -61,7 +61,7 @@ CUDA 内存一致性模型保证示例代码中的断言条件为真。
 
 .. _using-domains-in-cuda:
 
-4.14.3. 在 CUDA 中使用域
+4.15.3. 在 CUDA 中使用域
 ------------------------
 
 域可以通过新的启动属性 ``cudaLaunchAttributeMemSyncDomain`` 和 ``cudaLaunchAttributeMemSyncDomainMap`` 访问。

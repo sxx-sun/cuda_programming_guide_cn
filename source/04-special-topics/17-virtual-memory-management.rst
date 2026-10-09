@@ -1,6 +1,6 @@
 .. _virtual-memory-management-details:
 
-4.16. 虚拟内存管理
+4.17. 虚拟内存管理
 ==================
 
 在 CUDA 编程模型中，内存分配调用（如 ``cudaMalloc()`` ）返回 GPU 内存中的内存地址。
@@ -48,12 +48,12 @@ CUDA VMM 向用户公开了细粒度的控制，用于在应用程序中管理 G
 
 .. _virtual-memory-management-preliminaries:
 
-4.16.1. 预备知识
+4.17.1. 预备知识
 ----------------
 
 .. _virtual-memory-management-definitions:
 
-4.16.1.1. 定义
+4.17.1.1. 定义
 ^^^^^^^^^^^^^^
 
 **Fabric 内存（Fabric Memory）：** Fabric 内存是指可通过高速互连结构（如 NVIDIA 的 NVLink 和 NVSwitch）访问的内存。
@@ -90,7 +90,7 @@ MEX 通道与 Fabric Handle（网络互联句柄）直接相关，在多节点 G
 
 .. _virtual-memory-management-querying-support:
 
-4.16.1.2. 查询支持
+4.17.1.2. 查询支持
 ^^^^^^^^^^^^^^^^^^
 
 应用程序在使用功能之前应查询支持情况，因为其可用性可能因 GPU 架构、驱动程序版本和使用的特定软件库而异。
@@ -166,7 +166,7 @@ MEX 通道与 Fabric Handle（网络互联句柄）直接相关，在多节点 G
 
 .. _vmm-api-overview:
 
-4.16.2. API 概述
+4.17.2. API 概述
 ----------------
 
 VMM 为开发者提供对虚拟内存管理的精细控制。VMM 作为非常底层的 API，需要直接使用 :ref:`CUDA Driver API <driver-api>`。
@@ -198,13 +198,13 @@ VMM 工作流涉及一系列内存管理步骤，重点关注在不同设备或�
 OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄具有更大的通用性，可在单节点和多节点环境中使用。
 需要注意的是，使用 fabric 特定句柄需要启用 IMEX 通道。
 
-一旦导出句柄，必须使用进程间通信协议将其共享给接收进程或进程，方法的选择留给开发者。
+一旦导出句柄，必须使用进程间通信协议将其共享给接收进程，方法的选择留给开发者。
 然后，接收进程使用 VMM API 导入句柄。在句柄成功导出、共享和导入后，源进程和目标进程都必须保留虚拟地址空间，已分配的物理内存将映射到该空间。
 最后一步是为每个设备设置内存访问权限，确保建立适当的权限。整个过程（包括两种句柄方法）在附图中进一步详细说明。
 
 .. _virtual-memory-management-unicast:
 
-4.16.3. 单播内存共享
+4.17.3. 单播内存共享
 --------------------
 
 共享 GPU 内存可以在具有多个 GPU 的一台机器上或跨机器网络进行。该过程遵循以下步骤：
@@ -229,12 +229,11 @@ OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄
 
 .. _virtual-memory-management-unicast-allocate-export:
 
-4.16.3.1. 分配和导出
+4.17.3.1. 分配和导出
 ^^^^^^^^^^^^^^^^^^^^
 
-**分配物理内存** 使用虚拟内存管理 API 进行内存分配的第一步是创建一个物理内存块，为分配提供后备。
-为了分配物理内存，应用程序必须使用 ``cuMemCreate`` API。此函数创建的分配没有任何设备或主机映射。
-函数参数 ``CUmemGenericAllocationHandle`` 描述要分配的内存属性，如分配的位置、分配是否将共享到另一个进程（或图形 API），或要分配的内存的物理属性。
+**分配物理内存** 第一步使用 ``cuMemCreate`` 创建物理内存块。此函数创建的物理内存没有任何设备或主机（虚拟地址）映射。
+函数参数 ``CUmemGenericAllocationHandle`` 描述要分配的内存属性，如分配的位置、是否将共享给其他进程（或图形 API），或要分配的内存的物理属性。
 用户必须确保请求的分配大小与适当的粒度对齐。可以使用 ``cuMemGetAllocationGranularity`` 查询有关分配粒度要求的信息。
 
 **OS 特定句柄 (Linux)**
@@ -328,14 +327,15 @@ OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄
 
 .. _virtual-memory-management-unicast-share-import:
 
-4.16.3.2. 共享和导入
+4.17.3.2. 共享和导入
 ^^^^^^^^^^^^^^^^^^^^
 
-**共享内存句柄** 一旦导出句柄，必须使用进程间通信协议将其共享给接收进程或进程。开发者可以自由使用任何方法共享句柄。
-使用的特定 IPC 方法取决于应用程序的设计和环境。常见方法包括 OS 特定进程间套接字和分布式消息传递。
-使用 OS 特定 IPC 提供高性能传输，但仅限于同一台机器上的进程，不可移植。Fabric 特定 IPC 更简单且更便携。
-然而，fabric 特定 IPC 需要系统级支持。选择的方法必须安全可靠地将句柄数据传输到目标进程，以便它可以用于导入内存并建立有效的映射。
-选择 IPC 方法的灵活性允许将  VMM 集成到各种系统架构中，从单节点应用程序到分布式多节点设置。
+**共享内存句柄** 句柄导出后，必须使用进程间通信协议将其共享给接收进程。开发者可以自由选择使用那种 IPC 方法共享句柄。
+这通常取决于应用程序的设计和环境。常见方法包括 OS 特定进程间套接字和分布式消息传递。
+使用 OS 特定 IPC 提供高性能传输，但仅限于同一台机器上的进程，不可移植。
+Fabric 特定 IPC 更简单且可移植，但需要系统级支持。
+选择的方法必须安全可靠地将句柄数据传递给目标进程，以便它正确导入内存并建立有效的映射。
+在 IPC 机制选择上的灵活性，使得 VMM 能够集成到各种系统架构中，涵盖从单节点应用到分布式多节点部署的各类场景。
 在以下代码片段中，我们将提供使用套接字编程和 MPI 共享和接收句柄的示例。
 
 **发送：OS 特定 IPC (Linux)**
@@ -492,7 +492,7 @@ OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄
 
     MPI_Recv(&fh, sizeof(CUmemFabricHandle), MPI_BYTE, 1, 0, MPI_COMM_WORLD);
 
-**导入内存句柄** 同样，用户可以为 OS 特定 IPC 或 fabric 特定 IPC 导入句柄。OS 特定 IPC 句柄只能在单节点上使用。Fabric 特定句柄可用于单节点或多节点。
+**导入内存句柄** OS 特定 IPC 句柄只能在单节点上使用。Fabric 特定句柄可用于单节点或多节点。
 
 **OS 特定句柄 (Linux)**
 
@@ -510,7 +510,7 @@ OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄
 
 .. _virtual-memory-management-unicast-reserve-map:
 
-4.16.3.3. 保留和映射
+4.17.3.3. 保留和映射
 ^^^^^^^^^^^^^^^^^^^^
 
 **保留虚拟地址范围**
@@ -519,7 +519,8 @@ OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄
 保留的地址范围必须至少与用户计划放置在其中的所有物理内存分配的大小之和一样大。
 
 应用程序可以通过向 ``cuMemAddressReserve`` 传递适当的参数来保留虚拟地址范围。获取的地址范围不会有任何设备或主机物理内存与之关联。
-保留的虚拟地址范围可以映射到属于系统中任何设备的内存块，从而为应用程序提供连续的 VA 范围，由属于不同设备的内存进行后备和映射。应用程序应使用 ``cuMemAddressFree`` 将虚拟地址范围返回给 CUDA。
+保留的虚拟地址范围可以映射到属于系统中任何设备的内存块，从而为应用程序提供连续的 VA 范围，由属于不同设备的内存进行后备和映射。
+应用程序应使用 ``cuMemAddressFree`` 将虚拟地址范围返回给 CUDA。
 用户必须确保在调用 ``cuMemAddressFree`` 之前整个 VA 范围已取消映射。
 这些函数在概念上类似于 Linux 上的 ``mmap`` 和 ``munmap`` 或 Windows 上的 ``VirtualAlloc`` 和 ``VirtualFree`` 。
 以下代码片段说明了该函数的用法：
@@ -528,7 +529,8 @@ OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄
 
     CUdeviceptr ptr;
     // `ptr` holds the returned start of virtual address range reserved.
-    CUresult result = cuMemAddressReserve(&ptr, size, 0, 0, 0); // alignment = 0 for default alignment
+    // alignment = 0 for default alignment
+    CUresult result = cuMemAddressReserve(&ptr, size, 0, 0, 0);
 
 **映射内存**
 
@@ -536,7 +538,8 @@ OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄
 从 ``cuMemAddressReserve`` 获取的地址范围和从 ``cuMemCreate`` 或 ``cuMemImportFromShareableHandle`` 获取的物理分配必须使用 ``cuMemMap`` 相互关联。
 
 用户可以将来自多个设备的分配关联到驻留在连续虚拟地址范围中，只要他们划分了足够的地址空间。
-要解耦物理分配和地址范围，用户必须使用 ``cuMemUnmap`` 取消映射地址。用户可以多次将内存映射和取消映射到同一地址范围，只要他们确保不尝试在已映射的 VA 范围保留上创建映射。
+要解耦物理分配和地址范围，用户必须使用 ``cuMemUnmap`` 取消映射地址。
+用户可以多次将内存映射和取消映射到同一地址范围，只要他们确保不尝试在已映射的 VA 范围保留上创建映射。
 以下代码片段说明了该函数的用法：
 
 .. code-block:: cpp
@@ -548,13 +551,13 @@ OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄
 
 .. _virtual-memory-management-unicast-access:
 
-4.16.3.4. 访问权限
+4.17.3.4. 访问权限
 ^^^^^^^^^^^^^^^^^^
 
-CUDA 的虚拟内存管理 API 使应用程序能够使用访问控制机制显式保护其 VA 范围。
-使用 ``cuMemMap`` 将分配映射到地址范围的某个区域并不会使该地址可访问，如果 CUDA  kernel 访问它会导致程序崩溃。
-用户必须专门在源设备和访问设备上使用 ``cuMemSetAccess`` 函数选择访问控制。
-这允许或限制特定设备对映射地址范围的访问。以下代码片段说明了该函数的用法：
+CUDA 的虚拟内存管理 API 允许应用程序通过访问控制机制显式保护其虚拟地址范围。
+仅使用 ``cuMemMap`` 将物理内存分配映射到某段地址范围，并不会使该地址自动变为可访问状态；若此时 CUDA 核函数尝试访问该地址，将导致程序崩溃。
+开发者必须在源设备及需要访问该内存的设备上，显式调用 ``cuMemSetAccess`` 函数来配置访问权限。
+该函数用于授予或限制特定设备对已映射地址范围的访问能力。以下代码片段展示了该函数的用法：
 
 .. code-block:: cpp
 
@@ -568,24 +571,24 @@ CUDA 的虚拟内存管理 API 使应用程序能够使用访问控制机制显�
         cuMemSetAccess(ptr, size, &accessDesc, 1);
     }
 
-VMM 公开的访问控制机制允许用户明确指定他们希望与系统中其他对等设备共享哪些分配。
-如前所述， ``cudaEnablePeerAccess`` 强制将使用 ``cudaMalloc`` 进行的所有先前和未来分配映射到目标对等设备。
-这在许多情况下很方便，因为用户不必担心跟踪每个分配到系统中每个设备的映射状态。
-但这种方法 `有性能影响 <https://devblogs.nvidia.com/introducing-low-level-gpu-virtual-memory-management/>`_。
-通过分配粒度的访问控制，VMM 允许以最小的开销进行对等映射。
+VMM 提供的访问控制机制，使用户能够显式指定将哪些内存分配共享给系统中的其他对等设备。
+如前所述， ``cudaEnablePeerAccess`` 会将此前及此后通过 ``cudaMalloc`` 创建的所有内存分配，全部映射到目标对等设备上。
+在许多场景下这种方式十分便捷，因为用户不必担心每块内存分配在每个设备上的映射状态。
+然而，这种策略会带来 `性能开销 <https://devblogs.nvidia.com/introducing-low-level-gpu-virtual-memory-management/>`_。
+相比之下，VMM 支持以单个内存分配为粒度进行访问控制，从而能够以极低的开销实现精确的对等映射。
 
-`vectorAddMMAP 示例 <https://github.com/NVIDIA/cuda-samples/tree/master/Samples/0_Introduction/vectorAddMMAP>`_ 可用作使用虚拟内存管理 API 的示例。
+`vectorAddMMAP 示例 <https://github.com/NVIDIA/cuda-samples/tree/master/Samples/0_Introduction/vectorAddMMAP>`_ 展示了 VMM API 的用法。
 
 .. _virtual-memory-management-unicast-free:
 
-4.16.3.5. 释放内存
+4.17.3.5. 释放内存
 ^^^^^^^^^^^^^^^^^^
 
-要释放分配的内存和地址空间，源进程和目标进程都应按顺序使用 ``cuMemUnmap`` 、 ``cuMemRelease`` 和 ``cuMemAddressFree`` 函数。
-``cuMemUnmap`` 函数取消映射先前从地址范围映射的内存区域，有效地将物理内存与保留的虚拟地址空间分离。
-接下来， ``cuMemRelease`` 释放先前创建的物理内存，将其返回给系统。
-最后， ``cuMemAddressFree`` 释放先前保留的虚拟地址范围，使其可供将来使用。
-这个特定顺序确保物理内存和虚拟地址空间的完全和干净释放。
+要释放已分配的内存和地址空间，源进程与目标进程均应严格按照 ``cuMemUnmap`` 、 ``cuMemRelease`` 和 ``cuMemAddressFree`` 的顺序依次调用这三个函数。
+首先， ``cuMemUnmap`` 用于解除先前建立的内存映射，将物理内存从预留的虚拟地址空间中分离；
+接着， ``cuMemRelease`` 负责释放此前创建的物理内存，将其归还给系统；
+最后， ``cuMemAddressFree`` 用于回收之前预留的虚拟地址范围，使其可被后续操作重新使用。
+遵循这个顺序，是确保物理内存与虚拟地址空间均被彻底、安全释放的必要前提。
 
 .. code-block:: cpp
 
@@ -599,16 +602,20 @@ VMM 公开的访问控制机制允许用户明确指定他们希望与系统中�
 
 .. _virtual-memory-management-multicast:
 
-4.16.4. 多播内存共享
+4.17.4. 多播内存共享
 --------------------
 
-`多播对象管理 API <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__MULTICAST.html#group__CUDA__MULTICAST/>`_ 为应用程序提供了一种创建多播对象的方法，
-结合上述 `虚拟内存管理 API <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__VA.html>`_，
-允许应用程序在支持 NVLink SHARP 的 NVLink 连接 GPU（通过 NVSwitch 连接）上利用 NVLink SHARP。
-NVLink SHARP 允许 CUDA 应用程序利用结构内计算来加速通过 NVSwitch 连接的 GPU 之间的广播和归约等操作。
-为此，多个 NVLink 连接的 GPU 形成多播团队，团队中的每个 GPU 用物理内存支持多播对象。
-因此，N 个 GPU 的多播团队有 N 个多播对象的物理副本，每个副本对参与的一个 GPU 是本地的。
-使用多播对象映射的 `multimem PTX 指令 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-multimem-ld-reduce-multimem-st-multimem-red/>`_ 与多播对象的所有副本一起工作。
+`多播对象管理 API <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__MULTICAST.html#group__CUDA__MULTICAST/>`_ 为应用程序提供了创建多播对象的能力，
+结合前述 `虚拟内存管理 API <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__VA.html>`_，
+应用程序可在 NVSwitch 互联的 GPU 上充分利用 NVLink SHARP 技术。
+NVLink SHARP 允许 CUDA 应用借助 NVSwitch 的网络内计算（In-Fabric Computing）能力，加速 GPU 间的广播和归约等操作。
+为实现这一机制，多个通过 NVLink 互联的 GPU 需组成一个多播组，组内每个 GPU 均须使用本地物理内存来支撑同一个多播对象。
+因此，在一个包含 N 个 GPU 的多播组中，该多播对象存在 N 份物理副本，每份副本分别驻留在对应的 GPU 本地。
+当 `multimem PTX 指令 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-multimem-ld-reduce-multimem-st-multimem-red/>`_ 指令作用于多播对象的映射地址时，其操作将同时应用于该多播对象的所有副本。
+
+.. note::
+
+    NVLink SHARP(Scalable Hierarchical Aggregation and Reduction Protocol)， 可扩展分层聚合与归约协议，是 NVIDIA 专为 NVSwitch 互联架构设计的一项网络内计算技术。
 
 要使用多播对象，应用程序需要：
 
@@ -616,27 +623,29 @@ NVLink SHARP 允许 CUDA 应用程序利用结构内计算来加速通过 NVSwit
 
 - 使用 ``cuMulticastCreate`` 创建多播句柄。
 
-- 与控制应参与多播团队的 GPU 的所有进程共享多播句柄。这使用如上所述的 ``cuMemExportToShareableHandle`` 工作。
+- 将多播句柄共享给所有拥有需加入多播组的 GPU 的进程。这可以通过 ``cuMemExportToShareableHandle`` 来实现。
 
-- 使用 ``cuMulticastAddDevice`` 添加应参与多播团队的所有 GPU。
+- 使用 ``cuMulticastAddDevice`` 将所有需要参与的 GPU 添加到该多播组中。
 
-- 对于每个参与的 GPU，将如上所述使用 ``cuMemCreate`` 分配的物理内存绑定到多播句柄。在绑定任何设备上的内存之前，需要将所有设备添加到多播团队。
+- 对于每个参与的 GPU，需通过 ``cuMemCreate`` 分配的物理内存并绑定到该多播句柄。注意， **必须在所有设备均已加入多播组之后，才能在任意设备上执行内存绑定操作** 。
 
-- 保留地址范围，映射多播句柄并设置访问权限，如常规单播映射所述。到同一物理内存的单播和多播映射是可能的。
-  参见上面的 :ref:`虚拟别名支持 <virtual-aliasing-support>` 节，了解如何确保到同一物理内存的多个映射之间的一致性。
+- 预留一段地址范围，映射该多播句柄，并按照 :ref:`常规单播映射的方式设置访问权限 <virtual-memory-management-unicast-access>`。
+  同一块物理内存可以同时存在单播映射和多播映射。
+  关于如何确保指向同一物理内存的多个映射之间的一致性，请参阅 :ref:`虚拟别名支持 <virtual-aliasing-support>` 章节。
 
 - 在多播映射中使用 `multimem PTX 指令 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-multimem-ld-reduce-multimem-st-multimem-red/>`_。
 
-`Multi GPU Programming Models <https://github.com/NVIDIA/multi-gpu-programming-models/>`_ GitHub 仓库中的 ``multi_node_p2p`` 示例包含使用 fabric 内存（包括多播对象）利用 NVLink SHARP 的完整示例。
-请注意，此示例面向 NCCL 或 NVSHMEM 等库的开发者。它展示了 NVSHMEM 等高级编程模型如何在（多节点）NVLink 域内内部工作。
-应用程序开发者通常应使用更高级别的 MPI、NCCL 或 NVSHMEM 接口而不是此 API。
+`Multi GPU Programming Models <https://github.com/NVIDIA/multi-gpu-programming-models/>`_ GitHub 仓库中的 ``multi_node_p2p`` 提供了一个使用 Fabric 内存（包括多播对象）以利用 NVLink SHARP 的完整示例。
+请注意，该示例主要面向 NCCL 或 NVSHMEM 等库的开发者，旨在展示 NVSHMEM 等高级编程模型在（多节点）NVLink 域内部的运作机制。
+应用程序开发者通常应直接使用 MPI、NCCL 或 NVSHMEM 等高级接口，而非直接调用此底层 API。
+
 
 .. _virtual-memory-management-multicast-allocate:
 
-4.16.4.1. 分配多播对象
+4.17.4.1. 分配多播对象
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-可以使用 ``cuMulticastCreate`` 创建多播对象：
+使用 ``cuMulticastCreate`` 创建多播对象：
 
 .. code-block:: cpp
 
@@ -662,20 +671,22 @@ NVLink SHARP 允许 CUDA 应用程序利用结构内计算来加速通过 NVSwit
 
 .. _virtual-memory-management-multicast-add-device:
 
-4.16.4.2. 向多播对象添加设备
+4.17.4.2. 向多播对象添加设备
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-可以使用 ``cuMulticastAddDevice`` 向多播团队添加设备：
+使用 ``cuMulticastAddDevice`` 向多播组添加设备：
 
 .. code-block:: cpp
 
     cuMulticastAddDevice(&mcHandle, device);
 
 此步骤需要在任何设备上的内存绑定到多播对象之前，在控制参与多播团队的设备的所有进程上完成。
+在将任何设备上的内存绑定到多播对象之前，所有控制着多播组中设备的进程都必须完成此步骤。
+
 
 .. _virtual-memory-management-multicast-bind:
 
-4.16.4.3. 将内存绑定到多播对象
+4.17.4.3. 将内存绑定到多播对象
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 在创建多播对象并将所有参与设备添加到多播对象后，需要为每个设备使用 ``cuMemCreate`` 分配的物理内存来支持它：
@@ -686,7 +697,7 @@ NVLink SHARP 允许 CUDA 应用程序利用结构内计算来加速通过 NVSwit
 
 .. _use-multicast-mappings:
 
-4.16.4.4. 使用多播映射
+4.17.4.4. 使用多播映射
 ^^^^^^^^^^^^^^^^^^^^^^
 
 要在 CUDA C++ 中使用多播映射，需要使用带内联 PTX 的 `multimem PTX 指令 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-multimem-ld-reduce-multimem-st-multimem-red/>`_：
@@ -729,12 +740,12 @@ NVLink SHARP 允许 CUDA 应用程序利用结构内计算来加速通过 NVSwit
 
 .. _advanced-configuration-vmm:
 
-4.16.5. 高级配置
+4.17.5. 高级配置
 ----------------
 
 .. _virtual-memory-management-memory-types:
 
-4.16.5.1. 内存类型
+4.17.5.1. 内存类型
 ^^^^^^^^^^^^^^^^^^
 
 VMM 还为应用程序提供了一种机制来分配某些设备可能支持的特殊类型内存。
@@ -743,7 +754,7 @@ VMM 还为应用程序提供了一种机制来分配某些设备可能支持的�
 
 .. _virtual-memory-management-compressible-memory:
 
-4.16.5.2. 可压缩内存
+4.17.5.2. 可压缩内存
 ^^^^^^^^^^^^^^^^^^^^
 
 可压缩内存可用于加速对具有非结构化稀疏性和其他可压缩数据模式的数据的访问。
@@ -776,7 +787,7 @@ VMM 还为应用程序提供了一种机制来分配某些设备可能支持的�
 
 .. _virtual-aliasing-support:
 
-4.16.5.3. 虚拟别名支持
+4.17.5.3. 虚拟别名支持
 ^^^^^^^^^^^^^^^^^^^^^^
 
 虚拟内存管理 API 提供了一种方法，通过使用不同虚拟地址多次调用 ``cuMemMap`` 来创建同一分配的多个虚拟内存映射或"代理"。
@@ -831,7 +842,7 @@ VMM 还为应用程序提供了一种机制来分配某些设备可能支持的�
 
 .. _virtual-memory-management-ipc-os-handles:
 
-4.16.5.4. IPC 的 OS 特定句柄详情
+4.17.5.4. IPC 的 OS 特定句柄详情
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 使用 ``cuMemCreate`` ，用户可以在分配时指示他们已将特定分配指定用于进程间通信或图形互操作目的。

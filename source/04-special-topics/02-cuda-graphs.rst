@@ -136,8 +136,14 @@ CUDA 12.3 为 CUDA 图新增了边数据功能（edge data）。
    cudaGraphAddNode(&nodes[3], graph, &nodes[1], NULL, 2, &kParams);
 
 上面的示例包含四个 kernel 节点，并配置了节点间的依赖关系，用于演示如何创建极简计算图。
-在常规业务程序中，还需要添加各类内存操作节点，例如 ``cudaGraphAddMemcpyNode()`` 等接口。
+在常规业务程序中，还需要添加各类内存操作节点，例如 memcpy 和 memset 节点。
 如需查阅全部用于创建节点的计算图 API，可参考 `CUDA 运行时 API 文档 <https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__GRAPH.html>`_ 。
+
+.. note::
+
+   CUDA 图 API 最初为每种不同类型的节点提供了独立的添加函数，例如 ``cudaGraphAddKernelNode()`` 或 ``cudaGraphAddMemcpyNode()`` 。
+   这些接口已被单一的、多态的 ``cudaGraphAddNode()`` 所取代，该接口使用节点参数的 ``.type`` 字段来确定所添加节点的类型。
+   非多态的接口将在未来被弃用。 ``cudaGraphAddNode()`` 是使用 CUDA 图 API 向图中添加节点的推荐方式。
 
 .. _cuda-graphs-stream-capture:
 
@@ -301,107 +307,150 @@ CUDA 12.3 为 CUDA 图新增了边数据功能（edge data）。
                                size_t  inputSize,
                                size_t  numOfBlocks)
          {
-            cudaStream_t                 streamForGraph;
-            cudaGraph_t                  graph;
-            std::vector<cudaGraphNode_t> nodeDependencies;
-            cudaGraphNode_t              memcpyNode, kernelNode, memsetNode;
-            double                       result_h = 0.0;
+             cudaStream_t                 streamForGraph;
+             cudaGraph_t                  graph;
+             std::vector<cudaGraphNode_t> nodeDependencies;
+             cudaGraphNode_t              memcpyNode, kernelNode;
+             double                       result_h = 0.0;
 
-            cudaStreamCreate(&streamForGraph);
+             cudaStreamCreate(&streamForGraph);
 
-            cudaKernelNodeParams kernelNodeParams = {0};
-            cudaMemcpy3DParms    memcpyParams     = {0};
-            cudaMemsetParams     memsetParams     = {0};
+             // cudaGraphAddNode is the unified node-creation API: one call for every node type,
+             // driven by a cudaGraphNodeParams struct (a .type tag + a union of per-type params).
+             // It replaces the previously used cudaGraphAddMemcpyNode/cudaGraphAddKernelNode calls. The struct
+             // has reserved fields that must be zero, so it is re-zeroed with "= {}" before each node below.
+             cudaGraphNodeParams nodeParams   = {};
+             cudaMemcpy3DParms   memcpyParams = {0};
 
-            memcpyParams.srcArray = NULL;
-            memcpyParams.srcPos   = make_cudaPos(0, 0, 0);
-            memcpyParams.srcPtr   = make_cudaPitchedPtr(inputVec_h, sizeof(float) * inputSize, inputSize, 1);
-            memcpyParams.dstArray = NULL;
-            memcpyParams.dstPos   = make_cudaPos(0, 0, 0);
-            memcpyParams.dstPtr   = make_cudaPitchedPtr(inputVec_d, sizeof(float) * inputSize, inputSize, 1);
-            memcpyParams.extent   = make_cudaExtent(sizeof(float) * inputSize, 1, 1);
-            memcpyParams.kind     = cudaMemcpyHostToDevice;
+             memcpyParams.srcArray = NULL;
+             memcpyParams.srcPos   = make_cudaPos(0, 0, 0);
+             memcpyParams.srcPtr   = make_cudaPitchedPtr(inputVec_h, sizeof(float) * inputSize, inputSize, 1);
+             memcpyParams.dstArray = NULL;
+             memcpyParams.dstPos   = make_cudaPos(0, 0, 0);
+             memcpyParams.dstPtr   = make_cudaPitchedPtr(inputVec_d, sizeof(float) * inputSize, inputSize, 1);
+             memcpyParams.extent   = make_cudaExtent(sizeof(float) * inputSize, 1, 1);
+             memcpyParams.kind     = cudaMemcpyHostToDevice;
 
-            memsetParams.dst         = (void *)outputVec_d;
-            memsetParams.value       = 0;
-            memsetParams.pitch       = 0;
-            memsetParams.elementSize = sizeof(float); // elementSize can be max 4 bytes
-            memsetParams.width       = numOfBlocks * 2;
-            memsetParams.height      = 1;
+             // Create an empty graph; nodes and edges will be added below.
+             cudaGraphCreate(&graph, 0);
 
-            cudaGraphCreate(&graph, 0);
-            cudaGraphAddMemcpyNode(&memcpyNode, graph, NULL, 0, &memcpyParams);
-            cudaGraphAddMemsetNode(&memsetNode, graph, NULL, 0, &memsetParams);
+             // Node 1: H2D memcpy — no dependencies (NULL, 0), so it can start immediately.
+             // For a memcpy node the cudaMemcpy3DParms goes into nodeParams.memcpy.copyParams
+             // (the .memcpy union member is a wrapper struct, so the copy descriptor nests one level deeper).
+             nodeParams                   = {};
+             nodeParams.type              = cudaGraphNodeTypeMemcpy;
+             nodeParams.memcpy.copyParams = memcpyParams;
+             cudaGraphAddNode(&memcpyNode, graph, NULL, /*dependencyData=*/NULL, 0, &nodeParams);
 
-            nodeDependencies.push_back(memsetNode);
-            nodeDependencies.push_back(memcpyNode);
+             // Make the next node wait for this memcpy to finish before starting.
+             nodeDependencies.push_back(memcpyNode);
 
-            void *kernelArgs[4] = {(void *)&inputVec_d, (void *)&outputVec_d, &inputSize, &numOfBlocks};
+             void *kernelArgs[4] = {(void *)&inputVec_d, (void *)&outputVec_d, &inputSize, &numOfBlocks};
 
-            kernelNodeParams.func           = (void *)reduce;
-            kernelNodeParams.gridDim        = dim3(numOfBlocks, 1, 1);
-            kernelNodeParams.blockDim       = dim3(THREADS_PER_BLOCK, 1, 1);
-            kernelNodeParams.sharedMemBytes = 0;
-            kernelNodeParams.kernelParams   = (void **)kernelArgs;
-            kernelNodeParams.extra          = NULL;
+             // Node 2: first reduction kernel — depends on the H2D memcpy completing.
+             // Kernel params are set directly on the .kernel union member.
+             nodeParams                       = {};
+             nodeParams.type                  = cudaGraphNodeTypeKernel;
+             nodeParams.kernel.func           = (void *)reduce;
+             nodeParams.kernel.gridDim        = dim3(numOfBlocks, 1, 1);
+             nodeParams.kernel.blockDim       = dim3(THREADS_PER_BLOCK, 1, 1);
+             nodeParams.kernel.sharedMemBytes = 0;
+             nodeParams.kernel.kernelParams   = (void **)kernelArgs;
+             nodeParams.kernel.extra          = NULL;
+             cudaGraphAddNode(
+                 &kernelNode, graph, nodeDependencies.data(), /*dependencyData=*/NULL, nodeDependencies.size(), &nodeParams);
 
-            cudaGraphAddKernelNode(
-               &kernelNode, graph, nodeDependencies.data(), nodeDependencies.size(), &kernelNodeParams);
+             // Move dependency forward: the next node waits for this kernel.
+             nodeDependencies.clear();
+             nodeDependencies.push_back(kernelNode);
 
-            nodeDependencies.clear();
-            nodeDependencies.push_back(kernelNode);
+             void *kernelArgs2[3] = {(void *)&outputVec_d, (void *)&result_d, &numOfBlocks};
 
-            memset(&memsetParams, 0, sizeof(memsetParams));
-            memsetParams.dst         = result_d;
-            memsetParams.value       = 0;
-            memsetParams.elementSize = sizeof(float);
-            memsetParams.width       = 2;
-            memsetParams.height      = 1;
-            cudaGraphAddMemsetNode(&memsetNode, graph, NULL, 0, &memsetParams);
+             // Node 3: final reduction kernel — depends on Node 2.
+             nodeParams                       = {};
+             nodeParams.type                  = cudaGraphNodeTypeKernel;
+             nodeParams.kernel.func           = (void *)reduceFinal;
+             nodeParams.kernel.gridDim        = dim3(1, 1, 1);
+             nodeParams.kernel.blockDim       = dim3(THREADS_PER_BLOCK, 1, 1);
+             nodeParams.kernel.sharedMemBytes = 0;
+             nodeParams.kernel.kernelParams   = kernelArgs2;
+             nodeParams.kernel.extra          = NULL;
+             cudaGraphAddNode(
+                 &kernelNode, graph, nodeDependencies.data(), /*dependencyData=*/NULL, nodeDependencies.size(), &nodeParams);
+             nodeDependencies.clear();
+             nodeDependencies.push_back(kernelNode);
 
-            nodeDependencies.push_back(memsetNode);
+             memset(&memcpyParams, 0, sizeof(memcpyParams));
 
-            memset(&kernelNodeParams, 0, sizeof(kernelNodeParams));
-            kernelNodeParams.func           = (void *)reduceFinal;
-            kernelNodeParams.gridDim        = dim3(1, 1, 1);
-            kernelNodeParams.blockDim       = dim3(THREADS_PER_BLOCK, 1, 1);
-            kernelNodeParams.sharedMemBytes = 0;
-            void *kernelArgs2[3]            = {(void *)&outputVec_d, (void *)&result_d, &numOfBlocks};
-            kernelNodeParams.kernelParams   = kernelArgs2;
-            kernelNodeParams.extra          = NULL;
+             memcpyParams.srcArray = NULL;
+             memcpyParams.srcPos   = make_cudaPos(0, 0, 0);
+             memcpyParams.srcPtr   = make_cudaPitchedPtr(result_d, sizeof(double), 1, 1);
+             memcpyParams.dstArray = NULL;
+             memcpyParams.dstPos   = make_cudaPos(0, 0, 0);
+             memcpyParams.dstPtr   = make_cudaPitchedPtr(&result_h, sizeof(double), 1, 1);
+             memcpyParams.extent   = make_cudaExtent(sizeof(double), 1, 1);
+             memcpyParams.kind     = cudaMemcpyDeviceToHost;
 
-            cudaGraphAddKernelNode(
-               &kernelNode, graph, nodeDependencies.data(), nodeDependencies.size(), &kernelNodeParams);
+             // Node 4: D2H memcpy — copies the scalar result back to the host.
+             // Again the copy descriptor nests in nodeParams.memcpy.copyParams.
+             nodeParams                   = {};
+             nodeParams.type              = cudaGraphNodeTypeMemcpy;
+             nodeParams.memcpy.copyParams = memcpyParams;
+             cudaGraphAddNode(&memcpyNode, graph, nodeDependencies.data(), /*dependencyData=*/NULL, nodeDependencies.size(), &nodeParams);
+             nodeDependencies.clear();
+             nodeDependencies.push_back(memcpyNode);
 
-            nodeDependencies.clear();
-            nodeDependencies.push_back(kernelNode);
+             cudaGraphNode_t hostNode;
+             callBackData_t  hostFnData;
+             hostFnData.data    = &result_h;
+             hostFnData.fn_name = "cudaGraphsManual";
 
-            memset(&memcpyParams, 0, sizeof(memcpyParams));
+             // Node 5: host callback — runs on the CPU after the D2H copy completes.
+             // The .host member is cudaHostNodeParamsV2 (fn + userData, plus a syncMode field
+             // left at 0 by the zero-init above).
+             nodeParams               = {};
+             nodeParams.type          = cudaGraphNodeTypeHost;
+             nodeParams.host.fn       = myHostNodeCallback;
+             nodeParams.host.userData = &hostFnData;
+             cudaGraphAddNode(&hostNode, graph, nodeDependencies.data(), /*dependencyData=*/NULL, nodeDependencies.size(), &nodeParams);
 
-            memcpyParams.srcArray = NULL;
-            memcpyParams.srcPos   = make_cudaPos(0, 0, 0);
-            memcpyParams.srcPtr   = make_cudaPitchedPtr(result_d, sizeof(double), 1, 1);
-            memcpyParams.dstArray = NULL;
-            memcpyParams.dstPos   = make_cudaPos(0, 0, 0);
-            memcpyParams.dstPtr   = make_cudaPitchedPtr(&result_h, sizeof(double), 1, 1);
-            memcpyParams.extent   = make_cudaExtent(sizeof(double), 1, 1);
-            memcpyParams.kind     = cudaMemcpyDeviceToHost;
+             size_t numNodes = 0;
+             cudaGraphGetNodes(graph, NULL, &numNodes);
+             printf("Graph node count: %zu\n", numNodes);
 
-            cudaGraphAddMemcpyNode(
-               &memcpyNode, graph, nodeDependencies.data(), nodeDependencies.size(), &memcpyParams);
-            nodeDependencies.clear();
-            nodeDependencies.push_back(memcpyNode);
+             // Instantiate: compile the graph into an executable form (one-time cost).
+             // This is where CUDA optimizes the schedule; repeated launches reuse this.
+             cudaGraphExec_t graphExec;
+             cudaGraphInstantiate(&graphExec, graph, NULL, NULL, 0);
 
-            cudaGraphNode_t    hostNode;
-            cudaHostNodeParams hostParams = {0};
-            hostParams.fn                 = myHostNodeCallback;
-            callBackData_t hostFnData;
-            hostFnData.data     = &result_h;
-            hostFnData.fn_name  = "cudaGraphsManual";
-            hostParams.userData = &hostFnData;
+             // Demonstrates cudaGraphClone — in practice, cloning is useful when multiple CPU
+             // threads need to launch the same graph concurrently, each with its own independent graphExec.
+             cudaGraph_t     clonedGraph;
+             cudaGraphExec_t clonedGraphExec;
+             cudaGraphClone(&clonedGraph, graph);
+             cudaGraphInstantiate(&clonedGraphExec, clonedGraph, NULL, NULL, 0);
 
-            cudaGraphAddHostNode(
-               &hostNode, graph, nodeDependencies.data(), nodeDependencies.size(), &hostParams);
+             // Refill the host input before each launch so the graph's H2D copy processes
+             // new data every time — one instantiated graph reused for different data.
+             // The per-iteration sync ensures that copy finishes before we overwrite the buffer.
+             for (int i = 0; i < GRAPH_LAUNCH_ITERATIONS; i++) {
+                 init_input(inputVec_h, inputSize);
+                 cudaGraphLaunch(graphExec, streamForGraph);
+                 cudaStreamSynchronize(streamForGraph);
+             }
+
+             printf("\nCloned graph:\n");
+             for (int i = 0; i < GRAPH_LAUNCH_ITERATIONS; i++) {
+                 init_input(inputVec_h, inputSize);
+                 cudaGraphLaunch(clonedGraphExec, streamForGraph);
+                 cudaStreamSynchronize(streamForGraph);
+             }
+
+             cudaGraphExecDestroy(graphExec);
+             cudaGraphExecDestroy(clonedGraphExec);
+             cudaGraphDestroy(graph);
+             cudaGraphDestroy(clonedGraph);
+             cudaStreamDestroy(streamForGraph);
          }
 
    .. tab-item:: 流捕获
@@ -415,50 +464,69 @@ CUDA 12.3 为 CUDA 图新增了边数据功能（edge data）。
                                            size_t  inputSize,
                                            size_t  numOfBlocks)
          {
-            cudaStream_t stream1, stream2, stream3, streamForGraph;
-            cudaEvent_t  forkStreamEvent, memsetEvent1, memsetEvent2;
-            cudaGraph_t  graph;
-            double       result_h = 0.0;
+             cudaStream_t stream1, streamForGraph;
+             cudaGraph_t  graph;
+             double       result_h = 0.0;
 
-            cudaStreamCreate(&stream1);
-            cudaStreamCreate(&stream2);
-            cudaStreamCreate(&stream3);
-            cudaStreamCreate(&streamForGraph);
+             cudaStreamCreate(&stream1);
+             cudaStreamCreate(&streamForGraph);
 
-            cudaEventCreate(&forkStreamEvent);
-            cudaEventCreate(&memsetEvent1);
-            cudaEventCreate(&memsetEvent2);
+             // Begin capture: operations issued to stream1 are recorded, not executed.
+             cudaStreamBeginCapture(stream1, cudaStreamCaptureModeGlobal);
 
-            cudaStreamBeginCapture(stream1, cudaStreamCaptureModeGlobal);
+             cudaMemcpyAsync(inputVec_d, inputVec_h, sizeof(float) * inputSize, cudaMemcpyDefault, stream1);
 
-            cudaEventRecord(forkStreamEvent, stream1);
-            cudaStreamWaitEvent(stream2, forkStreamEvent, 0);
-            cudaStreamWaitEvent(stream3, forkStreamEvent, 0);
+             reduce<<<numOfBlocks, THREADS_PER_BLOCK, 0, stream1>>>(inputVec_d, outputVec_d, inputSize, numOfBlocks);
 
-            cudaMemcpyAsync(inputVec_d, inputVec_h, sizeof(float) * inputSize, cudaMemcpyDefault, stream1);
+             reduceFinal<<<1, THREADS_PER_BLOCK, 0, stream1>>>(outputVec_d, result_d, numOfBlocks);
+             cudaMemcpyAsync(&result_h, result_d, sizeof(double), cudaMemcpyDefault, stream1);
 
-            cudaMemsetAsync(outputVec_d, 0, sizeof(double) * numOfBlocks, stream2);
+             callBackData_t hostFnData = {0};
+             hostFnData.data           = &result_h;
+             hostFnData.fn_name        = "cudaGraphsUsingStreamCapture";
+             cudaLaunchHostFunc(stream1, myHostNodeCallback, &hostFnData);
 
-            cudaEventRecord(memsetEvent1, stream2);
+             // End capture: the runtime builds a graph from everything recorded above.
+             // The resulting graph is structurally identical to the one built manually.
+             cudaStreamEndCapture(stream1, &graph);
 
-            cudaMemsetAsync(result_d, 0, sizeof(double), stream3);
-            cudaEventRecord(memsetEvent2, stream3);
+             size_t numNodes = 0;
+             cudaGraphGetNodes(graph, NULL, &numNodes);
+             printf("Graph node count: %zu\n", numNodes);
 
-            cudaStreamWaitEvent(stream1, memsetEvent1, 0);
+             // Instantiate the captured graph into an executable form.
+             cudaGraphExec_t graphExec;
+             cudaGraphInstantiate(&graphExec, graph, NULL, NULL, 0);
 
-            reduce<<<numOfBlocks, THREADS_PER_BLOCK, 0, stream1>>>(inputVec_d, outputVec_d, inputSize, numOfBlocks);
+             // Demonstrates cudaGraphClone — in practice, cloning is useful when multiple CPU
+             // threads need to launch the same graph concurrently, each with its own independent graphExec.
+             cudaGraph_t     clonedGraph;
+             cudaGraphExec_t clonedGraphExec;
+             cudaGraphClone(&clonedGraph, graph);
+             cudaGraphInstantiate(&clonedGraphExec, clonedGraph, NULL, NULL, 0);
 
-            cudaStreamWaitEvent(stream1, memsetEvent2, 0);
+             // Refill the host input before each launch so the graph's H2D copy processes
+             // new data every time — one instantiated graph reused for different data.
+             // The per-iteration sync ensures that copy finishes before we overwrite the buffer.
+             for (int i = 0; i < GRAPH_LAUNCH_ITERATIONS; i++) {
+                 init_input(inputVec_h, inputSize);
+                 cudaGraphLaunch(graphExec, streamForGraph);
+                 cudaStreamSynchronize(streamForGraph);
+             }
 
-            reduceFinal<<<1, THREADS_PER_BLOCK, 0, stream1>>>(outputVec_d, result_d, numOfBlocks);
-            cudaMemcpyAsync(&result_h, result_d, sizeof(double), cudaMemcpyDefault, stream1);
+             printf("\nCloned graph:\n");
+             for (int i = 0; i < GRAPH_LAUNCH_ITERATIONS; i++) {
+                 init_input(inputVec_h, inputSize);
+                 cudaGraphLaunch(clonedGraphExec, streamForGraph);
+                 cudaStreamSynchronize(streamForGraph);
+             }
 
-            callBackData_t hostFnData = {0};
-            hostFnData.data           = &result_h;
-            hostFnData.fn_name        = "cudaGraphsUsingStreamCapture";
-            cudaHostFn_t fn           = myHostNodeCallback;
-            cudaLaunchHostFunc(stream1, fn, &hostFnData);
-            cudaStreamEndCapture(stream1, &graph);
+             cudaGraphExecDestroy(graphExec);
+             cudaGraphExecDestroy(clonedGraphExec);
+             cudaGraphDestroy(graph);
+             cudaGraphDestroy(clonedGraph);
+             cudaStreamDestroy(stream1);
+             cudaStreamDestroy(streamForGraph);
          }
 
 .. _cuda-graphs-graph-instantiation:
@@ -1094,6 +1162,8 @@ CUDA 会在节点创建阶段为图分配内存分配虚拟地址。
 GPU 时序指任务在 GPU 硬件上实际运行的先后顺序，区别于任务入队、任务定义的先后顺序。
 因此，图分配内存属于遵循 `GPU 执行时序` 。
 
+.. _cuda-graphs-graph-node-apis:
+
 4.2.5.2.1. 图节点 API
 `````````````````````
 
@@ -1136,9 +1206,9 @@ GPU 时序指任务在 GPU 硬件上实际运行的先后顺序，区别于任�
    // ...set other kernel node parameters...
 
    // add the kernel node to the graph
-   cudaGraphAddNode(&a, graph, &allocNode, 1, NULL, &nodeParams);
-   cudaGraphAddNode(&b, graph, &a, 1, NULL, &nodeParams);
-   cudaGraphAddNode(&c, graph, &a, 1, NULL, &nodeParams);
+   cudaGraphAddNode(&a, graph, &allocNode, NULL, 1, &nodeParams);
+   cudaGraphAddNode(&b, graph, &a, NULL, 1, &nodeParams);
+   cudaGraphAddNode(&c, graph, &a, NULL, 1, &nodeParams);
    cudaGraphNode_t dependencies[2];
    // kernel nodes b and c are using the graph allocation,
    // so the freeing node must depend on them.
@@ -1157,6 +1227,8 @@ GPU 时序指任务在 GPU 硬件上实际运行的先后顺序，区别于任�
    // so it must not access the allocation.
    // This would be true even if the freeNode depended on kernel node e.
    cudaGraphAddNode(&e, graph, NULL, NULL, 0, &nodeParams);
+
+.. _cuda-graphs-graph-memory-nodes-stream-capture:
 
 4.2.5.2.2. 流捕获
 `````````````````
@@ -1228,7 +1300,7 @@ GPU 时序指任务在 GPU 硬件上实际运行的先后顺序，区别于任�
          cudaGraphAddNode(&allocNode, allocGraph, NULL, NULL, 0, &params);
          dptr = params.alloc.dptr;
 
-         cudaGraphInstantiate(&allocGraphExec, allocGraph, NULL, NULL, 0);
+         cudaGraphInstantiate(&allocGraphExec, allocGraph, 0);
 
          cudaGraphLaunch(allocGraphExec, stream);
          kernel<<< ..., stream >>>(dptr, ...);
@@ -1240,29 +1312,32 @@ GPU 时序指任务在 GPU 硬件上实际运行的先后顺序，区别于任�
 
          // Contents of allocating graph
          void *dptr;
+
+         // Contents of allocating graph
          cudaGraphAddNode(&allocNode, allocGraph, NULL, NULL, 0, &allocNodeParams);
          dptr = allocNodeParams.alloc.dptr;
 
-         // Contents of consuming/freeing graph
+         // contents of consuming/freeing graph
          kernelNodeParams.kernel.kernelParams[0] = allocNodeParams.alloc.dptr;
          cudaGraphAddNode(&freeNode, freeGraph, NULL, NULL, 1, dptr);
 
-         cudaGraphInstantiate(&allocGraphExec, allocGraph, NULL, NULL, 0);
-         cudaGraphInstantiate(&freeGraphExec, freeGraph, NULL, NULL, 0);
+         cudaGraphInstantiate(&allocGraphExec, allocGraph, 0);
+         cudaGraphInstantiate(&freeGraphExec, freeGraph, 0);
 
          cudaGraphLaunch(allocGraphExec, allocStream);
 
-         // Establish stream2's dependency on the allocation node
+         // establish the dependency of stream2 on the allocation node
+         // note: the dependency could also have been established with a stream synchronize operation
          cudaEventRecord(allocEvent, allocStream);
          cudaStreamWaitEvent(stream2, allocEvent);
 
          kernel<<< ..., stream2 >>> (dptr, ...);
 
-         // Establish dependency between stream3 and the allocation use
+         // establish the dependency between the stream 3 and the allocation use
          cudaStreamRecordEvent(streamUseDoneEvent, stream2);
          cudaStreamWaitEvent(stream3, streamUseDoneEvent);
 
-         // Now it is safe to launch the free graph, which can also access the memory
+         // it is now safe to launch the freeing graph, which may also access the memory
          cudaGraphLaunch(freeGraphExec, stream3);
 
    .. tab-item:: 使用图外部事件节点
@@ -1271,65 +1346,53 @@ GPU 时序指任务在 GPU 硬件上实际运行的先后顺序，区别于任�
 
          // Contents of allocating graph
          void *dptr;
-         cudaEvent_t allocEvent;  // event indicating when allocation is ready for use
-         cudaEvent_t streamUseDoneEvent;  // event indicating when stream operations are done
+         cudaEvent_t allocEvent; // event indicating when the allocation will be ready for use.
+         cudaEvent_t streamUseDoneEvent; // event indicating when the stream operations are done with the allocation.
 
-         // Allocating graph contents with event record node
+         // Contents of allocating graph with event record node
          cudaGraphAddNode(&allocNode, allocGraph, NULL, NULL, 0, &allocNodeParams);
          dptr = allocNodeParams.alloc.dptr;
-         // Note: this event record node depends on the allocation node
+         // note: this event record node depends on the alloc node
 
          cudaGraphNodeParams allocEventNodeParams = { cudaGraphNodeTypeEventRecord };
          allocEventNodeParams.eventRecord.event = allocEvent;
          cudaGraphAddNode(&recordNode, allocGraph, &allocNode, NULL, 1, allocEventNodeParams);
-         cudaGraphInstantiate(&allocGraphExec, allocGraph, NULL, NULL, 0);
+         cudaGraphInstantiate(&allocGraphExec, allocGraph, 0);
 
-         // Consuming/freeing graph contents with event wait node
+         // contents of consuming/freeing graph with event wait nodes
          cudaGraphNodeParams streamWaitEventNodeParams = { cudaGraphNodeTypeEventWait };
          streamWaitEventNodeParams.eventWait.event = streamUseDoneEvent;
-         cudaGraphAddNode(&streamUseDoneEventNode,
-                          waitAndFreeGraph,
-                          NULL,
-                          NULL,
-                          0,
-                          streamWaitEventNodeParams);
+         cudaGraphAddNode(&streamUseDoneEventNode, waitAndFreeGraph, NULL, NULL, 0, streamWaitEventNodeParams);
 
          cudaGraphNodeParams allocWaitEventNodeParams = { cudaGraphNodeTypeEventWait };
          allocWaitEventNodeParams.eventWait.event = allocEvent;
-         cudaGraphAddNode(&allocReadyEventNode,
-                          waitAndFreeGraph,
-                          NULL,
-                          NULL,
-                          0,
-                          allocWaitEventNodeParams);
+         cudaGraphAddNode(&allocReadyEventNode, waitAndFreeGraph, NULL, NULL, 0, allocWaitEventNodeParams);
 
          kernelNodeParams->kernelParams[0] = allocNodeParams.alloc.dptr;
 
-         // allocReadyEventNode provides ordering for the allocation node in the consuming graph
-         cudaGraphAddNode(&kernelNode,
-                          waitAndFreeGraph,
-                          &allocReadyEventNode,
-                          NULL,
-                          1,
-                          &kernelNodeParams);
+         // The allocReadyEventNode provides ordering with the alloc node for use in a consuming graph.
+         cudaGraphAddNode(&kernelNode, waitAndFreeGraph, &allocReadyEventNode, NULL, 1, &kernelNodeParams);
 
-         // Free node must be ordered after both external and internal users
+         // The free node has to be ordered after both external and internal users.
+         // Thus the node must depend on both the kernelNode and the streamUseDoneEventNode.
          dependencies[0] = kernelNode;
          dependencies[1] = streamUseDoneEventNode;
 
          cudaGraphNodeParams freeNodeParams = { cudaGraphNodeTypeMemFree };
          freeNodeParams.free.dptr = dptr;
          cudaGraphAddNode(&freeNode, waitAndFreeGraph, &dependencies, NULL, 2, freeNodeParams);
-         cudaGraphInstantiate(&waitAndFreeGraphExec, waitAndFreeGraph, NULL, NULL, 0);
+         cudaGraphInstantiate(&waitAndFreeGraphExec, waitAndFreeGraph, 0);
 
          cudaGraphLaunch(allocGraphExec, allocStream);
 
-         // Establish stream2's dependency on the event node to satisfy ordering requirements
+         // establish the dependency of stream2 on the event node satisfies the ordering requirement
          cudaStreamWaitEvent(stream2, allocEvent);
          kernel<<< ..., stream2 >>> (dptr, ...);
          cudaStreamRecordEvent(streamUseDoneEvent, stream2);
 
-         // Event wait node in waitAndFreeGraphExec establishes dependency on required events
+         // the event wait node in the waitAndFreeGraphExec establishes the dependency
+         // on the "readyForFreeEvent" that is needed to prevent the kernel running in
+         // stream two from accessing the allocation after the free node in execution order.
          cudaGraphLaunch(waitAndFreeGraphExec, stream3);
 
 .. _cuda-graphs-auto-free-on-launch:
@@ -1340,8 +1403,6 @@ GPU 时序指任务在 GPU 硬件上实际运行的先后顺序，区别于任�
 在正常情况下，如果一张图存在未释放的内存分配，CUDA 会阻止图被重新启动，因为同一虚拟地址重复分配会造成显存泄漏。
 使用 ``cudaGraphInstantiateFlagAutoFreeOnLaunch`` 标志实例化图允许图在仍有未释放分配的情况下重新启动。
 在这种情况下，启动时会自动插入针对未释放分配的异步释放操作。
-
-启动时自动释放对于单生产者多消费者算法很有用。在每次迭代中，生产者图创建多个分配，并且根据运行时条件，不同的消费者集合访问这些分配。这种可变执行序列意味着消费者无法释放分配，因为后续消费者可能需要访问。启动时自动释放意味着启动循环不需要跟踪生产者的分配——相反，该信息保持隔离在生产者的创建和销毁逻辑中。一般来说，启动时自动释放简化了原本需要在每次重新启动前释放图拥有的所有分配的算法。
 
 在启动时自动释放（Auto free on launch）功能对于单生产者多消费者算法非常有用。
 每一轮迭代中，生产者图（producer graph）会创建多个内存分配，并且根据运行时条件，会有不定数量的消费者访问这些内存。
@@ -1358,7 +1419,7 @@ GPU 时序指任务在 GPU 硬件上实际运行的先后顺序，区别于任�
 
 .. code-block:: c++
 
-   // Create producer graph that allocates memory and fills it with data
+   // Create producer graph which allocates memory and populates it with data
    cudaStreamBeginCapture(cudaStreamPerThread, cudaStreamCaptureModeGlobal);
    cudaMallocAsync(&data1, blocks * threads, cudaStreamPerThread);
    cudaMallocAsync(&data2, blocks * threads, cudaStreamPerThread);
@@ -1374,7 +1435,7 @@ GPU 时序指任务在 GPU 硬件上实际运行的先后顺序，区别于任�
    cudaStreamBeginCapture(cudaStreamPerThread, cudaStreamCaptureModeGlobal);
    consumerFromLibrary(data1, cudaStreamPerThread);
    cudaStreamEndCapture(cudaStreamPerThread, &graph);
-   cudaGraphInstantiateWithFlags(&consumer1, graph, 0);  // regular instantiation
+   cudaGraphInstantiateWithFlags(&consumer1, graph, 0); //regular instantiation
    cudaGraphDestroy(graph);
 
    // Create second consumer graph
@@ -1395,7 +1456,6 @@ GPU 时序指任务在 GPU 硬件上实际运行的先后顺序，区别于任�
        }
    } while (determineAction(&launchConsumer2));
 
-   // free the unfreed memory, orderd by myStream
    cudaFreeAsync(data1, myStream);
    cudaFreeAsync(data2, myStream);
 
@@ -1422,27 +1482,27 @@ CUDA 12.9 新增了将子图的所有权转移给父图的功能。
 
 .. code-block:: c++
 
-   // Create child graph
+   // Create the child graph
    cudaGraphCreate(&child, 0);
 
-   // Parameters for a basic allocation
+   // parameters for a basic allocation
    cudaGraphNodeParams allocNodeParams = { cudaGraphNodeTypeMemAlloc };
    allocNodeParams.alloc.poolProps.allocType = cudaMemAllocationTypePinned;
    allocNodeParams.alloc.poolProps.location.type = cudaMemLocationTypeDevice;
-   // Specify device 0 as the resident device
+   // specify device 0 as the resident device
    allocNodeParams.alloc.poolProps.location.id = 0;
    allocNodeParams.alloc.bytesize = size;
 
    cudaGraphAddNode(&allocNode, child, NULL, NULL, 0, &allocNodeParams);
-   // Additional nodes using this allocation can be added here
+   // Additional nodes using the allocation could be added here
    cudaGraphNodeParams freeNodeParams = { cudaGraphNodeTypeMemFree };
    freeNodeParams.free.dptr = allocNodeParams.alloc.dptr;
    cudaGraphAddNode(&freeNode, child, &allocNode, NULL, 1, freeNodeParams);
 
-   // Create parent graph
+   // Create the parent graph
    cudaGraphCreate(&parent, 0);
 
-   // Move child graph into parent graph
+   // Move the child graph to the parent graph
    cudaGraphNodeParams childNodeParams = { cudaGraphNodeTypeGraph };
    childNodeParams.graph.graph = child;
    childNodeParams.graph.ownership = cudaGraphChildGraphOwnershipMove;
@@ -1475,7 +1535,7 @@ CUDA 可能会为生命周期不重叠的不同内存分配分配相同的虚拟
 
    添加新的分配节点 （2）
 
-下图展示了添加一个新的分配节点（3）。新的分配节点不依赖于释放节点（2），因此无法重用关联分配节点（2）的地址。
+下图展示了添加一个新的分配节点（4）。新的分配节点不依赖于释放节点（2），因此无法重用关联分配节点（2）的地址。
 如果分配节点（2）使用了释放节点（1）释放的地址，则新的分配节点 3 将需要一个新地址。
 
 .. figure:: /_static/images/adding-new-alloc-nodes.png
@@ -1496,7 +1556,7 @@ CUDA 可能会为生命周期不重叠的不同内存分配分配相同的虚拟
 CUDA 可在图实例化、启动或执行阶段的任意时刻更新物理显存映射关系。
 CUDA 还可能在后续多次图启动操作之间插入同步逻辑，避免存活的图内存分配指向同一块物理显存。
 对于任何 **分配 - 释放 - 再分配** 的使用模式，若程序在某段内存分配的生命周期之外访问其指针，该非法访问可能在无报错的情况下读写另一块内存分配的有效数据（即使分配的虚拟地址是唯一的）。
-可借助计算检查工具捕获此类错误。
+可借助 Compute Sanitizer 工具捕获此类错误。
 
 下图展示了在同一个流中顺序执行的多张图。
 在此示例里，每张图都会释放自身申请的全部内存。
@@ -1601,21 +1661,20 @@ CUDA 允许拥有不同映射关系的图分配复用相同的虚拟地址。
    // allocate an allocation resident on device 1 accessible from device 1
    cudaGraphAddNode(&allocNode, graph, NULL, NULL, 0, &allocNodeParams);
 
-   accessDescs[2];
-   // access descs (only ReadWrite and Device access supported by the add node api)
+   cudaMemAccessDesc accessDescs[2];
+   // boilerplate for the access descs (only ReadWrite and Device access supported by the add node api)
    accessDescs[0].flags = cudaMemAccessFlagsProtReadWrite;
    accessDescs[0].location.type = cudaMemLocationTypeDevice;
    accessDescs[1].flags = cudaMemAccessFlagsProtReadWrite;
    accessDescs[1].location.type = cudaMemLocationTypeDevice;
 
-   // access being requested for device 0 & 2.
-   // Device 1 access requirement left implicit.
+   // access being requested for device 0 & 2.  Device 1 access requirement left implicit.
    accessDescs[0].location.id = 0;
    accessDescs[1].location.id = 2;
 
    // access request array has 2 entries.
-   allocNodeParams.alloc.accessDescCount = 2;
-   allocNodeParams.alloc.accessDescs = accessDescs;
+   allocNodeParams.accessDescCount = 2;
+   allocNodeParams.accessDescs = accessDescs;
 
    // allocate an allocation resident on device 1 accessible from devices 0, 1 and 2.
    // (0 & 2 from the descriptors, 1 from it being the resident device).
@@ -1627,11 +1686,11 @@ CUDA 允许拥有不同映射关系的图分配复用相同的虚拟地址。
 ````````````````````````````````
 
 对于流捕获场景，内存分配节点会在捕获时记录对应内存池的对等 GPU 访问权限。
-若在 ``cudaMallocFromPoolAsync`` 被捕获之后，修改内存池的对等访问权限，不会改变图执行时为这段内存创建的映射关系
+若在 ``cudaMallocFromPoolAsync`` 被捕获之后，修改内存池的对等访问权限，不会改变图执行时为这段内存创建的映射关系。
 
 .. code-block:: c++
 
-   // access descs (only ReadWrite and Device access supported by the add node api)
+   // boilerplate for the access descs (only ReadWrite and Device access supported by the add node api)
    accessDesc.flags = cudaMemAccessFlagsProtReadWrite;
    accessDesc.location.type = cudaMemLocationTypeDevice;
    accessDesc.location.id = 1;
@@ -1639,21 +1698,19 @@ CUDA 允许拥有不同映射关系的图分配复用相同的虚拟地址。
    // let memPool be resident and accessible on device 0
 
    cudaStreamBeginCapture(stream);
-   cudaMallocAsync(&dptr1, size, memPool, stream);
+   cudaMallocFromPoolAsync(&dptr1, size, memPool, stream);
    cudaStreamEndCapture(stream, &graph1);
 
    cudaMemPoolSetAccess(memPool, &accessDesc, 1);
 
-   // The graph node allocating dptr1 will only have accessibility from device 0, even though
-   // memPool now has accessibility from device 1.
-
    cudaStreamBeginCapture(stream);
-
-   // The graph node allocating dptr2 will have accessibility from devices 0 and 1,
-   // because that was the pool accessibility at the time of the cudaMallocAsync call.
-
-   cudaMallocAsync(&dptr2, size, memPool, stream);
+   cudaMallocFromPoolAsync(&dptr2, size, memPool, stream);
    cudaStreamEndCapture(stream, &graph2);
+
+   //The graph node allocating dptr1 would only have the device 0 accessibility
+   //even though memPool now has device 1 accessibility.
+   //The graph node allocating dptr2 will have device 0 and device 1 accessibility,
+   //since that was the pool accessibility at the time of the cudaMallocFromPoolAsync call.
 
 .. _cuda-graphs-device-graph-launch:
 
@@ -1738,7 +1795,7 @@ Memcpy 节点：
 4.2.6.1.3. 设备图更新
 ``````````````````````
 
-设备图仅能在主机端进行更新；若已实例化的可执行图发生更新，必须重新将其上传至设备，修改才能生效
+设备图仅能在主机端进行更新；若已实例化的可执行图发生更新，必须重新将其上传至设备，修改才能生效。
 这可以通过 :ref:`cuda-graphs-device-graph-upload` 中方法来实现。
 与主机图不同的是，如果在更新过程中从设备端启动设备图，将导致未定义的行为。
 
@@ -1801,7 +1858,7 @@ Memcpy 节点：
        cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
        launchFireAndForgetGraph<<<1, 1, 0, stream>>>(gExec2);
        cudaStreamEndCapture(stream, &g1);
-       cudaGraphInstantiate(&gExec1, g1);
+       cudaGraphInstantiate(&gExec1, g1, 0);
 
        // Launch the host graph, which will in turn launch the device graph.
        cudaGraphLaunch(gExec1, stream);
@@ -1839,8 +1896,6 @@ Memcpy 节点：
 
    嵌套的即发即弃环境
 
-当图从主机启动时，存在一个流环境，它是启动图的执行环境的父环境。流环境封装了作为整体启动一部分生成的所有工作。当整体流环境标记为完成时，流启动完成（即下游依赖工作现在可以运行）。
-
 当从主机端启动一个图时，会存在一个流环境（Stream Environment），作为被启动子图的执行环境的父级。
 该流环境封装了子图启动过程中所生成的所有工作。
 当整个流环境被标记为完成时，流启动才算完成（即此时下游的依赖工作才可以开始运行）。
@@ -1859,8 +1914,6 @@ Memcpy 节点：
 
 与主机端不同，无法通过传统接口如 ``cudaDeviceSynchronize()`` 或 ``cudaStreamSynchronize()`` 在 GPU 上完成设备图执行同步。
 为了实现串行任务依赖，CUDA 提供了另一种执行模式 —— 尾部启动（tail launch），用以提供相近的同步能力。
-
-尾部启动在图的环境被认为完成时执行——即当图及其所有子图完成时。当图完成时，尾部启动列表中下一个图的环境将替换已完成的环境作为父环境的子环境。与即发即忘启动一样，一个图可以有多个图排队进行尾部启动。
 
 尾部启动会在一个图的执行环境完全完成时（当该图及其所有子图都执行完毕）才会触发下一个图执行。
 当一个图执行完成时，尾部启动列表中下一个图的环境将作为父环境的子环境，接替刚刚完成的那个图的环境。
@@ -1894,7 +1947,7 @@ Memcpy 节点：
        cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
        launchTailGraph<<<1, 1, 0, stream>>>(gExec2);
        cudaStreamEndCapture(stream, &g1);
-       cudaGraphInstantiate(&gExec1, g1);
+       cudaGraphInstantiate(&gExec1, g1, 0);
 
        // Launch the host graph, which will in turn launch the device graph.
        cudaGraphLaunch(gExec1, stream);
@@ -1909,10 +1962,7 @@ Memcpy 节点：
 
    尾部启动排序
 
-如下图所示，图 `G1` 在执行时向尾部启动队列提交 `G2` 和 `G3` 的启动请求。
-图 `G2` 在执行时，生成新的尾部启动子图 `X` 和 `Y`。
-虽然 `G3` 已经存在于尾部启动队列中，但是 `X` 和 `Y` 会先与 `G3` 执行。
-因为 `G3` 在 `G2` **完全** 执行完成之后才能执行。 **只有由同一张图提交的尾部启动才按入队顺序逐个执行。**
+由尾部图（tail graph）入队的尾部启动，将先于尾部启动列表中排在前面的图所入队的尾部启动执行。这些新的尾部启动将按照其入队顺序执行。
 
 .. figure:: /_static/images/tail-launch-ordering-complex.png
    :alt: Tail launch ordering when enqueued from multiple graphs
@@ -1991,7 +2041,7 @@ Memcpy 节点：
        cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
        launchSiblingGraph<<<1, 1, 0, stream>>>(gExec2);
        cudaStreamEndCapture(stream, &g1);
-       cudaGraphInstantiate(&gExec1, g1);
+       cudaGraphInstantiate(&gExec1, g1, 0);
 
        // Launch the host graph, which will in turn launch the device graph.
        cudaGraphLaunch(gExec1, stream);

@@ -1,6 +1,6 @@
 .. _extended-gpu-memory-details:
 
-4.17. 扩展 GPU 内存
+4.19. 扩展 GPU 内存
 ===================
 
 扩展 GPU 内存（Extended GPU Memory，EGM）功能利用高带宽 NVLink-C2C，使 GPU 能够高效访问所有系统内存，无论是单节点还是多节点系统。EGM 适用于集成 CPU-GPU NVIDIA 系统，允许分配可被系统中任何 GPU 线程访问的物理内存。EGM 确保所有 GPU 都能以 GPU-GPU NVLink 或 NVLink-C2C 的速度访问其资源。
@@ -16,14 +16,14 @@
 
 .. _egm-preliminaries:
 
-4.17.1. 基础知识
+4.19.1. 基础知识
 ----------------
 
 在深入了解 EGM 功能的 API 变更之前，我们将介绍当前支持的拓扑结构、标识符分配、虚拟内存管理的先决条件以及 EGM 的 CUDA 类型。
 
 .. _egm-platforms:
 
-4.17.1.1. EGM 平台：系统拓扑
+4.19.1.1. EGM 平台：系统拓扑
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 目前，EGM 可以在以下平台上启用：
@@ -40,7 +40,7 @@
 
 .. _socket-identifiers:
 
-4.17.1.2. Socket 标识符：是什么？如何访问？
+4.19.1.2. Socket 标识符：是什么？如何访问？
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 NUMA（Non-Uniform Memory Access，非统一内存访问）是多处理器计算机系统中使用的内存架构，其中内存被划分为多个节点。每个节点都有自己的处理器和内存。在这样的系统中，NUMA 将系统划分为节点，并为每个节点分配唯一的标识符（ ``numaID`` ）。
@@ -54,14 +54,14 @@ EGM 使用由操作系统分配的 NUMA 节点标识符。请注意，此标识�
 
 .. _allocators-egm-support:
 
-4.17.1.3. 分配器与 EGM 支持
+4.19.1.3. 分配器与 EGM 支持
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 将系统内存映射为 EGM 不会导致任何性能问题。实际上，访问映射为 EGM 的远程 socket 系统内存会更快。因为通过 EGM，流量保证通过 NVLinks 路由。目前， ``cuMemCreate`` 和 ``cudaMemPoolCreate`` 分配器支持使用适当的位置类型和 NUMA 标识符。
 
 .. _memory-mgmt-extensions:
 
-4.17.1.4. 当前 API 的内存管理扩展
+4.19.1.4. 当前 API 的内存管理扩展
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 目前，EGM 内存可以使用虚拟内存（ ``cuMemCreate`` ）或流有序内存（ ``cudaMemPoolCreate`` ）分配器进行映射。用户负责分配物理内存并将其映射到所有 socket 上的虚拟内存地址空间。
@@ -92,12 +92,12 @@ EGM 使用由操作系统分配的 NUMA 节点标识符。请注意，此标识�
 
 .. _using-egm-interface:
 
-4.17.2. 使用 EGM 接口
+4.19.2. 使用 EGM 接口
 ---------------------
 
 .. _egm-single-node-single-gpu:
 
-4.17.2.1. 单节点、单 GPU
+4.19.2.1. 单节点、单 GPU
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 任何现有的 CUDA 主机分配器以及系统分配的内存都可以用来受益于高带宽 C2C。对于用户来说，本地访问就是今天的主机分配。
@@ -108,14 +108,14 @@ EGM 使用由操作系统分配的 NUMA 节点标识符。请注意，此标识�
 
 .. _egm-single-node-multi-gpu:
 
-4.17.2.2. 单节点、多 GPU
+4.19.2.2. 单节点、多 GPU
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 在多 GPU 系统中，用户必须提供主机信息用于放置。如前所述，表达该信息的一种自然方式是使用 NUMA 节点 ID，EGM 遵循这种方法。因此，使用 ``cuDeviceGetAttribute`` 函数，用户应该能够获知最近的 NUMA 节点 ID（参见 :ref:`socket-identifiers` ）。然后用户可以使用 VMM（虚拟内存管理）API 或 CUDA 内存池来分配和管理 EGM 内存。
 
 .. _using-vmm-apis:
 
-4.17.2.2.1. 使用 VMM API
+4.19.2.2.1. 使用 VMM API
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 使用虚拟内存管理 API 分配内存的第一步是创建一个物理内存块，为分配提供后备存储。有关更多详细信息，请参阅 CUDA 编程指南的 :ref:`virtual-memory-management` 部分。在 EGM 分配中，用户必须显式提供 ``CU_MEM_LOCATION_TYPE_HOST_NUMA`` 作为位置类型，并提供 ``numaID`` 作为位置标识符。此外，在 EGM 中，分配必须与平台的适当粒度对齐。以下代码片段展示了使用 ``cuMemCreate`` 分配物理内存：
@@ -155,7 +155,7 @@ EGM 使用由操作系统分配的 NUMA 节点标识符。请注意，此标识�
 
 .. _using-cuda-memory-pool:
 
-4.17.2.2.2. 使用 CUDA 内存池
+4.19.2.2.2. 使用 CUDA 内存池
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 要定义 EGM，用户可以在节点上创建内存池并授予对等方访问权限。在这种情况下，用户必须显式定义 ``cudaMemLocationTypeHostNuma`` 作为位置类型，并将 ``numaId`` 作为位置标识符。以下代码片段展示了使用 ``cudaMemPoolCreate`` 创建内存池：
@@ -192,7 +192,7 @@ EGM 使用由操作系统分配的 NUMA 节点标识符。请注意，此标识�
 
 .. _egm-multi-node-multi-gpu:
 
-4.17.2.3. 多节点、多 GPU
+4.19.2.3. 多节点、多 GPU
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 除了内存分配之外，远程对等访问没有 EGM 特定的修改，它遵循 CUDA 进程间（IPC）协议。有关 IPC 的更多详细信息，请参阅 CUDA 编程指南的 :ref:`interprocess-communication` 。

@@ -1,13 +1,13 @@
 .. _graphics-interop-details:
 
-4.19. CUDA 与图形 API 互操作
+4.21. CUDA 与图形 API 互操作
 ============================
 
 在 CUDA 中直接访问来自 API 的 GPU 数据，允许使用 CUDA 核函数读写这些数据，从而在从其他 API 使用它们的同时提供 CUDA 功能。主要有两个概念：直接方法，即与 OpenGL 和 Direct3D[9-11] 的 :ref:`图形互操作性 <graphics-interoperability>`，它使得可以将资源从 OpenGL 和 Direct3D 映射到 CUDA 地址空间；以及更灵活的 :ref:`外部资源互操作性 <external-resource-interoperability>`，其中可以通过导入和导出操作系统级句柄来访问内存和同步对象。这支持以下 API：Direct3D[11-12]、Vulkan 和 NVIDIA 软件通信接口互操作性。
 
 .. _graphics-interoperability:
 
-4.19.1. 图形互操作性
+4.21.1. 图形互操作性
 --------------------
 
 在使用 CUDA 访问 Direct3D 或 OpenGL 资源（例如 VBO（顶点缓冲对象））之前，必须先注册和映射它。使用相应的 CUDA 函数（见下面的示例）进行注册将返回类型为 ``struct cudaGraphicsResource`` 的 CUDA 图形资源，该资源保存 CUDA 设备指针或数组。要访问核函数中的设备数据，必须映射资源。资源注册后，可以根据需要多次映射和取消映射。映射的资源通过使用 ``cudaGraphicsResourceGetMappedPointer()`` 返回的设备内存地址（用于缓冲区）和 ``cudaGraphicsSubResourceGetMappedArray()`` （用于 CUDA 数组）由核函数访问。一旦 CUDA 不再需要该资源，可以取消注册。这些是主要步骤：
@@ -23,7 +23,7 @@
 
 .. _opengl-interoperability:
 
-4.19.1.1. OpenGL 互操作性
+4.21.1.1. OpenGL 互操作性
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 可以映射到 CUDA 地址空间的 OpenGL 资源是 OpenGL 缓冲区、纹理和渲染缓冲区对象。使用 ``cudaGraphicsGLRegisterBuffer()`` 注册缓冲区对象，在 CUDA 中，它显示为普通设备指针。使用 ``cudaGraphicsGLRegisterImage()`` 注册纹理或渲染缓冲区对象，在 CUDA 中，它显示为 CUDA 数组。
@@ -200,7 +200,7 @@
 
 .. _direct3d-interoperability:
 
-4.19.1.2. Direct3D 互操作性
+4.21.1.2. Direct3D 互操作性
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Direct3D 互操作性支持 Direct3D9、Direct3D10 和 Direct3D11，但不支持 Direct3D12，这里我们关注 Direct3D11，对于 Direct3D9 和 Direct3D10 请参阅 CUDA 编程指南 12.9。可以映射到 CUDA 地址空间的 Direct3D 资源是 Direct3D 缓冲区、纹理和表面。这些资源使用 ``cudaGraphicsD3D11RegisterResource()`` 注册。
@@ -330,7 +330,7 @@ CUDA 核函数 ``cuda_kernel_texture_2d`` 在频闪蓝色背景上绘制移动�
 
 .. _sli-interoperability:
 
-4.19.1.3. 可扩展链接接口 (SLI) 配置中的互操作性
+4.21.1.3. 可扩展链接接口 (SLI) 配置中的互操作性
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 在具有多个 GPU 的系统中，所有支持 CUDA 的 GPU 都可以通过 CUDA 驱动程序和运行时作为单独的设备访问。当系统处于 SLI 模式时，这是不同的。SLI 是一种硬件配置的多 GPU 配置，通过跨多个 GPU 划分工作负载来提供更高的渲染性能。隐式 SLI 模式（驱动程序进行假设）不再受支持，但显式 SLI 仍受支持。显式 SLI 意味着应用程序通过 API（例如 Vulkan、DirectX、GL）了解和管理 SLI 组中所有设备的 SLI 状态。
@@ -343,7 +343,7 @@ CUDA 核函数 ``cuda_kernel_texture_2d`` 在频闪蓝色背景上绘制移动�
 
 .. _external-resource-interoperability:
 
-4.19.2. 外部资源互操作性
+4.21.2. 外部资源互操作性
 ------------------------
 
 外部资源互操作性允许 CUDA 导入由 API 显式导出的某些资源。这些对象通常使用操作系统原生的句柄导出，如 Linux 上的文件描述符或 Windows 上的 NT 句柄。这使得可以在其他 API 和 CUDA 之间高效地共享资源，而无需在两者之间复制或重复资源。它支持以下 API：Direct3D[11-12]、Vulkan 和 NVIDIA 软件通信接口互操作性。有两种类型的资源可以导入：
@@ -358,7 +358,7 @@ CUDA 核函数 ``cuda_kernel_texture_2d`` 在频闪蓝色背景上绘制移动�
 
 .. _vulkan-interoperability:
 
-4.19.2.1. Vulkan 互操作性
+4.21.2.1. Vulkan 互操作性
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大化 GPU 利用率并避免不必要的复制。注意，这不是 Vulkan 指南，我们只关注与 CUDA 的互操作性，有关 Vulkan 指南请参阅 `https://www.vulkan.org/learn#vulkan-tutorials <https://www.vulkan.org/learn#vulkan-tutorials>`_。
@@ -400,7 +400,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _setting-up-a-vulkan-device:
 
-4.19.2.1.1. 设置 Vulkan 设备
+4.21.2.1.1. 设置 Vulkan 设备
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 为了导出内存对象，必须创建启用了 ``VK_KHR_external_memory_capabilities`` 扩展的 Vulkan 实例，以及启用了 ``VK_KHR_external_memory`` 的设备。此外，必须启用特定于平台的句柄类型，对于 Windows 为 ``VK_KHR_external_memory_win32`` ，对于基于 UNIX 的系统为 ``VK_KHR_external_memory_fd`` 。
@@ -437,7 +437,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _initializing-cuda-with-matching-device-uuids:
 
-4.19.2.1.2. 使用匹配的设备 UUID 初始化 CUDA
+4.21.2.1.2. 使用匹配的设备 UUID 初始化 CUDA
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 导入由 Vulkan 导出的内存和同步对象时，必须在创建它们的同一设备上导入和映射它们。与创建对象的 Vulkan 物理设备对应的 CUDA 设备，可以通过比较 CUDA 设备的 UUID 与 Vulkan 物理设备的 UUID 来确定，如以下来自 simpleVulkan 示例的代码片段所示，其中 ``vkDeviceUUID`` 是 Vulkan API 结构 ``vkPhysicalDeviceIDProperties.deviceUUID`` 的成员，定义了当前 Vulkan 实例的物理设备 id。
@@ -496,7 +496,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _exporting-vulkan-memory-objects:
 
-4.19.2.1.3. 导出 Vulkan 内存对象
+4.21.2.1.3. 导出 Vulkan 内存对象
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 为了导出 Vulkan 内存对象，必须创建具有相应导出标志的缓冲区。请注意，句柄类型的枚举是特定于平台的。
@@ -570,7 +570,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _exporting-vulkan-synchronization-objects:
 
-4.19.2.1.4. 导出 Vulkan 同步对象
+4.21.2.1.4. 导出 Vulkan 同步对象
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 在 GPU 上执行的 Vulkan API 调用是异步的。为了定义执行顺序，Vulkan 中提供了可以与 CUDA 共享的信号量和围栏（fence）。与内存对象类似，信号量可以由 Vulkan 导出，它们需要根据信号量的类型使用导出标志创建。信号量有二进制（binary）信号量和时间轴（timeline）信号量两种。二进制信号量只有 1 位计数器，即已发出信号或未发出信号。时间轴信号量具有 64 位计数器，可用于使用同一信号量定义执行顺序。在 simpleVulkan 示例中，时间轴信号量和二进制信号量都有对应的代码路径。
@@ -607,7 +607,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _importing-memory-objects:
 
-4.19.2.1.5. 导入内存对象
+4.21.2.1.5. 导入内存对象
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 由 Vulkan 导出的专用（dedicated）和非专用内存对象都可以导入到 CUDA 中。导入 Vulkan 专用内存对象时，必须设置 ``cudaExternalMemoryDedicated`` 标志。在 Windows 中，使用 ``VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT`` 导出的 Vulkan 内存对象可以使用与该对象关联的 NT 句柄导入到 CUDA 中，如下所示。请注意，CUDA 不会取得该 NT 句柄的所有权，在不再需要该句柄时关闭它是应用程序的责任。NT 句柄持有对资源的引用，因此必须先显式释放它，然后才能释放底层内存。在 Linux 中，使用 ``VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT`` 导出的 Vulkan 内存对象可以使用与该对象关联的文件描述符导入到 CUDA 中，如下所示。请注意，文件描述符一经导入，CUDA 即取得其所有权。在成功导入之后使用该文件描述符会导致未定义行为。
@@ -669,7 +669,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _mapping-buffers-onto-imported-memory-objects:
 
-4.19.2.1.6. 将缓冲区映射到导入的内存对象上
+4.21.2.1.6. 将缓冲区映射到导入的内存对象上
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 导入内存对象后，必须先进行映射才能使用。可以将设备指针映射到导入的内存对象上，如下所示。映射的偏移量和大小必须与使用相应 Vulkan API 创建映射时指定的值相匹配。所有映射的设备指针都必须使用 ``cudaFree()`` 释放。
@@ -688,7 +688,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _mapping-mipmapped-arrays-onto-imported-memory-objects:
 
-4.19.2.1.7. 将 mipmapped 数组映射到导入的内存对象上
+4.21.2.1.7. 将 mipmapped 数组映射到导入的内存对象上
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 可以将 CUDA mipmapped 数组映射到导入的内存对象上，如下所示。偏移量、维度、格式和 mip 层级数量必须与使用相应 Vulkan API 创建映射时指定的值相匹配。此外，如果该 mipmapped 数组在 Vulkan 中被绑定为颜色目标（color target），则必须设置 ``cudaArrayColorAttachment`` 标志。所有映射的 mipmapped 数组都必须使用 ``cudaFreeMipmappedArray()`` 释放。以下独立代码片段展示了在将 mipmapped 数组映射到导入的内存对象上时，如何将 Vulkan 参数转换为相应的 CUDA 参数。
@@ -794,7 +794,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _importing-synchronization-objects:
 
-4.19.2.1.8. 导入同步对象
+4.21.2.1.8. 导入同步对象
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 使用 ``VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT`` 导出的 Vulkan 信号量对象可以使用与该对象关联的文件描述符导入到 CUDA 中，如下所示。请注意，文件描述符一经导入，CUDA 即取得其所有权。在成功导入之后使用该文件描述符会导致未定义行为。而使用 ``VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT`` 导出的 Vulkan 信号量对象可以使用与该对象关联的 NT 句柄导入到 CUDA 中，如下所示。请注意，CUDA 不会取得该 NT 句柄的所有权，在不再需要该句柄时关闭它是应用程序的责任。NT 句柄持有对资源的引用，因此必须先显式释放它，然后才能释放底层信号量。另外，使用 ``VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT`` 导出的 Vulkan 信号量对象可以使用与该对象关联的全局共享 D3DKMT 句柄导入到 CUDA 中，如下所示。由于全局共享的 D3DKMT 句柄不持有对底层信号量的引用，当该资源的所有其他引用都被销毁时，它会被自动销毁。
@@ -851,7 +851,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _signaling-waiting-on-imported-synchronization-objects:
 
-4.19.2.1.9. 对导入的同步对象发出信号/等待
+4.21.2.1.9. 对导入的同步对象发出信号/等待
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 可以对导入的 Vulkan 信号量发出信号和进行等待，如下所示。对信号量发出信号会将其置为已发信号状态；对于时间轴信号量，还会将计数器设置为信号调用中指定的值。等待该信号的相应等待操作必须在 Vulkan 中发出。此外，对于二进制信号量，等待该信号的等待操作必须在此信号发出之后才能发出。等待信号量会一直等到其达到已发信号状态或指定的等待值。已发信号的二进制信号量随后会被重置回未发信号状态。该等待所等待的相应信号必须在 Vulkan 中发出。此外，对于二进制信号量，必须先发出信号，然后才能发出此等待。在以下摘自 simpleVulkan 示例的代码中，只有当围绕顶点缓冲区的信号量由 Vulkan 发出信号后，才会调用模拟步骤/CUDA 核函数。在模拟步骤之后，会对另一个信号量发出信号；对于时间轴信号量，则由 CUDA 递增同一信号量，使得等待该信号量的 Vulkan 部分可以使用更新后的顶点缓冲区继续渲染。
@@ -901,7 +901,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _opengl-interoperability-ext-res-int:
 
-4.19.2.1.10. OpenGL 互操作性
+4.21.2.1.10. OpenGL 互操作性
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 如 :ref:`OpenGL 互操作性 <opengl-interoperability>` 中所述，传统的 OpenGL-CUDA 互操作通过 CUDA 直接消费在 OpenGL 中创建的句柄来工作。但是，由于 OpenGL 也可以消费在 Vulkan 中创建的内存和同步对象，因此存在另一种实现 OpenGL-CUDA 互操作的方法。本质上，由 Vulkan 导出的内存和同步对象可以同时导入到 OpenGL 和 CUDA 中，然后用于协调 OpenGL 和 CUDA 之间的内存访问。有关如何导入由 Vulkan 导出的内存和同步对象的更多详细信息，请参阅以下 OpenGL 扩展：
@@ -915,14 +915,14 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _direct3d-interoperability-ext-res-int:
 
-4.19.2.2. Direct3D 互操作性
+4.21.2.2. Direct3D 互操作性
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 将 Direct3D[11|12] 资源导入到 CUDA 支持 Direct3D11 和 Direct3D12。这里我们只关注 Direct3D12，有关 Direct3D11，请参阅 CUDA 编程指南 12.9。
 
 .. _matching-device-luids:
 
-4.19.2.2.1. 匹配设备 LUID
+4.21.2.2.1. 匹配设备 LUID
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 导入由 Direct3D12 导出的内存和同步对象时，必须在创建它们的同一设备上导入和映射它们。与创建对象的 Direct3D12 设备对应的 CUDA 设备，可以通过比较 CUDA 设备的 LUID 与 Direct3D12 设备的 LUID 来确定，如以下代码示例所示。请注意，Direct3D12 设备不得在链接节点适配器（linked node adapter）上创建，即 ``ID3D12Device::GetNodeCount`` 返回的节点计数必须为 1。
@@ -950,7 +950,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _importing-memory-objects-dir3d-12-int:
 
-4.19.2.2.2. 导入内存对象
+4.21.2.2.2. 导入内存对象
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 从 NT 句柄导入内存对象有几种不同的方式。请注意，在不再需要 NT 句柄时关闭它是应用程序的责任。NT 句柄持有对资源的引用，因此必须先显式释放它，然后才能释放底层内存。导入 Direct3D 资源时，必须像下面的代码片段那样设置 ``cudaExternalMemoryDedicated`` 标志。可共享的 Direct3D12 堆（heap）内存对象（通过在调用 ``ID3D12Device::CreateHeap`` 时设置 ``D3D12_HEAP_FLAG_SHARED`` 标志创建）可以使用与该对象关联的 NT 句柄导入到 CUDA 中，如下所示。
@@ -1039,7 +1039,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _mapping-buffers-onto-imported-memory-objects-dir3d-12-int:
 
-4.19.2.2.3. 将缓冲区映射到导入的内存对象上
+4.21.2.2.3. 将缓冲区映射到导入的内存对象上
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 可以将设备指针映射到导入的内存对象上，如下所示。映射的偏移量和大小必须与使用相应 Direct3D12 API 创建映射时指定的值相匹配。所有映射的设备指针都必须使用 ``cudaFree()`` 释放。
@@ -1063,7 +1063,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _mapping-mipmapped-arrays-onto-imported-memory-objects-dir3d-12-int:
 
-4.19.2.2.4. 将 mipmapped 数组映射到导入的内存对象上
+4.21.2.2.4. 将 mipmapped 数组映射到导入的内存对象上
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 可以将 CUDA mipmapped 数组映射到导入的内存对象上，如下所示。偏移量、维度、格式和 mip 层级数量必须与使用相应 Direct3D12 API 创建映射时指定的值相匹配。此外，如果该 mipmapped 数组可以在 Direct3D12 中被绑定为渲染目标（render target），则必须设置 ``cudaArrayColorAttachment`` 标志。所有映射的 mipmapped 数组都必须使用 ``cudaFreeMipmappedArray()`` 释放。以下代码示例展示了在将 mipmapped 数组映射到导入的内存对象上时，如何将参数转换为相应的 CUDA 参数。
@@ -1161,7 +1161,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _importing-synchronization-objects-dir3d-12-int:
 
-4.19.2.2.5. 导入同步对象
+4.21.2.2.5. 导入同步对象
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 可共享的 Direct3D12 围栏（fence）对象（通过在调用 ``ID3D12Device::CreateFence`` 时设置 ``D3D12_FENCE_FLAG_SHARED`` 标志创建）可以使用与该对象关联的 NT 句柄导入到 CUDA 中，如下所示。请注意，在不再需要该句柄时关闭它是应用程序的责任。NT 句柄持有对资源的引用，因此必须先显式释放它，然后才能释放底层信号量。
@@ -1205,7 +1205,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _signaling-waiting-on-imported-synchronization-objects-dir3d-12-int:
 
-4.19.2.2.6. 对导入的同步对象发出信号/等待
+4.21.2.2.6. 对导入的同步对象发出信号/等待
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 一旦从 Direct3D12 导入了带有围栏的信号量，就可以对它们发出信号和进行等待。对围栏对象发出信号会设置其值。等待该信号的相应等待操作必须在 Direct3D12 中发出。请注意，等待该信号的等待操作必须在此信号发出之后才能发出。
@@ -1238,7 +1238,7 @@ Vulkan 图形和计算工作负载在同一硬件上的耦合执行可以最大�
 
 .. _nvidia-software-communication-interface-interoperability-nvsci:
 
-4.19.2.3. NVIDIA 软件通信接口互操作性 (NVSCI)
+4.21.2.3. NVIDIA 软件通信接口互操作性 (NVSCI)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 NvSciBuf 和 NvSciSync 是为以下目的而开发的接口：
@@ -1250,7 +1250,7 @@ NvSciBuf 和 NvSciSync 是为以下目的而开发的接口：
 
 .. _importing-memory-objects-nvsci:
 
-4.19.2.3.1. 导入内存对象
+4.21.2.3.1. 导入内存对象
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 要分配与给定 CUDA 设备兼容的 NvSciBuf 对象，必须如下所示在 NvSciBuf 属性列表中使用 ``NvSciBufGeneralAttrKey_GpuId`` 设置相应的 GPU id。应用程序可以选择指定以下属性：
@@ -1374,7 +1374,7 @@ NvSciBuf 和 NvSciSync 是为以下目的而开发的接口：
 
 .. _mapping-buffers-onto-imported-memory-objects-nvsci:
 
-4.19.2.3.2. 将缓冲区映射到导入的内存对象上
+4.21.2.3.2. 将缓冲区映射到导入的内存对象上
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 可以将设备指针映射到导入的内存对象上，如下所示。映射的偏移量和大小可以根据已分配的 ``NvSciBufObj`` 的属性填写。所有映射的设备指针都必须使用 ``cudaFree()`` 释放。
@@ -1398,7 +1398,7 @@ NvSciBuf 和 NvSciSync 是为以下目的而开发的接口：
 
 .. _mapping-mipmapped-arrays-onto-imported-memory-objects-nvsci:
 
-4.19.2.3.3. 将 mipmapped 数组映射到导入的内存对象上
+4.21.2.3.3. 将 mipmapped 数组映射到导入的内存对象上
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 可以将 CUDA mipmapped 数组映射到导入的内存对象上，如下所示。偏移量、维度和格式可以根据已分配的 ``NvSciBufObj`` 的属性填写。所有映射的 mipmapped 数组都必须使用 ``cudaFreeMipmappedArray()`` 释放。以下代码示例展示了在将 mipmapped 数组映射到导入的内存对象上时，如何将 NvSciBuf 属性转换为相应的 CUDA 参数。
@@ -1429,7 +1429,7 @@ NvSciBuf 和 NvSciSync 是为以下目的而开发的接口：
 
 .. _importing-synchronization-objects-nvsci:
 
-4.19.2.3.4. 导入同步对象
+4.21.2.3.4. 导入同步对象
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 可以使用 ``cudaDeviceGetNvSciSyncAttributes()`` 生成与给定 CUDA 设备兼容的 NvSciSync 属性。返回的属性列表可用于创建保证与给定 CUDA 设备兼容的 ``NvSciSyncObj`` 。
@@ -1483,7 +1483,7 @@ NvSciBuf 和 NvSciSync 是为以下目的而开发的接口：
 
 .. _signaling-waiting-on-imported-synchronization-objects-nvsci:
 
-4.19.2.3.5. 对导入的同步对象发出信号/等待
+4.21.2.3.5. 对导入的同步对象发出信号/等待
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 可以对导入的 ``NvSciSyncObj`` 对象发出信号，如下所述。对由 NvSciSync 支持的信号量对象发出信号会初始化作为输入传递的围栏参数。与前述信号对应的等待操作会等待此围栏参数。此外，等待该信号的等待操作必须在此信号发出之后才能发出。如果将标志设置为 ``cudaExternalSemaphoreSignalSkipNvSciBufMemSync`` ，则会跳过默认作为信号操作一部分执行的内存同步操作（针对此进程中所有导入的 NvSciBuf）。当 ``NvsciBufGeneralAttrKey_GpuSwNeedCacheCoherency`` 为 FALSE 时，应设置此标志。
