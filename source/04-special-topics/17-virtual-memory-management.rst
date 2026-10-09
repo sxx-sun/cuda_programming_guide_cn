@@ -680,8 +680,8 @@ NVLink SHARP 允许 CUDA 应用借助 NVSwitch 的网络内计算（In-Fabric Co
 
     cuMulticastAddDevice(&mcHandle, device);
 
-此步骤需要在任何设备上的内存绑定到多播对象之前，在控制参与多播团队的设备的所有进程上完成。
-在将任何设备上的内存绑定到多播对象之前，所有控制着多播组中设备的进程都必须完成此步骤。
+在所有相关的进程上，将他们管理的、参与多播的设备添加到多播组。
+**必须在所有设备均已加入多播组之后，才能在任意设备上执行内存绑定操作**
 
 
 .. _virtual-memory-management-multicast-bind:
@@ -689,11 +689,12 @@ NVLink SHARP 允许 CUDA 应用借助 NVSwitch 的网络内计算（In-Fabric Co
 4.17.4.3. 将内存绑定到多播对象
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-在创建多播对象并将所有参与设备添加到多播对象后，需要为每个设备使用 ``cuMemCreate`` 分配的物理内存来支持它：
+使用 ``cuMemCreate`` 分配的物理内存，并使用 ``cuMulticastBindMem`` 将内存绑定到多播对象：
 
 .. code-block:: cpp
 
     cuMulticastBindMem(mcHandle, mcOffset, memHandle, memOffset, size, 0 /*flags*/);
+
 
 .. _use-multicast-mappings:
 
@@ -706,7 +707,8 @@ NVLink SHARP 允许 CUDA 应用借助 NVSwitch 的网络内计算（In-Fabric Co
 
     __global__ void all_reduce_norm_barrier_kernel(float* l2_norm,
                                                    float* partial_l2_norm_mc,
-                                                   unsigned int* arrival_counter_uc, unsigned int* arrival_counter_mc,
+                                                   unsigned int* arrival_counter_uc,
+                                                   unsigned int* arrival_counter_mc,
                                                    const unsigned int expected_count) {
         assert( 1 == blockDim.x * blockDim.y * blockDim.z * gridDim.x * gridDim.y * gridDim.z );
         float l2_norm_sum = 0.0;
@@ -728,8 +730,12 @@ NVLink SHARP 允许 CUDA 应用借助 NVSwitch 的网络内计算（In-Fabric Co
         cuda::atomic_ref<unsigned int,cuda::thread_scope_system> ac(arrival_counter_uc);
         while (expected_count > ac.load(cuda::memory_order_acquire));
 
-        // Atomic load reduction from all replicas. It does not provide ordering so it can be relaxed.
-        asm volatile ("multimem.ld_reduce.relaxed.sys.global.add.f32 %0, [%1];" : "=f"(l2_norm_sum) : "l"(partial_l2_norm_mc) : "memory");
+        // Atomic load reduction from all replicas.
+        // It does not provide ordering so it can be relaxed.
+        asm volatile ("multimem.ld_reduce.relaxed.sys.global.add.f32 %0, [%1];"
+            : "=f"(l2_norm_sum)
+            : "l"(partial_l2_norm_mc)
+            : "memory");
 
     #else
         #error "ERROR: multimem instructions require compute capability 9.0 or larger."
