@@ -765,13 +765,16 @@ VMM 还为应用程序提供了一种机制来分配某些设备可能支持的�
 
 可压缩内存可用于加速对具有非结构化稀疏性和其他可压缩数据模式的数据的访问。
 压缩可以节省 DRAM 带宽、L2 读取带宽和 L2 容量，具体取决于数据。
-想要在支持计算数据压缩的设备上分配可压缩内存的应用程序可以通过将 ``CUmemAllocationProp::allocFlags::compressionType`` 设置为 ``CU_MEM_ALLOCATION_COMP_GENERIC`` 来实现。
-用户必须使用 ``CU_DEVICE_ATTRIBUTE_GENERIC_COMPRESSION_SUPPORTED`` 查询设备是否支持计算数据压缩。以下代码片段说明如何使用 ``cuDeviceGetAttribute`` 查询可压缩内存支持。
+在支持数据压缩的设备上，应用程序可以通过将 ``CUmemAllocationProp::allocFlags::compressionType`` 设置为 ``CU_MEM_ALLOCATION_COMP_GENERIC`` 来申请可压缩内存。
+用户必须使用 ``CU_DEVICE_ATTRIBUTE_GENERIC_COMPRESSION_SUPPORTED`` 查询设备是否支持计算数据压缩。
+以下代码片段说明如何使用 ``cuDeviceGetAttribute`` 查询可压缩内存支持。
 
 .. code-block:: cpp
 
     int compressionSupported = 0;
-    cuDeviceGetAttribute(&compressionSupported, CU_DEVICE_ATTRIBUTE_GENERIC_COMPRESSION_SUPPORTED, device);
+    cuDeviceGetAttribute(&compressionSupported,
+                         CU_DEVICE_ATTRIBUTE_GENERIC_COMPRESSION_SUPPORTED,
+                         device);
 
 在支持计算数据压缩的设备上，用户必须在分配时选择加入，如下所示：
 
@@ -779,7 +782,8 @@ VMM 还为应用程序提供了一种机制来分配某些设备可能支持的�
 
     prop.allocFlags.compressionType = CU_MEM_ALLOCATION_COMP_GENERIC;
 
-由于各种原因（如硬件资源有限），分配可能没有压缩属性。要验证标志是否生效，用户可以使用 ``cuMemGetAllocationPropertiesFromHandle`` 查询已分配内存的属性。
+由于各种原因（如硬件资源有限），分配可能没有压缩属性。
+要验证标志是否生效，用户可以使用 ``cuMemGetAllocationPropertiesFromHandle`` 查询已分配内存的属性。
 
 .. code-block:: cpp
 
@@ -796,9 +800,10 @@ VMM 还为应用程序提供了一种机制来分配某些设备可能支持的�
 4.17.5.3. 虚拟别名支持
 ^^^^^^^^^^^^^^^^^^^^^^
 
-虚拟内存管理 API 提供了一种方法，通过使用不同虚拟地址多次调用 ``cuMemMap`` 来创建同一分配的多个虚拟内存映射或"代理"。
-这称为虚拟别名。除非 PTX ISA 中另有说明，否则对分配的一个代理的写入被认为与同一内存的任何其他代理不一致且不连贯，直到写入设备操作（网格启动、memcpy、memset 等）完成。
-在写入设备操作之前存在于 GPU 上但在写入设备操作完成后读取的网格也被认为具有不一致和不连贯的代理。
+VMM 提供了一种机制，允许通过多次调用 ``cuMemMap`` 并指定不同的虚拟地址，为同一块物理内存分配创建多个虚拟内存映射（即“代理”）。
+这种机制被称为虚拟别名（ virtual aliasing ）。
+除非 PTX ISA 中另有说明，否则在写入设备操作（如网格启动、内存拷贝、内存填充等）完成之前，对某个代理的写入与其他指向同一内存的代理之间被视为不一致且不连贯的。
+此外，如果在写入设备操作发起前 GPU 上已存在某些网格，而这些网格在写入操作完成后才执行读取，那么这些网格所访问的代理同样被视为不一致且不连贯的。
 
 例如，以下片段被认为是未定义的，假设设备指针 A 和 B 是同一内存分配的虚拟别名：
 
@@ -806,7 +811,7 @@ VMM 还为应用程序提供了一种机制来分配某些设备可能支持的�
 
     __global__ void foo(char *A, char *B) {
       *A = 0x1;
-      printf("%d\n", *B);    // Undefined behavior!  *B can take on either
+      printf("%d\n", *B);  // Undefined behavior!  *B can take on either
     // the previous value or some value in-between.
     }
 
@@ -846,25 +851,38 @@ VMM 还为应用程序提供了一种机制来分配某些设备可能支持的�
       printf("%d\n", *B);    // *B == *A == 0x1
     }
 
+
+.. admonition:: 译注
+
+    这里主要描述了虚拟别名机制下最核心的一个坑： **硬件缓存一致性陷阱** 。
+    简单来说，它的核心含义是：同一块物理内存的两个不同虚拟地址（代理），在 GPU 硬件层面被视为“两个完全独立的内存区域”，它们之间没有自动的缓存同步机制。
+    用户需要保证一致性。例如：通过专用内存屏障（ ``fence.proxy.alias`` ）。
+    系统在完整操作边界提供隐式一致性保证。 **kernel 之间、stream 之间不需要！** 只约束 **同一个 kernel 内部线程内跨别名访问** 。
+
 .. _virtual-memory-management-ipc-os-handles:
 
 4.17.5.4. IPC 的 OS 特定句柄详情
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-使用 ``cuMemCreate`` ，用户可以在分配时指示他们已将特定分配指定用于进程间通信或图形互操作目的。
-应用程序可以通过将 ``CUmemAllocationProp::requestedHandleTypes`` 设置为平台特定字段来实现此目的。
-在 Windows 上，当 ``CUmemAllocationProp::requestedHandleTypes`` 设置为 ``CU_MEM_HANDLE_TYPE_WIN32`` 时，
-应用程序还必须在 ``CUmemAllocationProp::win32HandleMetaData`` 中指定 LPSECURITYATTRIBUTES 属性。此安全属性定义导出分配可能传输到其他进程的范围。
+使用 ``cuMemCreate`` 时，用户可以在分配内存时指定该分配已预留用于进程间通信或图形互操作。
+应用程序可通过将 ``CUmemAllocationProp::requestedHandleTypes`` 设置为平台特定的字段来实现此功能。
+在 Windows 平台上，当 ``CUmemAllocationProp::requestedHandleTypes`` 被设置为 ``CU_MEM_HANDLE_TYPE_WIN32`` 时，
+应用程序还必须在 ``CUmemAllocationProp::win32HandleMetaData`` 中指定一个 LPSECURITYATTRIBUTES 属性。
+该安全属性定义了导出的内存分配可被传输到其他进程的作用域范围。
 
-用户必须确保在尝试导出使用 ``cuMemCreate`` 分配的内存之前查询请求的句柄类型的支持。以下代码片段以平台特定的方式说明如何查询句柄类型支持。
+用户在尝试导出通过 ``cuMemCreate`` 分配的内存之前，必须先查询所请求的句柄类型是否受支持。以下代码片段展示了如何以平台特定的方式查询句柄类型的支持情况。
 
 .. code-block:: cpp
 
     int deviceSupportsIpcHandle;
     #if defined(__linux__)
-        cuDeviceGetAttribute(&deviceSupportsIpcHandle, CU_DEVICE_ATTRIBUTE_HANDLE_TYPE_POSIX_FILE_DESCRIPTOR_SUPPORTED, device));
+        cuDeviceGetAttribute(&deviceSupportsIpcHandle,
+                             CU_DEVICE_ATTRIBUTE_HANDLE_TYPE_POSIX_FILE_DESCRIPTOR_SUPPORTED,
+                             device));
     #else
-        cuDeviceGetAttribute(&deviceSupportsIpcHandle, CU_DEVICE_ATTRIBUTE_HANDLE_TYPE_WIN32_HANDLE_SUPPORTED, device));
+        cuDeviceGetAttribute(&deviceSupportsIpcHandle,
+                             CU_DEVICE_ATTRIBUTE_HANDLE_TYPE_WIN32_HANDLE_SUPPORTED,
+                             device));
     #endif
 
 用户应按如下所示适当设置 ``CUmemAllocationProp::requestedHandleTypes`` ：
