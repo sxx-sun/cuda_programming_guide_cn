@@ -4,3 +4,22 @@
 .rst-content table.docutils td .line-block {
     margin-bottom: 0;
 }
+
+/* sphinx_rtd_theme 版心：主题默认 800px，对齐 NVIDIA 官方的 1200px */
+.wy-nav-content {
+    max-width: 1200px;
+}
+
+/* 侧栏+正文作为整体居中：1500px = 侧栏 300px + 正文 1200px，剩余空间左右均分。
+   侧栏本是 fixed left:0，需与正文起始位置同步偏移；窗口不足 1500px 时退化为贴左。 */
+@media (min-width: 769px) {
+    .wy-nav-side {
+        left: max(0px, calc((100vw - 1500px) / 2));
+    }
+    .wy-nav-content-wrap {
+        margin-left: calc(300px + max(0px, (100vw - 1500px) / 2));
+    }
+    .wy-nav-content {
+        margin-left: 0;
+    }
+}
