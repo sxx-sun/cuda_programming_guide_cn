@@ -1,3 +1,5 @@
 _build/
 en/
 .omo/
+scripts/
+NIGHTLY_PROGRESS.md

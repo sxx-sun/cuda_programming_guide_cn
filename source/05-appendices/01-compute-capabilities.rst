@@ -18,7 +18,8 @@
 
 `CUDA GPU 计算能力 <https://developer.nvidia.com/cuda-gpus>`__ 页面提供了 NVIDIA GPU 型号与其计算能力之间的完整映射。
 
-或者，可以使用随 `NVIDIA 驱动程序 <https://www.nvidia.com/en-us/drivers/>`__ 提供的 `nvidia-smi <https://docs.nvidia.com/deploy/nvidia-smi/index.html>`__ 工具获取 GPU 的计算能力。例如，以下命令将输出系统上可用的 GPU 名称和计算能力：
+或者，可以使用随 `NVIDIA 驱动程序 <https://www.nvidia.com/en-us/drivers/>`__ 提供的 `nvidia-smi <https://docs.nvidia.com/deploy/nvidia-smi/index.html>`__ 工具获取 GPU 的计算能力。
+例如，以下命令将输出系统上可用的 GPU 名称和计算能力：
 
 .. code-block:: bash
 
