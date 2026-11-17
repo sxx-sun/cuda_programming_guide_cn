@@ -1,11 +1,11 @@
 .. _mathematical-functions:
 
-5.5. 浮点计算
+5.6. 浮点计算
 =============
 
 .. _floating-point-introduction:
 
-5.5.1. 浮点介绍
+5.6.1. 浮点介绍
 ---------------
 
 自 1985 年采用 `IEEE-754 标准 <https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8766229>`__ 进行二进制浮点运算以来，几乎所有主流计算系统（包括 NVIDIA 的 CUDA 架构）都已实现了该标准。IEEE-754 标准规定了浮点运算结果应如何近似。
@@ -16,7 +16,7 @@
 
 .. _floating-point-format:
 
-5.5.1.1. 浮点格式
+5.6.1.1. 浮点格式
 ^^^^^^^^^^^^^^^^^
 
 浮点格式和功能在 `IEEE-754 标准 <https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8766229>`__ 中定义。
@@ -68,7 +68,7 @@
 
 .. _normal-and-subnormal-values:
 
-5.5.1.2. 正规和次正规值
+5.6.1.2. 正规和次正规值
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 任何指数字段既不全为零也不全为一的浮点值都称为*正规*值。
@@ -89,7 +89,7 @@
 
 .. _special-values:
 
-5.5.1.3. 特殊值
+5.6.1.3. 特殊值
 ^^^^^^^^^^^^^^^
 
 IEEE-754 标准为浮点数定义了三种特殊值：
@@ -129,7 +129,7 @@ IEEE-754 标准为浮点数定义了三种特殊值：
 
 .. _associativity:
 
-5.5.1.4. 结合律
+5.6.1.4. 结合律
 ^^^^^^^^^^^^^^^
 
 重要的是要注意，数学算术的规则和属性由于其有限精度而不能直接应用于浮点算术。以下示例显示单精度值 ``A`` 、 ``B`` 和 ``C`` 以及使用不同结合律计算的数学精确值。
@@ -154,7 +154,7 @@ IEEE-754 标准为浮点数定义了三种特殊值：
 
 .. _fused-multiply-add-fma:
 
-5.5.1.5. 融合乘加（FMA）
+5.6.1.5. 融合乘加（FMA）
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 融合乘加（FMA）运算仅用一次舍入步骤计算结果。没有 FMA，结果需要两次舍入步骤：一次用于乘法，一次用于加法。因为 FMA 只使用一次舍入步骤，它产生更准确的结果。
@@ -187,7 +187,7 @@ CUDA 以多种方式为 ``float`` 和 ``double`` 数据类型提供融合乘加�
 
 .. _dot-product-example:
 
-5.5.1.6. 点积示例
+5.6.1.6. 点积示例
 ^^^^^^^^^^^^^^^^^
 
 考虑找到两个短向量 :math:`\vec{a}` 和 :math:`\vec{b}` 的点积的问题，两者都有四个元素。
@@ -208,7 +208,7 @@ CUDA 以多种方式为 ``float`` 和 ``double`` 数据类型提供融合乘加�
 
 .. _rounding:
 
-5.5.1.7. 舍入
+5.6.1.7. 舍入
 ^^^^^^^^^^^^^
 
 IEEE-754 标准要求支持几种运算。这些包括算术运算如加法、减法、乘法、除法、平方根、融合乘加、求余数、转换、缩放、符号和比较运算。对于给定的格式和舍入模式，这些运算的结果保证在标准的所有实现中一致。
@@ -234,7 +234,7 @@ IEEE-754 标准定义了四种舍入模式：*向最近舍入*、*向正无穷�
 
 .. _notes-on-host-device-computation-accuracy:
 
-5.5.1.8. 主机/设备计算精度说明
+5.6.1.8. 主机/设备计算精度说明
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 浮点计算结果的精度受多种因素影响。本节总结了在浮点计算中获得可靠结果的重要考虑因素。其中一些方面在前面章节中有更详细的描述。
@@ -282,7 +282,7 @@ IEEE-754 标准定义了四种舍入模式：*向最近舍入*、*向正无穷�
 
 .. _floating-point-data-types:
 
-5.5.2. 浮点数据类型
+5.6.2. 浮点数据类型
 -------------------
 
 CUDA 支持 Bfloat16、半精度、单精度、双精度和四精度浮点数据类型。下表总结了 CUDA 中支持的浮点数据类型及其要求。
@@ -395,7 +395,7 @@ CUDA 还支持 `TensorFloat-32 <https://blogs.nvidia.com/blog/tensorfloat-32-pre
 
 .. _cuda-and-ieee-754-compliance:
 
-5.5.3. CUDA 和 IEEE-754 兼容性
+5.6.3. CUDA 和 IEEE-754 兼容性
 ------------------------------
 
 所有 GPU 设备都遵循 `IEEE 754-2019 <https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8766229>`__ 二进制浮点运算标准，但有以下限制：
@@ -420,7 +420,7 @@ IEEE-754 和 C/C++ 语言标准没有明确解决在舍入到整数值超出目�
 
 .. _cuda-and-c-c-compliance:
 
-5.5.4. CUDA 和 C/C++ 兼容性
+5.6.4. CUDA 和 C/C++ 兼容性
 ---------------------------
 
 **浮点异常：**
@@ -474,7 +474,7 @@ C 和 C++ 都允许以十进制或十六进制表示法表示浮点值。
 
 .. _floating-point-functionality-exposure:
 
-5.5.5. 浮点功能暴露
+5.6.5. 浮点功能暴露
 -------------------
 
 CUDA 支持的数学函数通过以下方式暴露：
@@ -628,7 +628,7 @@ CUDA 支持的数学函数通过以下方式暴露：
 
 .. _built-in-arithmetic-operators:
 
-5.5.6. 内建算术运算符
+5.6.6. 内建算术运算符
 ---------------------
 
 内建 C/C++ 语言运算符，例如 ``x + y`` 、 ``x - y`` 、 ``x * y`` 、 ``x / y`` 、 ``x++`` 、 ``x--`` 以及倒数 ``1 / x`` ，对于单精度、双精度和四精度类型符合 IEEE-754 标准。它们在使用*向偶数舍入*舍入模式时保证最大 ULP 误差为零。它们在主机和设备代码中均可用。
@@ -644,7 +644,7 @@ CUDA 支持的数学函数通过以下方式暴露：
 
 .. _cuda-c-mathematical-standard-library-functions:
 
-5.5.7. CUDA C++ 标准库数学函数
+5.6.7. CUDA C++ 标准库数学函数
 ------------------------------
 
 CUDA 通过 ``cuda::std::`` 命名空间为 `C++ 标准库数学函数 <https://en.cppreference.com/w/cpp/header/cmath.html>`__ 提供全面支持。这些功能是 ``<cuda/std/cmath>`` 标头的一部分。它们在主机和设备代码中均可用。
@@ -657,7 +657,7 @@ CUDA 通过 ``cuda::std::`` 命名空间为 `C++ 标准库数学函数 <https://
 
 .. _basic-operations:
 
-5.5.7.1. 基本运算
+5.6.7.1. 基本运算
 ^^^^^^^^^^^^^^^^^
 
 基本运算的 `CUDA Math API <https://docs.nvidia.com/cuda/cuda-math-api/index.html>`__ 在主机和设备代码中均可用，但 ``__float128`` 除外。
@@ -743,7 +743,7 @@ CUDA 通过 ``cuda::std::`` 命名空间为 `C++ 标准库数学函数 <https://
 
 .. _exponential-functions:
 
-5.5.7.2. 指数函数
+5.6.7.2. 指数函数
 ^^^^^^^^^^^^^^^^^
 
 指数函数的 `CUDA Math API <https://docs.nvidia.com/cuda/cuda-math-api/index.html>`__ 仅对 ``float`` 和 ``double`` 类型在主机和设备代码中可用。
@@ -875,7 +875,7 @@ CUDA 通过 ``cuda::std::`` 命名空间为 `C++ 标准库数学函数 <https://
 
 .. _power-functions:
 
-5.5.7.3. 幂函数
+5.6.7.3. 幂函数
 ^^^^^^^^^^^^^^^
 
 幂函数的 `CUDA Math API <https://docs.nvidia.com/cuda/cuda-math-api/index.html>`__ 仅对 ``float`` 和 ``double`` 类型在主机和设备代码中可用。
@@ -952,7 +952,7 @@ CUDA 通过 ``cuda::std::`` 命名空间为 `C++ 标准库数学函数 <https://
 
 .. _trigonometric-functions:
 
-5.5.7.4. 三角函数
+5.6.7.4. 三角函数
 ^^^^^^^^^^^^^^^^^
 
 三角函数的 `CUDA Math API <https://docs.nvidia.com/cuda/cuda-math-api/index.html>`__ 仅对 ``float`` 和 ``double`` 类型在主机和设备代码中可用。
@@ -1070,7 +1070,7 @@ CUDA 通过 ``cuda::std::`` 命名空间为 `C++ 标准库数学函数 <https://
 
 .. _hyperbolic-functions:
 
-5.5.7.5. 双曲函数
+5.6.7.5. 双曲函数
 ^^^^^^^^^^^^^^^^^
 
 双曲函数的 `CUDA Math API <https://docs.nvidia.com/cuda/cuda-math-api/index.html>`__ 仅对 ``float`` 和 ``double`` 类型在主机和设备代码中可用。
@@ -1173,7 +1173,7 @@ CUDA 通过 ``cuda::std::`` 命名空间为 `C++ 标准库数学函数 <https://
 
 .. _error-and-gamma-functions:
 
-5.5.7.6. 误差函数和伽马函数
+5.6.7.6. 误差函数和伽马函数
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 误差函数和伽马函数的 `CUDA Math API <https://docs.nvidia.com/cuda/cuda-math-api/index.html>`__ 对 ``float`` 和 ``double`` 类型在主机和设备代码中可用。
@@ -1227,7 +1227,7 @@ CUDA 通过 ``cuda::std::`` 命名空间为 `C++ 标准库数学函数 <https://
 
 .. _nearest-integer-floating-point-operations:
 
-5.5.7.7. 最近整数浮点运算
+5.6.7.7. 最近整数浮点运算
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 最近整数浮点运算的 `CUDA Math API <https://docs.nvidia.com/cuda/cuda-math-api/index.html>`__ 仅对 ``float`` 和 ``double`` 类型在主机和设备代码中可用。
@@ -1324,7 +1324,7 @@ CUDA 通过 ``cuda::std::`` 命名空间为 `C++ 标准库数学函数 <https://
 
 .. _floating-point-manipulation-functions:
 
-5.5.7.8. 浮点操作函数
+5.6.7.8. 浮点操作函数
 ^^^^^^^^^^^^^^^^^^^^^
 
 浮点操作函数的 `CUDA Math API <https://docs.nvidia.com/cuda/cuda-math-api/index.html>`__ 在主机和设备代码中均可用，但 ``__float128`` 除外。
@@ -1390,7 +1390,7 @@ CUDA 通过 ``cuda::std::`` 命名空间为 `C++ 标准库数学函数 <https://
 
 .. _classification-and-comparison:
 
-5.5.7.9. 分类和比较
+5.6.7.9. 分类和比较
 ^^^^^^^^^^^^^^^^^^^
 
 分类和比较函数的 `CUDA Math API <https://docs.nvidia.com/cuda/cuda-math-api/index.html>`__ 在主机和设备代码中均可用，但 ``__float128`` 除外。
@@ -1497,7 +1497,7 @@ CUDA 通过 ``cuda::std::`` 命名空间为 `C++ 标准库数学函数 <https://
 
 .. _non-standard-cuda-mathematical-functions:
 
-5.5.8. 非标准 CUDA 数学函数
+5.6.8. 非标准 CUDA 数学函数
 ---------------------------
 
 CUDA 提供了不属于 C/C++ 标准库的数学函数，它们作为扩展提供。对于单精度和双精度函数，主机和设备代码的可用性按函数逐一确定。
@@ -1768,7 +1768,7 @@ CUDA 提供了不属于 C/C++ 标准库的数学函数，它们作为扩展提�
 
 .. _intrinsic-functions:
 
-5.5.9. 内建函数
+5.6.9. 内建函数
 ---------------
 
 内建数学函数是其对应的 `CUDA C 标准库数学函数 <https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__SINGLE.html>`__ 的更快但精度较低的版本。
@@ -1780,7 +1780,7 @@ CUDA 提供了不属于 C/C++ 标准库的数学函数，它们作为扩展提�
 
 .. _basic-intrinsic-functions:
 
-5.5.9.1. 基本内建函数
+5.6.9.1. 基本内建函数
 ^^^^^^^^^^^^^^^^^^^^^
 
 一部分数学内建函数允许指定舍入模式：
@@ -1825,7 +1825,7 @@ CUDA 提供了不属于 C/C++ 标准库的数学函数，它们作为扩展提�
 
 .. _single-precision-only-intrinsic-functions:
 
-5.5.9.2. 仅单精度内建函数
+5.6.9.2. 仅单精度内建函数
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 下表列出了单精度浮点内建函数及其最大 ULP 误差。
@@ -1895,7 +1895,7 @@ CUDA 提供了不属于 C/C++ 标准库的数学函数，它们作为扩展提�
 
 .. _use-fast-math-effect:
 
-5.5.9.3. ``--use_fast_math`` 的影响
+5.6.9.3. ``--use_fast_math`` 的影响
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``nvcc`` 编译标志 ``--use_fast_math`` 会将在设备代码中调用的一部分 `CUDA Math API 函数 <https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__SINGLE.html>`__ 转换为其对应的内建函数。请注意， :ref:`CUDA C++ 标准库函数 <cuda-c-mathematical-standard-library-functions>` 也会受到此标志的影响。有关使用内建函数代替 CUDA Math API 函数的影响的更多细节，参见 :ref:`内建函数 <intrinsic-functions>` 一节。
@@ -1935,7 +1935,7 @@ CUDA 提供了不属于 C/C++ 标准库的数学函数，它们作为扩展提�
 
 .. _references:
 
-5.5.10. 参考文献
+5.6.10. 参考文献
 ----------------
 
 #. `IEEE 754-2019 Standard for Floating-Point Arithmetic <https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8766229>`__.

@@ -1,20 +1,20 @@
 .. _device-callable-apis:
 
-5.6. 设备可调用 API 和内建函数
+5.7. 设备可调用 API 和内建函数
 ==============================
 
 本章节包含可从 CUDA 内核和设备代码调用的 API 和内建函数的参考材料和 API 文档。
 
 .. _memory-barrier-primitives-interface:
 
-5.6.1. 内存屏障原语接口
+5.7.1. 内存屏障原语接口
 -----------------------
 
 原语 API 是 ``cuda::barrier`` 功能的 C 语言接口。通过包含 ``<cuda_awbarrier_primitives.h>`` 头文件可以使用这些原语。
 
 .. _data-types:
 
-5.6.1.1. 数据类型
+5.7.1.1. 数据类型
 ^^^^^^^^^^^^^^^^^
 
 .. code-block:: c++
@@ -24,7 +24,7 @@
 
 .. _memory-barrier-primitives-api:
 
-5.6.1.2. 内存屏障原语 API
+5.7.1.2. 内存屏障原语 API
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c++
@@ -93,7 +93,7 @@
 
 .. _pipeline-primitives-interface:
 
-5.6.2. 流水线原语接口
+5.7.2. 流水线原语接口
 ---------------------
 
 流水线原语为 ``<cuda/pipeline>`` 中可用的功能提供 C 语言接口。通过包含 ``<cuda_pipeline.h>`` 头文件可以使用流水线原语接口。在不使用 ISO C++ 2011 兼容性编译时，包含 ``<cuda_pipeline_primitives.h>`` 头文件。
@@ -104,7 +104,7 @@
 
 .. _memcpy-async-primitive:
 
-5.6.2.1. ``memcpy_async`` 原语
+5.7.2.1. ``memcpy_async`` 原语
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c++
@@ -138,7 +138,7 @@
 
 .. _commit-primitive:
 
-5.6.2.2. 提交原语
+5.7.2.2. 提交原语
 ^^^^^^^^^^^^^^^^^
 
 .. code-block:: c++
@@ -149,7 +149,7 @@
 
 .. _wait-primitive:
 
-5.6.2.3. 等待原语
+5.7.2.3. 等待原语
 ^^^^^^^^^^^^^^^^^
 
 .. code-block:: c++
@@ -161,7 +161,7 @@
 
 .. _arrive-on-barrier-primitive:
 
-5.6.2.4. 到达屏障原语
+5.7.2.4. 到达屏障原语
 ^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c++
@@ -173,17 +173,17 @@
 
 .. _cooperative-groups-api:
 
-5.6.3. Cooperative Groups API
+5.7.3. Cooperative Groups API
 -----------------------------
 
 .. _cooperative-groups-h:
 
-5.6.3.1. cooperative_groups.h
+5.7.3.1. cooperative_groups.h
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. _class-thread-block:
 
-5.6.3.1.1. thread_block 类
+5.7.3.1.1. thread_block 类
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 任何 CUDA 程序员都已经熟悉一组线程：线程块。Cooperative Groups 扩展引入了一种新数据类型 ``thread_block`` ，以在内核中显式表示此概念。
@@ -248,7 +248,7 @@
 
 .. _class-cluster-group:
 
-5.6.3.1.2. cluster_group 类
+5.7.3.1.2. cluster_group 类
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 此组对象表示在单个集群中启动的所有线程。这些 API 在计算能力 9.0+ 的所有硬件上可用。在这种情况下，当启动非集群 grid 时，API 假设为 1x1x1 集群。
@@ -295,7 +295,7 @@
 
 .. _class-grid-group:
 
-5.6.3.1.3. grid_group 类
+5.7.3.1.3. grid_group 类
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 此组对象表示在单个 grid 中启动的所有线程。除 ``sync()`` 外的 API 始终可用，但要在 grid 范围内同步，需要使用协作启动 API。
@@ -348,7 +348,7 @@
 
 .. _class-thread-block-tile:
 
-5.6.3.1.4. thread_block_tile 类
+5.7.3.1.4. thread_block_tile 类
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 平铺组的模板化版本，其中使用模板参数指定 tile 的大小——在编译时已知这一点，有可能实现更优的执行。
@@ -452,7 +452,7 @@
 
 .. _class-coalesced-group:
 
-5.6.3.1.5. coalesced_group 类
+5.7.3.1.5. coalesced_group 类
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 在 CUDA 的 SIMT 架构中，在硬件级别，多处理器以称为 warp 的 32 个线程组执行线程。如果应用程序代码中存在数据相关的条件分支，使得 warp 内的线程分叉，则 warp 串行执行每个分支，禁用不在该路径上的线程。在该路径上保持活动的线程称为合并的。Cooperative Groups 具有发现和创建包含所有合并线程的组的功能。
@@ -528,12 +528,12 @@
 
 .. _cooperative-groups-async-h:
 
-5.6.3.2. cooperative_groups/async.h
+5.7.3.2. cooperative_groups/async.h
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. _memcpy-async:
 
-5.6.3.2.1. ``memcpy_async``
+5.7.3.2.1. ``memcpy_async``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``memcpy_async`` 是组范围的集体 memcpy，利用硬件加速支持从全局内存到共享内存的非阻塞内存事务。给定组中命名的一组线程， ``memcpy_async`` 将通过单个流水线阶段移动指定数量的字节或输入类型的元素。此外，为了在使用 ``memcpy_async`` API 时实现最佳性能，共享内存和全局内存都需要 16 字节的对齐。重要的是要注意，虽然这通常是一个 memcpy，但只有当源是全局内存且目标是共享内存并且两者都可以用 16、8 或 4 字节对齐寻址时，它才是异步的。异步复制的数据只能在调用 wait 或 wait_prior 后读取，这表示相应阶段已完成将数据移动到共享内存。
@@ -607,7 +607,7 @@
 
 .. _wait-and-wait-prior:
 
-5.6.3.2.2. ``wait`` 和 ``wait_prior``
+5.7.3.2.2. ``wait`` 和 ``wait_prior``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c++
@@ -671,12 +671,12 @@
 
 .. _cooperative-groups-partition-h:
 
-5.6.3.3. cooperative_groups/partition.h
+5.7.3.3. cooperative_groups/partition.h
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. _tiled-partition:
 
-5.6.3.3.1. ``tiled_partition``
+5.7.3.3.1. ``tiled_partition``
 """"""""""""""""""""""""""""""
 
 .. code-block:: c++
@@ -696,7 +696,7 @@
 
 .. _labeled-partition:
 
-5.6.3.3.2. ``labeled_partition``
+5.7.3.3.2. ``labeled_partition``
 """"""""""""""""""""""""""""""""
 
 .. code-block:: c++
@@ -721,7 +721,7 @@
 
 .. _binary-partition:
 
-5.6.3.3.3. ``binary_partition``
+5.7.3.3.3. ``binary_partition``
 """""""""""""""""""""""""""""""
 
 .. code-block:: c++
@@ -756,12 +756,12 @@
 
 .. _cooperative-groups-reduce-h:
 
-5.6.3.4. cooperative_groups/reduce.h
+5.7.3.4. cooperative_groups/reduce.h
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. _reduce-operators:
 
-5.6.3.4.1. ``Reduce`` 算子
+5.7.3.4.1. ``Reduce`` 算子
 """"""""""""""""""""""""""
 
 以下是可以使用 ``reduce`` 进行的一些基本操作的函数对象原型。
@@ -822,7 +822,7 @@ Reduce 受限于编译时实现可用的信息。因此，为了利用计算能�
 
 .. _reduce:
 
-5.6.3.4.2. ``reduce``
+5.7.3.4.2. ``reduce``
 """""""""""""""""""""
 
 .. code-block:: c++
@@ -864,12 +864,12 @@ Reduce 受限于编译时实现可用的信息。因此，为了利用计算能�
 
 .. _cooperative-groups-scan-h:
 
-5.6.3.5. cooperative_groups/scan.h
+5.7.3.5. cooperative_groups/scan.h
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. _inclusive-scan-and-exclusive-scan:
 
-5.6.3.5.1. ``inclusive_scan`` 和 ``exclusive_scan``
+5.7.3.5.1. ``inclusive_scan`` 和 ``exclusive_scan``
 """""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. code-block:: c++
@@ -1026,12 +1026,12 @@ Reduce 受限于编译时实现可用的信息。因此，为了利用计算能�
 
 .. _cooperative-groups-sync-h:
 
-5.6.3.6. cooperative_groups/sync.h
+5.7.3.6. cooperative_groups/sync.h
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. _barrier-arrive-and-barrier-wait:
 
-5.6.3.6.1. ``barrier_arrive`` 和 ``barrier_wait``
+5.7.3.6.1. ``barrier_arrive`` 和 ``barrier_wait``
 """""""""""""""""""""""""""""""""""""""""""""""""
 
 .. code-block:: c++
@@ -1079,7 +1079,7 @@ Reduce 受限于编译时实现可用的信息。因此，为了利用计算能�
 
 .. _sync:
 
-5.6.3.6.2. ``sync``
+5.7.3.6.2. ``sync``
 """""""""""""""""""
 
 .. code-block:: c++
@@ -1093,7 +1093,7 @@ Reduce 受限于编译时实现可用的信息。因此，为了利用计算能�
 
 .. _grid-synchronization:
 
-5.6.3.6.2.1. Grid 同步
+5.7.3.6.2.1. Grid 同步
 """"""""""""""""""""""
 
 在引入 Cooperative Groups 之前，CUDA 编程模型只允许在内核完成边界处进行线程块之间的同步。内核边界带有隐式的状态失效，并随之带来潜在的性能影响。
@@ -1154,26 +1154,26 @@ Reduce 受限于编译时实现可用的信息。因此，为了利用计算能�
 
 .. _cuda-device-runtime:
 
-5.6.4. CUDA 设备运行时
+5.7.4. CUDA 设备运行时
 ----------------------
 
 CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 CUDA Runtime API 许多相同的功能。这些 API 最常用于 :ref:`cuda-dynamic-parallelism` 或 :ref:`cuda-graphs-device-graph-launch` 的上下文中。
 
 .. _including-device-runtime-api-in-cuda-code:
 
-5.6.4.1. 在 CUDA 代码中包含设备运行时 API
+5.7.4.1. 在 CUDA 代码中包含设备运行时 API
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 与主机端运行时 API 类似，CUDA 设备运行时 API 的原型在程序编译期间自动包含。无需显式包含 ``cuda_device_runtime_api.h`` 。
 
 .. _memory-in-the-cuda-device-runtime:
 
-5.6.4.2. CUDA 设备运行时中的内存
+5.7.4.2. CUDA 设备运行时中的内存
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. _configuration-options:
 
-5.6.4.2.1. 配置选项
+5.7.4.2.1. 配置选项
 """""""""""""""""""
 
 设备运行时系统软件的资源分配通过主机程序的 ``cudaDeviceSetLimit()`` API 控制。必须在启动任何内核之前设置限制，并且在 GPU 主动运行程序时不得更改。
@@ -1193,7 +1193,7 @@ CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 C
 
 .. _allocation-and-lifetime:
 
-5.6.4.2.2. 分配和生命周期
+5.7.4.2.2. 分配和生命周期
 """""""""""""""""""""""""
 
 ``cudaMalloc()`` 和 ``cudaFree()`` 在主机和设备环境之间具有不同的语义。从主机调用时， ``cudaMalloc()`` 从未使用的设备内存中分配一个新区域。从设备运行时调用时，这些函数映射到设备端的 ``malloc()`` 和 ``free()`` 。这意味着在设备环境中，总可分配内存受限于设备 ``malloc()`` 堆大小，该大小可能小于可用的未使用设备内存。此外，在主机程序上对在设备上通过 ``cudaMalloc()`` 分配的指针调用 ``cudaFree()`` 是错误的，反之亦然。
@@ -1217,19 +1217,19 @@ CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 C
 
 .. _memory-declarations:
 
-5.6.4.2.2.1. 内存声明
+5.7.4.2.2.1. 内存声明
 """""""""""""""""""""
 
 .. _device-and-constant-memory:
 
-5.6.4.2.2.1.1. 设备和常量内存
+5.7.4.2.2.1.1. 设备和常量内存
 """""""""""""""""""""""""""""
 
 在文件作用域中使用 ``__device__`` 或 ``__constant__`` 内存空间说明符声明的内存，在使用设备运行时行为相同。所有内核都可以读写设备变量，无论内核最初是由主机还是设备运行时启动的。同样，所有内核都将具有与在模块作用域中声明的 ``__constant__`` 相同的视图。
 
 .. _textures-and-surfaces:
 
-5.6.4.2.2.1.2. 纹理和表面
+5.7.4.2.2.1.2. 纹理和表面
 """""""""""""""""""""""""
 
 设备运行时不允许从设备代码内部创建或销毁纹理或表面对象。从主机创建的纹理和表面对象可以在设备上自由使用和传递。无论在何处创建，动态创建的纹理对象始终有效，并且可以从父内核传递给子内核。
@@ -1240,7 +1240,7 @@ CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 C
 
 .. _shared-memory-variable-declarations:
 
-5.6.4.2.2.1.3. 共享内存变量声明
+5.7.4.2.2.1.3. 共享内存变量声明
 """""""""""""""""""""""""""""""
 
 在 CUDA C++ 中，共享内存可以声明为静态大小的文件作用域或函数作用域变量，也可以声明为 ``extern`` 变量，其大小在内核调用者通过启动配置参数在运行时确定。两种类型的声明在设备运行时下都有效。
@@ -1274,14 +1274,14 @@ CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 C
 
 .. _constant-memory:
 
-5.6.4.2.2.1.4. 常量内存
+5.7.4.2.2.1.4. 常量内存
 """""""""""""""""""""""
 
 常量不能从设备修改。它们只能从主机修改，但在主机修改常量的同时，如果存在并发 grid 在其生命周期的任何时刻访问该常量，则行为是未定义的。
 
 .. _symbol-addresses:
 
-5.6.4.2.2.1.5. 符号地址
+5.7.4.2.2.1.5. 符号地址
 """""""""""""""""""""""
 
 设备端符号（即标记为 ``__device__`` 的符号）可以通过 ``&`` 运算符从内核中引用，因为所有全局作用域设备变量都在内核的可见地址空间中。这也适用于 ``__constant__`` 符号，尽管在这种情况下指针将引用只读数据。
@@ -1290,14 +1290,14 @@ CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 C
 
 .. _sm-id-and-warp-id:
 
-5.6.4.3. SM Id 和 Warp Id
+5.7.4.3. SM Id 和 Warp Id
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 请注意，在 PTX 中 ``%smid`` 和 ``%warpid`` 被定义为 volatile 值。设备运行时可能会将线程块重新调度到不同的 SM 上，以更有效地管理资源。因此，依赖 ``%smid`` 或 ``%warpid`` 在线程或线程块的整个生命周期内保持不变是不安全的。
 
 .. _launch-setup-apis:
 
-5.6.4.4. 启动设置 API
+5.7.4.4. 启动设置 API
 ^^^^^^^^^^^^^^^^^^^^^
 
 :ref:`dynamic-parallelism-device-runtime-kernel-launch` 描述了使用与主机 CUDA Runtime API 相同的三重尖括号启动符号从设备代码启动内核的语法。
@@ -1330,14 +1330,14 @@ CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 C
 
 .. _device-management:
 
-5.6.4.5. 设备管理
+5.7.4.5. 设备管理
 ^^^^^^^^^^^^^^^^^
 
 设备运行时不支持多 GPU；设备运行时只能在其当前执行的设备上进行操作。但是，允许查询系统中任何具有 CUDA 能力的设备的属性。
 
 .. _api-reference:
 
-5.6.4.6. API 参考
+5.7.4.6. API 参考
 ^^^^^^^^^^^^^^^^^
 
 设备运行时支持的 CUDA Runtime API 部分在此详述。主机和设备运行时 API 具有相同的语法；除另有说明外，语义相同。下表提供了相对于主机可用版本的 API 概述。
@@ -1409,7 +1409,7 @@ CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 C
 
 .. _api-errors-and-launch-failures:
 
-5.6.4.7. API 错误和启动失败
+5.7.4.7. API 错误和启动失败
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 与 CUDA 运行时一样，任何函数都可能返回错误代码。返回的最后一个错误代码被记录，可以通过 ``cudaGetLastError()`` 调用检索。错误按线程记录，因此每个线程都可以识别它生成的最近错误。错误代码的类型为 ``cudaError_t`` 。
@@ -1420,7 +1420,7 @@ CUDA 设备运行时是内核代码中可用的 API，它提供了与主机上 C
 
 .. _device-runtime-streams:
 
-5.6.4.8. 设备运行时流
+5.7.4.8. 设备运行时流
 ^^^^^^^^^^^^^^^^^^^^^
 
 CUDA 设备运行时公开了特殊的命名流，为从设备启动的内核和图提供特定行为。与设备图启动相关的命名流在 :ref:`cuda-graphs-device-graph-launch` 中有文档说明。另外两个可用于 CUDA 设备运行时中内核和 memcpy 操作的命名流是 ``cudaStreamTailLaunch`` 和 ``cudaStreamTailLaunch`` 。这些命名流的具体行为在本节中有文档说明。
@@ -1433,14 +1433,14 @@ CUDA 设备运行时公开了特殊的命名流，为从设备启动的内核和
 
 .. _the-implicit-null-stream:
 
-5.6.4.8.1. 隐式（NULL）流
+5.7.4.8.1. 隐式（NULL）流
 """""""""""""""""""""""""
 
 在主机程序中，未命名（NULL）流与其他流之间具有额外的屏障同步语义（详情请参阅 :ref:`async-execution-blocking-non-blocking-default-stream` ）。设备运行时提供一个在线程块中所有线程之间共享的单一隐式未命名流，但由于所有命名流必须使用 ``cudaStreamNonBlocking`` 标志创建，启动到 NULL 流中的工作不会在任何其他流（包括其他线程块的 NULL 流）中的待处理工作上插入隐式依赖。
 
 .. _fire-and-forget-stream:
 
-5.6.4.8.2. Fire-and-Forget 流
+5.7.4.8.2. Fire-and-Forget 流
 """""""""""""""""""""""""""""
 
 Fire-and-forget 命名流（ ``cudaStreamFireAndForget`` ）允许用户以更少的样板代码和无需流跟踪开销的方式启动 fire-and-forget 工作。它在功能上等同于但比每次启动创建新流并启动到该流更快。
@@ -1459,7 +1459,7 @@ Fire-and-forget 流不能用于记录或等待事件。尝试这样做会导致 
 
 .. _tail-launch-stream:
 
-5.6.4.8.3. Tail Launch 流
+5.7.4.8.3. Tail Launch 流
 """""""""""""""""""""""""
 
 Tail launch 命名流（ ``cudaStreamTailLaunch`` ）允许 grid 在其完成后调度新 grid 启动。在大多数情况下，应该可以使用 tail launch 实现与 ``cudaDeviceSynchronize()`` 相同的功能。
@@ -1523,7 +1523,7 @@ Tail launch 流不能用于记录或等待事件。尝试这样做会导致 ``cu
 
 .. _ecc-errors:
 
-5.6.4.9. ECC 错误
+5.7.4.9. ECC 错误
 ^^^^^^^^^^^^^^^^^
 
 CUDA 内核中的代码无法获得 ECC 错误的通知。ECC 错误在整个启动树完成后在主机端报告。在嵌套程序执行期间出现的任何 ECC 错误将生成异常或继续执行（取决于错误和配置）。
