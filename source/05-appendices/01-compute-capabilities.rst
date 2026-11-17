@@ -437,7 +437,8 @@ NVML 接口
      - 2048
      - 1536
      - 1536
-   * - Green contexts：useFlags 为 0 时的最小 SM 分区大小
+   * - | Green contexts：useFlags 为 0 时
+       | 的最小 SM 分区大小
      - 2
      - 4
      - 4
@@ -448,7 +449,8 @@ NVML 接口
      - 8
      - 8
      - 8
-   * - Green contexts：useFlags 为 0 时每个分区的 SM 共调度对齐
+   * - | Green contexts：useFlags 为 0 时
+       | 每个分区的 SM 共调度对齐
      - 2
      - 2
      - 2
