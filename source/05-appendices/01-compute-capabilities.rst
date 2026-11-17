@@ -746,3 +746,140 @@ Tensor Core 功能集可通过内联 PTX 在 CUDA 编译工具链中使用。
      - Yes
      - Yes
      -
+
+.. _retrieve-features-and-technical-specifications:
+
+5.1.3.1. 获取功能和技术规格
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:ref:`CUDA C++ 标准库 <cuda-c-standard-library>` （libcu++）可用于以编程方式获取 GPU 架构的功能和技术规格。
+
+头文件 ``<cuda/devices>`` 提供了以下函数来获取架构的 traits：
+
+- ``cuda::arch_traits<sm_id>()``：返回在编译时指定的架构的 traits。
+
+- ``cuda::arch_traits_for(sm_id)``：返回在运行时指定的架构的 traits。
+
+- ``cuda::device::current_arch_traits()``：返回正在为其编译代码的架构的 traits。该函数只能在设备代码中使用。
+
+``sm_id`` 是形如 ``cuda::arch_id::sm_XY`` 的枚举器，其中 ``XY`` 是计算能力的主版本号和次版本号。
+
+架构 traits 描述了一个 GPU 架构的所有设备共有的限制和功能。``<cuda/devices>`` 还提供了
+`cuda::device_attributes <https://nvidia.github.io/cccl/unstable/libcudacxx/runtime/device.html#device-attributes>`__
+来查询由设备序号标识的特定设备的属性。特别地，``cuda::device_attributes::compute_capability(device_id)``
+返回一个表示主版本号和次版本号的 ``cuda::compute_capability`` 值，该值也可以传递给 ``cuda::arch_traits_for()``。
+
+示例：
+
+.. code-block:: cpp
+
+   #include <cuda/devices>
+   #include <cuda_runtime.h>
+   #include <cstdio>
+   #include <cstdlib>
+   #include <exception>
+
+   int main() {
+       int device_count;
+       cudaError_t status = cudaGetDeviceCount(&device_count);
+       if (status != cudaSuccess) {
+           std::printf("CUDA error: %s\n", cudaGetErrorString(status));
+           return EXIT_FAILURE;
+       }
+       try {
+           for (int device = 0; device < device_count; ++device) {
+               auto compute_capability = cuda::device_attributes::compute_capability(device);
+               auto traits             = cuda::arch_traits_for(compute_capability);
+               std::printf("Device %d, compute capability %d.%d\n",
+                           device, traits.compute_capability_major,
+                           traits.compute_capability_minor);
+               std::printf("  max_shared_memory_per_block_optin: %zu bytes\n",
+                           traits.max_shared_memory_per_block_optin);
+               std::printf("  total_constant_memory:             %zu bytes\n",
+                           traits.total_constant_memory);
+               std::printf("  max_blocks_per_multiprocessor:     %d\n",
+                           traits.max_blocks_per_multiprocessor);
+           }
+       } catch (const std::exception& e) {
+           // CCCL device queries and architecture traits lookup can throw.
+           std::printf("%s\n", e.what());
+           return EXIT_FAILURE;
+       }
+       return EXIT_SUCCESS;
+   }
+
+.. note::
+
+   依赖于特定设备的其他 GPU 属性，例如 SM 的数量或时钟频率，可以通过 ``cuda::device_attributes`` 获取。
+
+下表将上述 GPU 规格映射到相应的 ``cuda::arch_traits_t`` 字段。
+
+.. _compute-capabilities-table-arch-traits-feature-support:
+
+.. list-table:: 每个计算能力的功能支持对应的 ``cuda::arch_traits_t`` 字段
+   :header-rows: 1
+   :widths: 60 40
+
+   * - **功能**
+     - ``cuda::arch_traits_t`` 字段
+   * - Warp 归约函数（ :ref:`warp-reduce-functions` ）
+     - ``redux_intrinsic``
+   * - 硬件加速的 ``memcpy_async`` （ :ref:`pipelines` ）
+     - ``cp_async_supported``
+   * - 线程块集群（ :ref:`thread-block-clusters` ）
+     - ``cluster_supported``
+   * - 张量内存加速器（TMA）单元（ :ref:`使用张量内存加速器 (TMA) <async-copies-tma>` ）
+     - ``tma_supported``
+
+.. _compute-capabilities-table-arch-traits-device-and-sm-information:
+
+.. list-table:: 每个计算能力的设备与流式多处理器（SM）信息对应的 ``cuda::arch_traits_t`` 字段
+   :header-rows: 1
+   :widths: 60 40
+
+   * - **规格**
+     - ``cuda::arch_traits_t`` 字段
+   * - 每个设备的最大常驻网格数
+     - ``max_resident_grids``
+   * - 网格 x 维度的最大值
+     - ``max_grid_dim_x``
+   * - 网格 y 或 z 维度的最大值
+     - ``max_grid_dim_y``、 ``max_grid_dim_z``
+   * - 线程块 x 或 y 维度的最大值
+     - ``max_block_dim_x``、 ``max_block_dim_y``
+   * - 线程块 z 维度的最大值
+     - ``max_block_dim_z``
+   * - 每个线程块的最大线程数
+     - ``max_threads_per_block``
+   * - Warp 大小
+     - ``warp_size``
+   * - 每个 SM 的最大常驻线程块数
+     - ``max_blocks_per_multiprocessor``
+   * - 每个 SM 的最大常驻 warp 数
+     - ``max_warps_per_multiprocessor``
+   * - 每个 SM 的最大常驻线程数
+     - ``max_threads_per_multiprocessor``
+
+.. _compute-capabilities-table-arch-traits-memory-information:
+
+.. list-table:: 每个计算能力的内存信息对应的 ``cuda::arch_traits_t`` 字段
+   :header-rows: 1
+   :widths: 60 40
+
+   * - **规格**
+     - ``cuda::arch_traits_t`` 字段
+   * - 每个 SM 的 32 位寄存器数量
+     - ``max_registers_per_multiprocessor``
+   * - 每个线程块的最大 32 位寄存器数量
+     - ``max_registers_per_block``
+   * - 每个线程的最大 32 位寄存器数量
+     - ``max_registers_per_thread``
+   * - 每个 SM 的最大共享内存容量
+     - ``max_shared_memory_per_multiprocessor``
+   * - | 每个线程块的最大共享内存容量，需要显式选择
+       | （参见 :ref:`configuring-l1-shared-memory-balance`）
+     - ``max_shared_memory_per_block_optin``
+   * - 每个线程块的最大共享内存容量，无需显式选择（48 KB）
+     - ``max_shared_memory_per_block``
+   * - 常量内存大小
+     - ``total_constant_memory``
