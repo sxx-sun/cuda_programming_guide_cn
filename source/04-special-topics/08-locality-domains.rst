@@ -78,27 +78,110 @@ SM 的放置通过 :ref:`第 4.7 节 <green-contexts-details>` 中描述的绿�
        cudaDevSmResourceSplit(&result, 1, &smResource, nullptr, 0, &params);
    }
 
+.. _discovery-mode:
+
+4.8.2.1. 发现模式
+^^^^^^^^^^^^^^^^^
+
+当满足一组约束的 SM 数量无法预先知晓时，请使用 ``cudaDevSmResourceSplit`` 的发现模式（discovery mode）。
+将 ``smCount`` 设置为零即可启用发现模式。
+API 会将发现到的数量写入 ``params.smCount`` 。
+对 ``result`` 传入 ``nullptr`` 会执行一次试运行（dry run），只发现数量而不创建设备资源：
+
+.. code-block:: cpp
+
+   cudaDevSmResourceGroupParams params {};
+   params.flags = cudaDevSmResourceGroupLocalityDomainId;
+   params.localityDomainId = localityDomainId;
+   params.smCount = 0;
+
+   cudaDevSmResourceSplit(nullptr, 1, &smResource, nullptr, 0, &params);
+   unsigned int availableSms = params.smCount;
+
+如果 ``result`` 非空，同一次调用既会发现数量，也会返回包含相应数量 SM 的资源。
+
+
+.. _supplemental-sms:
+
+4.8.2.2. 补充 SM
+^^^^^^^^^^^^^^^^
+
+设备可以在 ``cudaDevAttrLocalityDomainMultiprocessorCount`` 所包含的 SM 之外，将额外的 *补充 SM（supplemental SM）* 关联到某个局部性域。
+局部性域的补充 SM 提供与稳定 SM 相同的内存就近访问收益，但其数量可能因局部性域和设备而异。
+与某个局部性域关联的实际 SM 集合，是其稳定 SM 与补充 SM 的并集。
+
+要发现与某个局部性域关联的稳定 SM 和补充 SM 的总数，请在发现约束中加入 ``cudaDevSmResourceGroupLocalityDomainSupplementalSms`` ：
+
+.. code-block:: cpp
+
+   cudaDevSmResourceGroupParams supplementalParams {};
+   supplementalParams.flags =
+       cudaDevSmResourceGroupLocalityDomainId |
+       cudaDevSmResourceGroupLocalityDomainSupplementalSms;
+   supplementalParams.localityDomainId = localityDomainId;
+   supplementalParams.smCount = 0;
+
+   cudaDevSmResourceSplit(nullptr, 1, &smResource, nullptr, 0,
+                          &supplementalParams);
+   unsigned int totalLocalizedSms = supplementalParams.smCount;
+   unsigned int supplementalSms = totalLocalizedSms - smsPerLocalityDomain;
+
+
+.. _sm-split-constraints:
+
+4.8.2.3. SM 切分约束
+^^^^^^^^^^^^^^^^^^^^
+
 可以在 ``params`` 中指定多个约束，与局部性域请求组合使用。例如：
 
-``smCount`` 约束可以为 ``0`` （发现模式，discovery mode）或正数。
-在发现模式下，API 会在 ``params.smCount`` 中返回该局部性域中的 SM 数量。
-对于完整的、未分区的设备资源，该值与 ``cudaDevAttrLocalityDomainMultiprocessorCount`` 相同。
-当 ``smCount`` 为正数时，API 最多分配到 ``cudaDevAttrLocalityDomainMultiprocessorCount`` 的值。
-更大的 ``smCount`` 请求将会失败。
+将 ``smCount`` 设为正数以请求相应数量的 SM，或设为 ``0`` 以使用上文描述的发现模式。
+在不包含补充 SM 或回填的情况下，大于 ``cudaDevAttrLocalityDomainMultiprocessorCount`` 的请求将会失败。
+要包含补充 SM，请添加 ``cudaDevSmResourceGroupLocalityDomainSupplementalSms`` 标志。
 
 当 ``coscheduledSmCount`` 为 ``0`` 时，API 不会按协同调度能力限制 SM，此时可用的局部化 SM 数量达到最大。
 分区的簇能力之后可以通过 ``cudaOccupancyMaxPotentialClusterSize`` 动态查询。
 当 ``coscheduledSmCount`` 非零时，API 将只选择满足所请求 ``coscheduledSmCount`` 的局部化 SM。
 
-默认情况下， ``result`` 中的所有 SM 都必须满足局部性域约束以及指定的任何其他约束。
-要放宽此行为，可在 ``params.flags`` 中添加 ``cudaDevSmResourceGroupBackfill`` 。
-启用回填（backfill）后，API 会优先从请求的局部性域填充该组，然后从未归属于任何局部性域的 SM 中填充，最后才从其他局部性域填充。
-如果在请求的局部性域中找不到任何 SM，调用将以 ``cudaErrorInvalidResourceConfiguration`` 失败。
+要从输入资源中 *任意* 局部性域选择 SM，请在 ``flags`` 中保留 ``cudaDevSmResourceGroupLocalityDomainId`` 的同时，
+将 ``localityDomainId`` 设置为 ``cudaDevSmResourceGroupLocalityDomainIdAny`` 。
+此值允许切分从所有可用局部性域的并集中选取，同时排除补充 SM。
+
+.. code-block:: cpp
+
+   group.flags = cudaDevSmResourceGroupLocalityDomainId;
+   group.localityDomainId = cudaDevSmResourceGroupLocalityDomainIdAny;
 
 未在 ``result`` 中返回的任何未使用的 SM，会通过 API 的 ``remainder`` 参数返回。
 
-``result`` 的 ``cudaDevResource.sm.flags`` 和 ``cudaDevResource.sm.localityDomainId`` 报告资源的放置情况。
+
+.. _backfill:
+
+4.8.2.4. 回填
+^^^^^^^^^^^^^
+
+``cudaDevSmResourceGroupBackfill`` 标志会放宽切分约束，使 CUDA 能够填满那些否则无法达到所请求 ``smCount`` 的组。
+按局部性域切分时，回填（backfill）的行为如下：
+
+- 添加 ``cudaDevSmResourceGroupBackfill`` 后，API 会优先使用请求的局部性域中的非补充 SM 填充该组，然后使用该域的补充 SM，最后才使用其他局部性域中的 SM。
+  如果在请求的局部性域中找不到任何 SM，调用将以 ``cudaErrorInvalidResourceConfiguration`` 失败。
+
+
+.. _inspecting-split-results:
+
+4.8.2.5. 检查切分结果
+^^^^^^^^^^^^^^^^^^^^^
+
+``result`` 的 ``cudaDevResource.sm.flags`` 和 ``cudaDevResource.sm.localityDomainId`` 报告资源约束。
+当 ``flags`` 中存在 ``cudaDevSmResourceGroupLocalityDomainId`` 时， ``localityDomainId`` 标识所请求的局部性域，否则其值没有意义。
+使用回填创建的资源可能包含来自其他局部性域的 SM，因此 ``localityDomainId`` 只反映最初请求的局部性域，而不是此类资源中出现的每个局部性域。
+
 在一个描述符中组合 SM 资源时，这些资源必须具有匹配的约束，包括 ``flags`` 和 ``localityDomainId`` 值。
+
+
+.. _creating-localized-streams:
+
+4.8.2.6. 创建局部化流
+^^^^^^^^^^^^^^^^^^^^^
 
 以下代码查询局部性域的数量，并为每个局部性域构造一个流。
 
