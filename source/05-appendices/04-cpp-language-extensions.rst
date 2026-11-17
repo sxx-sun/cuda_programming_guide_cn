@@ -3310,9 +3310,35 @@ DPX 函数集支持查找最小值和最大值，以及最多对三个 16 位或
        return is_greater_than_zero(value); // returns true, without evaluating the condition
    }
 
+.. _builtin-constant-p:
+
+5.4.9.4. ``__builtin_constant_p()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: cpp
+
+   int __builtin_constant_p(expression)
+
+如果编译器能够确定 expression 是编译期常量，该内置函数返回 1，否则返回 0。该表达式不会被求值，因此 expression 中的副作用不会发生。
+
+示例：
+
+.. code-block:: cpp
+
+   __device__ int select(int value) {
+       return __builtin_constant_p(value) ? value * 2 : value;
+   }
+
+   __global__ void kernel(int* out) {
+       #pragma unroll
+       for (int i = 0; i < 4; ++i) {
+           out[i] = select(i); // out[i] = i * 2
+       }
+   }
+
 .. _builtin-expect:
 
-5.4.9.4. ``__builtin_expect()``
+5.4.9.5. ``__builtin_expect()``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: cpp
@@ -3331,7 +3357,7 @@ DPX 函数集支持查找最小值和最大值，以及最多对三个 16 位或
 
 .. _builtin-unreachable:
 
-5.4.9.5. ``__builtin_unreachable()``
+5.4.9.6. ``__builtin_unreachable()``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: cpp
@@ -3355,7 +3381,7 @@ DPX 函数集支持查找最小值和最大值，以及最多对三个 16 位或
 
 .. _custom-abi-pragmas:
 
-5.4.9.6. 自定义 ABI Pragma
+5.4.9.7. 自定义 ABI Pragma
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``#pragma nv_abi`` 指令使在单独编译模式下编译的应用程序能够实现与全程序编译相似的性能，通过保持函数使用的寄存器数量。
@@ -3438,7 +3464,7 @@ DPX 函数集支持查找最小值和最大值，以及最多对三个 16 位或
 
 .. _mma-throughput-pragma:
 
-5.4.9.7. MMA 吞吐量 Pragma
+5.4.9.8. MMA 吞吐量 Pragma
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``nv_mma_throughput`` pragma 是一个指令，用于启用专门针对矩阵乘加运算调优的编译器优化。它仅在入口函数作用域（即 ``__global__`` 函数上）有效。其效果可能通过沿调用路径传播的优化，扩展到从该入口函数调用的 ``__device__`` 函数。
