@@ -418,10 +418,58 @@ GPU 设备的枚举顺序决定了序号值。
 
 ----
 
+.. _cuda-prefer-spinlocks-on-host:
+
+5.2.3.9. ``CUDA_PREFER_SPINLOCKS_ON_HOST``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+该环境变量向 CUDA 驱动程序和运行时提供一个提示，即对某些内部主机端同步路径优先使用基于自旋的锁模式。
+在此模式下，内部锁可能会主动轮询可用性，而不是阻塞并让出 CPU。
+这可以通过避免内核切换和唤醒开销来降低短时间持有锁的同步延迟，从而在低到中等竞争下改善快路径性能（例如，当多个主机线程竞争同一 CUDA 对象或执行上下文时）。
+
+基于自旋的锁不提供调度器辅助的公平性或优先级继承。
+在主机线程抢占、超额订阅或混合工作负载的情况下，启用基于自旋的锁可能会增加优先级反转、饥饿或系统响应能力下降的风险。
+
+**可选值**：
+
+- ``0``：默认行为。
+
+- ``1``：内部同步优先使用自旋锁。
+
+**示例**：
+
+.. code-block:: bash
+
+   CUDA_PREFER_SPINLOCKS_ON_HOST=1
+
+----
+
+.. _cuda-nsight-perf-force-disable-cuda-tracing:
+
+5.2.3.10. ``CUDA_NSIGHT_PERF_FORCE_DISABLE_CUDA_TRACING``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+该环境变量通过阻止驱动程序在驱动初始化期间打开与 ``nvidia-nsight-perf`` 守护进程的连接，强制阻止驱动程序中的 Nsight Perf CUDA Provider 跟踪 CUDA 程序。
+有关此功能和相关守护进程的更多信息，请参阅 Nsight Perf Always-on AI 性能分析文档。
+
+**可选值**：
+
+- ``0``：默认行为——在驱动初始化期间，尝试打开与 ``nvidia-nsight-perf`` 守护进程的连接。如果守护进程存在，则继续初始化跟踪。
+
+- ``1``：在驱动初始化期间不尝试打开与 ``nvidia-nsight-perf`` 守护进程的连接。
+
+**示例**：
+
+.. code-block:: bash
+
+   CUDA_NSIGHT_PERF_FORCE_DISABLE_CUDA_TRACING=1
+
+----
+
 .. _cuda-auto-boost-deprecated:
 
-5.2.3.9. ``CUDA_AUTO_BOOST`` [[已弃用]]
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+5.2.3.11. ``CUDA_AUTO_BOOST`` [[已弃用]]
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 该环境变量影响 GPU 时钟「自动提升」行为，即动态时钟提升。它会覆盖 ``nvidia-smi`` 工具的「自动提升」选项，即 ``nvidia-smi --auto-boost-default=0`` 。
 
@@ -507,6 +555,72 @@ GPU 设备的枚举顺序决定了序号值。
 .. code-block:: bash
 
    CUDA_BINARY_LOADER_THREAD_COUNT=4
+
+----
+
+.. _cuda-enable-function-lazy-finalization:
+
+5.2.4.4. ``CUDA_ENABLE_FUNCTION_LAZY_FINALIZATION``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+该环境变量强制开启延迟函数终结（Lazy Function Finalization, LFF）。LFF 默认启用。
+
+**可选值**：
+
+- ``0`` 或未设置：使用默认的 LFF 行为。
+
+- ``1``：启用 LFF，包括在 ``CUDA_MODULE_LOADING`` 设置为 ``EAGER`` 时。当 LFF 处于活动状态时，不使用并行终结。
+
+将该变量设置为 ``0`` 不会禁用 LFF。要禁用 LFF，请将 ``CUDA_DISABLE_FUNCTION_LAZY_FINALIZATION`` 设置为 ``1``。
+
+**示例**：
+
+.. code-block:: bash
+
+   CUDA_ENABLE_FUNCTION_LAZY_FINALIZATION=1
+
+----
+
+.. _cuda-disable-function-lazy-finalization:
+
+5.2.4.5. ``CUDA_DISABLE_FUNCTION_LAZY_FINALIZATION``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+该环境变量禁用延迟函数终结（LFF），并恢复立即的整模块终结。
+
+**可选值**：
+
+- ``0`` 或未设置：使用默认的 LFF 行为。
+
+- ``1``：禁用 LFF。立即终结可以使用多个 CPU 线程，其结果可以存储在计算缓存中。
+
+**示例**：
+
+.. code-block:: bash
+
+   CUDA_DISABLE_FUNCTION_LAZY_FINALIZATION=1
+
+----
+
+.. _cuda-device-default-stack-size-max:
+
+5.2.4.6. ``CUDA_DEVICE_DEFAULT_STACK_SIZE_MAX``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+当该环境变量设置为 ``1`` 时，驱动程序在相应的 ``cuModuleLoad*`` 调用期间，基于该模块中所有函数的最大需求，预分配最坏情况下的每线程栈内存。
+默认情况下，CUDA 驱动程序按需分配每线程栈内存：当核函数启动所需的栈多于当前可用栈时，驱动程序会在执行前扩展分配。
+
+**可选值**：
+
+- ``0`` 或未设置：栈内存在核函数启动时按需扩展（默认）。
+
+- ``1``：在模块加载时预分配最大栈内存。
+
+**示例**：
+
+.. code-block:: bash
+
+   CUDA_DEVICE_DEFAULT_STACK_SIZE_MAX=1
 
 ----
 
