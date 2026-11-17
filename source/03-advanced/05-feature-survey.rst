@@ -87,9 +87,22 @@ Green 上下文（Green contexts），也称为执行上下文（execution conte
 
 Green 上下文自 CUDA 13.1 及更高版本的 CUDA runtime 起正式提供支持， 在 :ref:`green-contexts-details` 给出完整细节。
 
+.. _tour-locality-domains:
+
+3.5.2.2. 局部性域
+^^^^^^^^^^^^^^^^^^^
+
+:ref:`局部性域 <locality-domains>` （locality domain）是 GPU 内存和 SM 的一个子集。
+对于拥有多个局部性域的 GPU，在特定的局部性域内分配内存，然后在一个仅包含同一局部性域内 SM 的 Green 上下文中使用这些内存执行核函数，可能会带来收益。
+
+局部性域是一项性能特性：即使 CUDA 代码没有对内存或计算进行局部性优化，它依然能够正确执行。
+
+:ref:`第 1.2.3.2 节 <programming-model-locality-domains>` 介绍了局部性域背后的概念；
+:ref:`第 4.8 节 <locality-domains>` 则提供了更多信息，包括如何确定一个 GPU 拥有多少个局部性域、如何在特定的局部性域中分配内存，以及如何创建仅包含同一局部性域内 SM 的 Green 上下文。
+
 .. _stream-ordered-memory-allocation:
 
-3.5.2.2. 流序内存分配
+3.5.2.3. 流序内存分配
 ^^^^^^^^^^^^^^^^^^^^^
 
 流排序内存分配器（Stream-ordered memory allocator）允许程序将 GPU 内存的分配与释放操作编排到特定的 CUDA 流中。
@@ -98,7 +111,7 @@ Green 上下文自 CUDA 13.1 及更高版本的 CUDA runtime 起正式提供支�
 
 .. _tour-cuda-graphs:
 
-3.5.2.3. CUDA Graphs
+3.5.2.4. CUDA Graphs
 ^^^^^^^^^^^^^^^^^^^^
 
 CUDA 图允许应用程序预先指定一系列 CUDA 操作（如启动 kernel 或内存拷贝）及其相互之间的依赖关系，从而使这些操作能够在 GPU 上得到高效执行。
@@ -113,7 +126,7 @@ CUDA 图允许应用程序预先指定一系列 CUDA 操作（如启动 kernel �
 
 .. _programmatic-dependent-launch:
 
-3.5.2.4. 程序化依赖启动
+3.5.2.5. 程序化依赖启动
 ^^^^^^^^^^^^^^^^^^^^^^^
 程序化依赖启动（Programmatic dependent launch）是 CUDA 的一项特性。
 它允许一个依赖型 kernel （即需要依赖前序 kernel 输出结果的 kernel），在其所依赖的主 kernel 尚未完成时就开始执行。
@@ -123,9 +136,24 @@ CUDA 图允许应用程序预先指定一系列 CUDA 操作（如启动 kernel �
 
 更多详细内容，请参阅 :ref:`programmatic-dependent-launch-details` 。
 
+.. _tour-fine-grained-synchronization:
+
+3.5.2.6. 细粒度同步
+^^^^^^^^^^^^^^^^^^^^
+
+:ref:`细粒度同步 <fine-grained-synchronization>` 允许消费者核函数（consumer kernel）通过检查数据本身中一个生产者永远不会写入的哨兵值（sentinel value），来判断生产者核函数（producer kernel）的数据是否就绪。
+在计算能力为 10.7 的设备上，从全局内存到共享内存的批量异步拷贝（bulk-asynchronous copy）可以在拷贝数据的同时执行这一检查。
+拷贝的结果通过一个以 ``layout::v1`` 格式初始化的共享内存屏障来报告，该屏障的条件阶段（conditional phase）只有在未发现哨兵值时才会完成。
+:ref:`第 4.6 节 <fine-grained-synchronization>` 描述了该协议及其基于 TMA 数据有效性报告（TMA data validity reporting）的实现。
+
+承载数据的缓冲区会首先被填入哨兵值，数据的每一部分只要不再包含哨兵值即表示已就绪。因此，每个消费者线程块可以在自己的输入被写入后立即使用它们，无需标志位，也无需等待生产者网格（grid）执行完毕。
+作为交换，每次使用前都必须用哨兵值重新初始化该缓冲区，并且生产者必须遵循一小套规则。
+这种收益依赖于两个核函数同时运行，例如配合 :ref:`程序化依赖启动 <programmatic-dependent-launch-details>` 使用。
+在使用程序化依赖启动时，消费者核函数仍需调用 ``cudaGridDependencySynchronize()``，但可以在使用完其输入之后再发出该调用。
+
 .. _lazy-loading:
 
-3.5.2.5. 延迟加载
+3.5.2.7. 延迟加载
 ^^^^^^^^^^^^^^^^^
 
 延迟加载（Lazy loading）是一项允许开发者控制 JIT 编译器在应用程序启动时如何运行的特性。
@@ -212,9 +240,19 @@ CUDA 进程间通信（CUDA IPC）提供了在不同进程之间共享 GPU 缓�
 
 :ref:`virtual-memory-management-details` 详细讲解 CUDA 驱动 API 所提供的各项控制手段，解释了它们的工作原理，以及开发者在何种情况下会发现这些功能大有裨益。
 
+.. _tour-compute-fabric-transport:
+
+3.5.5.2. Compute Fabric Transport
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:ref:`第 4.19 节 <compute-fabric-transport>` 介绍了一种以资源为中心（resource-centric）的模型，用于通过 NVLink fabric 进行由 GPU 发起的数据移动；
+在该模型中，对等端由逻辑端点 id（logical endpoint id）和偏移量（offset）标识，而不是由映射的虚拟地址标识。
+该特性面向编写通信原语（communication primitives）的开发者；
+对于应用而言，当 `NCCL Device API <https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/usage/deviceapi.html>`_ 或 `NVSHMEM <https://docs.nvidia.com/nvshmem/api/index.html>`_ 符合其通信模式时，应优先选用它们。
+
 .. _driver-entry-point-access:
 
-3.5.5.2. 驱动入口点访问
+3.5.5.3. 驱动入口点访问
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 驱动入口点访问（Driver entry point access）是指从 CUDA 11.3 开始提供的一种能力，它允许开发者检索指向 CUDA 驱动 API 和 CUDA 运行时 API 的函数指针。
@@ -223,7 +261,7 @@ CUDA 进程间通信（CUDA IPC）提供了在不同进程之间共享 GPU 缓�
 
 .. _error-log-management:
 
-3.5.5.3. 错误日志管理
+3.5.5.4. 错误日志管理
 ^^^^^^^^^^^^^^^^^^^^^
 
 错误日志管理（Error log management）提供了一系列实用工具，用于处理和记录来自 CUDA API 的错误。
