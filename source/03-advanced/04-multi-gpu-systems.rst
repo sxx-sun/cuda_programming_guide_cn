@@ -240,3 +240,12 @@ CUDA :ref:`atomic-functions` 可以在仅有一个 GPU 访问该对象的情况�
 
 此外，在支持 IOMMU 的系统上还可能启用 PCI 访问控制服务（Access Control Services, ACS）。
 PCI ACS 功能会将所有的 PCI 点对点流量强制重定向至 CPU 的根节点（Root Complex），这会导致整体对分带宽下降，从而造成显著的性能损失。
+
+.. _multi-gpu-compute-fabric-transport:
+
+3.4.2.6. Compute Fabric Transport
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+点对点内存访问（Peer-to-peer memory access）是通过发起进程预留并映射的虚拟地址来访问对等分配（peer allocation）的。
+Compute fabric transport 为大型 NVLink fabric 提供了一种替代方案：它以逻辑端点 id（logical endpoint id）来标识对等端，并以偏移量（offset）而非映射地址来标识所访问的资源。
+该特性面向通信库和高级应用，详细说明请参见 :ref:`第 4.19 节 <compute-fabric-transport>`。
