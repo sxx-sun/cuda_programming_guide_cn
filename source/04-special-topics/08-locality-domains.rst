@@ -1,6 +1,6 @@
 .. _locality-domains:
 
-4.7. 局部性域（Locality Domains）
+4.8. 局部性域（Locality Domains）
 =================================
 
 **局部性域（locality domain）** 是 GPU 中包含流式多处理器（SM）和设备内存的一个部分。
@@ -15,7 +15,7 @@ CUDA 使用从零开始的 **局部性域 ID（locality domain ID）** 来标识
 
 .. _discovering-locality-domains:
 
-4.7.1. 发现局部性域
+4.8.1. 发现局部性域
 -------------------
 
 使用 ``cudaDeviceGetAttribute`` 并传入以下 ``cudaDeviceAttr`` 值：
@@ -25,7 +25,7 @@ CUDA 使用从零开始的 **局部性域 ID（locality domain ID）** 来标识
 
 应用程序应当查询这些属性，而不是假定某种特定拓扑。
 设备上可用的局部性域数量受系统配置影响。
-同一设备类型在不同场景下可能呈现不同数量的局部性域（ :ref:`第 4.7.5.3 节 <compatibility-notes>` ）。
+同一设备类型在不同场景下可能呈现不同数量的局部性域（ :ref:`第 4.8.5.3 节 <compatibility-notes>` ）。
 所有设备（包括只有单个局部性域可用的设备）都可以使用局部性域 API。
 在只有单个局部性域的设备上，这些 API 的效果等同于以整个设备为目标。
 使用设备属性以编程方式查询设备的局部性域属性：
@@ -42,11 +42,11 @@ CUDA 使用从零开始的 **局部性域 ID（locality domain ID）** 来标识
 .. _locality-domains-compute:
 .. _localizing-compute-resources:
 
-4.7.2. 局部化计算资源
+4.8.2. 局部化计算资源
 ---------------------
 
 要将 SM 资源局部化到特定的局部性域，请使用 CUDA 绿色上下文 API。
-SM 的放置通过 :ref:`第 4.6 节 <green-contexts-details>` 中描述的绿色上下文资源 API 来表达。
+SM 的放置通过 :ref:`第 4.7 节 <green-contexts-details>` 中描述的绿色上下文资源 API 来表达。
 构造局部化 SM 分区的主要步骤如下：
 
 1. 使用 ``cudaDeviceGetDevResource`` 获取设备的 ``cudaDevResourceTypeSm`` 资源。
@@ -55,7 +55,7 @@ SM 的放置通过 :ref:`第 4.6 节 <green-contexts-details>` 中描述的绿�
 4. 使用 ``cudaDevResourceGenerateDesc`` 生成资源描述符，使用 ``cudaGreenCtxCreate`` 创建绿色上下文，最后通过 ``cudaExecutionCtxStreamCreate`` 创建流。
 5. 在该流上启动 kernel。
 
-典型的绿色上下文创建流程在 :ref:`第 4.6.2 节 <green-contexts-ease-of-use>` 中描述。
+典型的绿色上下文创建流程在 :ref:`第 4.7.2 节 <green-contexts-ease-of-use>` 中描述。
 局部化 SM 资源所需的额外改动如下所示：
 
 .. _locality-domains-localized-sm-group:
@@ -135,7 +135,7 @@ SM 的放置通过 :ref:`第 4.6 节 <green-contexts-details>` 中描述的绿�
 .. _locality-domains-memory:
 .. _allocating-localized-device-memory:
 
-4.7.3. 分配局部化设备内存
+4.8.3. 分配局部化设备内存
 -------------------------
 
 CUDA 使用 ``type`` 为 ``cudaMemLocationTypeDeviceLocalityDomain`` 的 ``cudaMemLocation`` 来表示局部化的内存位置。
@@ -145,7 +145,7 @@ CUDA 使用 ``type`` 为 ``cudaMemLocationTypeDeviceLocalityDomain`` 的 ``cudaM
 - ``localityDomainId`` 标识该 GPU 上的一个局部性域。
 
 运行时 API 将此位置与流序内存池一起使用（ :ref:`第 4.3 节 <stream-ordered-memory-allocation-details>` ）。
-驱动 API 还额外将对应的 ``CUmemLocation`` 用于虚拟内存管理分配（ :ref:`第 4.17 节 <virtual-memory-management-details>` ）。
+驱动 API 还额外将对应的 ``CUmemLocation`` 用于虚拟内存管理分配（ :ref:`第 4.18 节 <virtual-memory-management-details>` ）。
 
 通过其他机制创建的分配（例如 ``cudaMalloc`` 或统一内存）无法局部化。
 MLOPart 模式下的 `MPS（Multi-Process Service，多进程服务） <https://docs.nvidia.com/deploy/mps/index.html>`_ 可用于透明地局部化依赖 ``cudaMalloc`` 的应用程序。
@@ -153,7 +153,7 @@ MLOPart 模式下的 `MPS（Multi-Process Service，多进程服务） <https://
 
 .. _creating-a-localized-memory-pool:
 
-4.7.3.1. 创建局部化内存池
+4.8.3.1. 创建局部化内存池
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 要创建局部化内存池，需在 ``cudaMemPoolProps`` 中设置位置并调用 ``cudaMemPoolCreate`` ：
@@ -177,7 +177,7 @@ MLOPart 模式下的 `MPS（Multi-Process Service，多进程服务） <https://
 
 .. _creating-a-localized-vmm-allocation:
 
-4.7.3.2. 创建局部化 VMM 分配
+4.8.3.2. 创建局部化 VMM 分配
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 驱动 API 可以将由 ``cuMemCreate`` 创建的物理内存放置在某个局部性域中。
@@ -194,7 +194,7 @@ MLOPart 模式下的 `MPS（Multi-Process Service，多进程服务） <https://
 
 .. _querying-memory-placement:
 
-4.7.4. 查询内存放置
+4.8.4. 查询内存放置
 -------------------
 
 使用 ``cudaMemPoolGetAttribute`` 并传入 ``cudaMemPoolAttrLocalityDomainId`` 来查询内存池。
@@ -212,7 +212,7 @@ MLOPart 模式下的 `MPS（Multi-Process Service，多进程服务） <https://
 
 .. _programming-guidance:
 
-4.7.5. 编程指导
+4.8.5. 编程指导
 ---------------
 
 要局部化工作负载，请使用与其内存分配位于同一局部性域的计算资源来启动 kernel。
@@ -224,7 +224,7 @@ MLOPart 模式下的 `MPS（Multi-Process Service，多进程服务） <https://
 
 .. _localized-kernels-with-fork-join-pattern:
 
-4.7.5.1. 采用 fork/join 模式的局部化 kernel
+4.8.5.1. 采用 fork/join 模式的局部化 kernel
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **fork/join 模式** 使用事件和流等待来表达一个并行区域。
@@ -259,7 +259,7 @@ MLOPart 模式下的 `MPS（Multi-Process Service，多进程服务） <https://
 
 .. _locality-domains-cuda-graphs:
 
-4.7.5.2. CUDA Graphs
+4.8.5.2. CUDA Graphs
 ^^^^^^^^^^^^^^^^^^^^
 
 CUDA Graphs（ :ref:`第 4.2 节 <cuda-graphs>` ）通过流捕获和手动图构造支持局部化。
@@ -268,7 +268,7 @@ CUDA Graphs（ :ref:`第 4.2 节 <cuda-graphs>` ）通过流捕获和手动图�
 
 .. _stream-capture:
 
-4.7.5.2.1. 流捕获
+4.8.5.2.1. 流捕获
 ~~~~~~~~~~~~~~~~~
 
 fork/join 模式可以被捕获为一个 CUDA 图。
@@ -296,7 +296,7 @@ fork/join 模式可以被捕获为一个 CUDA 图。
 
 .. _graph-construction:
 
-4.7.5.2.2. 图构造
+4.8.5.2.2. 图构造
 ~~~~~~~~~~~~~~~~~
 
 也可以显式构造相同的图拓扑。
@@ -323,7 +323,7 @@ fork/join 模式可以被捕获为一个 CUDA 图。
 .. _locality-domains-support:
 .. _compatibility-notes:
 
-4.7.5.3. 兼容性说明
+4.8.5.3. 兼容性说明
 ^^^^^^^^^^^^^^^^^^^
 
 vGPU 和 MIG 设备不支持局部化，将只报告 1 个局部性域。

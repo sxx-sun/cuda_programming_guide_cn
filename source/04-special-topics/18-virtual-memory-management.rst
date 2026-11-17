@@ -1,6 +1,6 @@
 .. _virtual-memory-management-details:
 
-4.17. 虚拟内存管理
+4.18. 虚拟内存管理
 ==================
 
 在 CUDA 编程模型中，内存分配调用（如 ``cudaMalloc()`` ）返回 GPU 内存中的内存地址。
@@ -48,12 +48,12 @@ CUDA VMM 向用户公开了细粒度的控制，用于在应用程序中管理 G
 
 .. _virtual-memory-management-preliminaries:
 
-4.17.1. 预备知识
+4.18.1. 预备知识
 ----------------
 
 .. _virtual-memory-management-definitions:
 
-4.17.1.1. 定义
+4.18.1.1. 定义
 ^^^^^^^^^^^^^^
 
 **Fabric 内存（Fabric Memory）：** Fabric 内存是指可通过高速互连结构（如 NVIDIA 的 NVLink 和 NVSwitch）访问的内存。
@@ -90,7 +90,7 @@ MEX 通道与 Fabric Handle（网络互联句柄）直接相关，在多节点 G
 
 .. _virtual-memory-management-querying-support:
 
-4.17.1.2. 查询支持
+4.18.1.2. 查询支持
 ^^^^^^^^^^^^^^^^^^
 
 应用程序在使用功能之前应查询支持情况，因为其可用性可能因 GPU 架构、驱动程序版本和使用的特定软件库而异。
@@ -166,7 +166,7 @@ MEX 通道与 Fabric Handle（网络互联句柄）直接相关，在多节点 G
 
 .. _vmm-api-overview:
 
-4.17.2. API 概述
+4.18.2. API 概述
 ----------------
 
 VMM 为开发者提供对虚拟内存管理的精细控制。VMM 作为非常底层的 API，需要直接使用 :ref:`CUDA Driver API <driver-api>`。
@@ -204,7 +204,7 @@ OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄
 
 .. _virtual-memory-management-unicast:
 
-4.17.3. 单播内存共享
+4.18.3. 单播内存共享
 --------------------
 
 共享 GPU 内存可以在具有多个 GPU 的一台机器上或跨机器网络进行。该过程遵循以下步骤：
@@ -229,7 +229,7 @@ OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄
 
 .. _virtual-memory-management-unicast-allocate-export:
 
-4.17.3.1. 分配和导出
+4.18.3.1. 分配和导出
 ^^^^^^^^^^^^^^^^^^^^
 
 **分配物理内存** 第一步使用 ``cuMemCreate`` 创建物理内存块。此函数创建的物理内存没有任何设备或主机（虚拟地址）映射。
@@ -327,7 +327,7 @@ OS 特定句柄仅限于单节点上的进程间通信，而 fabric 特定句柄
 
 .. _virtual-memory-management-unicast-share-import:
 
-4.17.3.2. 共享和导入
+4.18.3.2. 共享和导入
 ^^^^^^^^^^^^^^^^^^^^
 
 **共享内存句柄** 句柄导出后，必须使用进程间通信协议将其共享给接收进程。开发者可以自由选择使用那种 IPC 方法共享句柄。
@@ -510,7 +510,7 @@ Fabric 特定 IPC 更简单且可移植，但需要系统级支持。
 
 .. _virtual-memory-management-unicast-reserve-map:
 
-4.17.3.3. 保留和映射
+4.18.3.3. 保留和映射
 ^^^^^^^^^^^^^^^^^^^^
 
 **保留虚拟地址范围**
@@ -551,7 +551,7 @@ Fabric 特定 IPC 更简单且可移植，但需要系统级支持。
 
 .. _virtual-memory-management-unicast-access:
 
-4.17.3.4. 访问权限
+4.18.3.4. 访问权限
 ^^^^^^^^^^^^^^^^^^
 
 CUDA 的虚拟内存管理 API 允许应用程序通过访问控制机制显式保护其虚拟地址范围。
@@ -581,7 +581,7 @@ VMM 提供的访问控制机制，使用户能够显式指定将哪些内存分�
 
 .. _virtual-memory-management-unicast-free:
 
-4.17.3.5. 释放内存
+4.18.3.5. 释放内存
 ^^^^^^^^^^^^^^^^^^
 
 要释放已分配的内存和地址空间，源进程与目标进程均应严格按照 ``cuMemUnmap`` 、 ``cuMemRelease`` 和 ``cuMemAddressFree`` 的顺序依次调用这三个函数。
@@ -602,7 +602,7 @@ VMM 提供的访问控制机制，使用户能够显式指定将哪些内存分�
 
 .. _virtual-memory-management-multicast:
 
-4.17.4. 多播内存共享
+4.18.4. 多播内存共享
 --------------------
 
 `多播对象管理 API <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__MULTICAST.html#group__CUDA__MULTICAST/>`_ 为应用程序提供了创建多播对象的能力，
@@ -642,7 +642,7 @@ NVLink SHARP 允许 CUDA 应用借助 NVSwitch 的网络内计算（In-Fabric Co
 
 .. _virtual-memory-management-multicast-allocate:
 
-4.17.4.1. 分配多播对象
+4.18.4.1. 分配多播对象
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 使用 ``cuMulticastCreate`` 创建多播对象：
@@ -671,7 +671,7 @@ NVLink SHARP 允许 CUDA 应用借助 NVSwitch 的网络内计算（In-Fabric Co
 
 .. _virtual-memory-management-multicast-add-device:
 
-4.17.4.2. 向多播对象添加设备
+4.18.4.2. 向多播对象添加设备
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 使用 ``cuMulticastAddDevice`` 向多播组添加设备：
@@ -686,7 +686,7 @@ NVLink SHARP 允许 CUDA 应用借助 NVSwitch 的网络内计算（In-Fabric Co
 
 .. _virtual-memory-management-multicast-bind:
 
-4.17.4.3. 将内存绑定到多播对象
+4.18.4.3. 将内存绑定到多播对象
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 使用 ``cuMemCreate`` 分配的物理内存，并使用 ``cuMulticastBindMem`` 将内存绑定到多播对象：
@@ -698,7 +698,7 @@ NVLink SHARP 允许 CUDA 应用借助 NVSwitch 的网络内计算（In-Fabric Co
 
 .. _use-multicast-mappings:
 
-4.17.4.4. 使用多播映射
+4.18.4.4. 使用多播映射
 ^^^^^^^^^^^^^^^^^^^^^^
 
 要在 CUDA C++ 中使用多播映射，需要使用带内联 PTX 的 `multimem PTX 指令 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-multimem-ld-reduce-multimem-st-multimem-red/>`_：
@@ -746,12 +746,12 @@ NVLink SHARP 允许 CUDA 应用借助 NVSwitch 的网络内计算（In-Fabric Co
 
 .. _advanced-configuration-vmm:
 
-4.17.5. 高级配置
+4.18.5. 高级配置
 ----------------
 
 .. _virtual-memory-management-memory-types:
 
-4.17.5.1. 内存类型
+4.18.5.1. 内存类型
 ^^^^^^^^^^^^^^^^^^
 
 VMM 还为应用程序提供了一种机制来分配某些设备可能支持的特殊类型内存。
@@ -760,7 +760,7 @@ VMM 还为应用程序提供了一种机制来分配某些设备可能支持的�
 
 .. _virtual-memory-management-compressible-memory:
 
-4.17.5.2. 可压缩内存
+4.18.5.2. 可压缩内存
 ^^^^^^^^^^^^^^^^^^^^
 
 可压缩内存可用于加速对具有非结构化稀疏性和其他可压缩数据模式的数据的访问。
@@ -797,7 +797,7 @@ VMM 还为应用程序提供了一种机制来分配某些设备可能支持的�
 
 .. _virtual-aliasing-support:
 
-4.17.5.3. 虚拟别名支持
+4.18.5.3. 虚拟别名支持
 ^^^^^^^^^^^^^^^^^^^^^^
 
 VMM 提供了一种机制，允许通过多次调用 ``cuMemMap`` 并指定不同的虚拟地址，为同一块物理内存分配创建多个虚拟内存映射（即“代理”）。
@@ -861,7 +861,7 @@ VMM 提供了一种机制，允许通过多次调用 ``cuMemMap`` 并指定不�
 
 .. _virtual-memory-management-ipc-os-handles:
 
-4.17.5.4. IPC 的 OS 特定句柄详情
+4.18.5.4. IPC 的 OS 特定句柄详情
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 使用 ``cuMemCreate`` 时，用户可以在分配内存时指定该分配已预留用于进程间通信或图形互操作。

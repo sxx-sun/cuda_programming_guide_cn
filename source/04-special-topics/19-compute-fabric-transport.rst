@@ -1,6 +1,6 @@
 .. _compute-fabric-transport:
 
-4.18. Compute Fabric Transport
+4.19. Compute Fabric Transport
 ===========================================
 
 Compute Fabric Transport （计算网络传输， CFT ） 基于 NVLink Fabric 提供大规模 GPU 间通信能力，
@@ -47,7 +47,7 @@ CFT 为通过 NVLink 互连的 GPU 提供了一种互补的、 **以资源为中
 .. _prerequisites-and-scope:
 .. _cft-prerequisites-scope:
 
-4.18.1. 前提与范围
+4.19.1. 前提与范围
 ------------------
 
 使用逻辑端点有以下要求：
@@ -55,7 +55,7 @@ CFT 为通过 NVLink 互连的 GPU 提供了一种互补的、 **以资源为中
 - **CUDA 驱动 API。** 逻辑端点 API 是底层 :ref:`CUDA Driver API <driver-api>` 的一部分。
 - **NVLink fabric 连通性与设备支持。** 参与的 GPU 必须能够通过 NVLink fabric 相互到达。
   设备是否支持逻辑端点取决于其体系结构、驱动程序和系统配置，
-  因此应用程序应当通过查询 :ref:`第 4.18.2.2 节 <cft-query-for-support>` 中描述的设备属性来确定支持情况，而不是根据现有硬件进行推断。
+  因此应用程序应当通过查询 :ref:`第 4.19.2.2 节 <cft-query-for-support>` 中描述的设备属性来确定支持情况，而不是根据现有硬件进行推断。
 - **IMEX 守护进程与通道。** 在进程之间共享端点使用 fabric IPC 句柄，这要求 NVIDIA IMEX 守护进程处于运行状态且已配置 IMEX 通道。
 
 端点可以与同一节点上的进程，或同一 NVLink 网络内不同节点上的进程共享。
@@ -64,7 +64,7 @@ CFT 为通过 NVLink 互连的 GPU 提供了一种互补的、 **以资源为中
 
 .. _preliminaries:
 
-4.18.2. 预备知识
+4.19.2. 预备知识
 ----------------
 
 以下定义确立了本节其余部分使用的关键对象和操作。
@@ -72,7 +72,7 @@ CFT 为通过 NVLink 互连的 GPU 提供了一种互补的、 **以资源为中
 
 .. _definitions:
 
-4.18.2.1. 定义
+4.19.2.1. 定义
 ^^^^^^^^^^^^^^
 
 **逻辑端点 id（Logical Endpoint Id）：** ``CUlogicalEndpointId`` 是一个 32 位值，用于命名进程内的一个逻辑端点。
@@ -83,7 +83,7 @@ fabric 操作通过该 id 加上一个偏移来寻址端点。
 在用 ``cuLogicalEndpointIdRelease`` 释放端点 id 之前，必须先用 ``cuLogicalEndpointDestroy`` 移除这种关联。
 在端点 id 仍与某个端点保持关联时释放它属于未定义行为。
 之后的保留操作可能会重用已释放的 id。
-:ref:`第 4.18.6 节 <cft-logical-endpoint-ids>` 描述逻辑端点 id 的生命周期。
+:ref:`第 4.19.6 节 <cft-logical-endpoint-ids>` 描述逻辑端点 id 的生命周期。
 
 **逻辑端点（Logical Endpoint）：** 逻辑端点是一个传输对象，表示可通过 NVLink fabric 到达的资源，并以一个有界的偏移空间的形式暴露。
 创建端点会分配用于路由寻址到它的 fabric 操作的资源。
@@ -92,7 +92,7 @@ fabric 操作使用相关联的端点 id 加上该空间内的一个偏移来命
 当进程使用 ``cuLogicalEndpointCreate`` 创建端点或使用 ``cuLogicalEndpointImport`` 导入对等端点时，端点会与一个保留的 id 相关联。
 在显式解绑端点的资源之前销毁该端点关联，会解绑这些资源，但不会销毁资源本身。
 在资源尚未从端点解绑之前就销毁它们属于未定义行为。
-:ref:`第 4.18.3 节 <cft-api-overview>` 概述了端点的生命周期。
+:ref:`第 4.19.3 节 <cft-api-overview>` 概述了端点的生命周期。
 
 **单播逻辑端点（Unicast Logical Endpoint）：** 单播逻辑端点表示一个点对点传输目标。
 它有一个单一的所有者设备，在创建端点时指定，端点绑定的内存就位于该设备上。
@@ -121,10 +121,10 @@ fabric 操作使用这种句柄来代替对等虚拟地址。
 **端点绑定（Endpoint Binding）：** 端点绑定是逻辑端点偏移空间中的一个范围与应用程序提供的物理内存分配之间的关联。
 应用程序可以使用 ``cuLogicalEndpointBindAddr`` 通过已映射的虚拟地址绑定内存，或使用 ``cuLogicalEndpointBindMem`` 通过分配句柄绑定内存。
 fabric 操作仅对已绑定的端点范围有效，并且绑定必须满足端点的对齐和大小限制。
-参见 :ref:`第 4.18.8 节 <cft-binding-memory>` 和 :ref:`第 4.18.6.1 节 <cft-limits-alignment>` 。
+参见 :ref:`第 4.19.8 节 <cft-binding-memory>` 和 :ref:`第 4.19.6.1 节 <cft-limits-alignment>` 。
 
 所有 fabric 操作都是异步的：发起一个操作只是启动传输。
-它们的完成情况和状态通过每个操作提供的完成机制显式报告（参见 :ref:`第 4.18.10 节 <cft-completion-status>` ）。
+它们的完成情况和状态通过每个操作提供的完成机制显式报告（参见 :ref:`第 4.19.10 节 <cft-completion-status>` ）。
 
 **Put 与 Get 操作：** put 和 get 是 CFT 提供的数据移动原语。
 put 操作将数据从发起方 GPU 移动到目标逻辑端点。
@@ -160,13 +160,13 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 观察到每一个目的地位置都已被写入，也并不表示操作已成功完成、目的地资源可以被重用。
 例如，如果响应被丢弃，生产者可能会收到错误状态，从而导致其重试该操作。
 因此，应用程序必须等待完成并检查所报告的状态，然后才能将操作视为完成。
-参见 :ref:`第 4.18.10 节 <cft-completion-status>` 。
+参见 :ref:`第 4.19.10 节 <cft-completion-status>` 。
 
 
 .. _query-for-support:
 .. _cft-query-for-support:
 
-4.18.2.2. 支持查询
+4.19.2.2. 支持查询
 ^^^^^^^^^^^^^^^^^^
 
 应用程序在使用逻辑端点 API 之前应当查询支持情况，因为可用性取决于 GPU 体系结构、驱动程序和系统配置。
@@ -255,7 +255,7 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 .. _api-overview:
 .. _cft-api-overview:
 
-4.18.3. API 概览
+4.19.3. API 概览
 ----------------
 
 逻辑端点 API 是底层 :ref:`CUDA Driver API <driver-api>` 的一部分，使用逻辑端点遵循一个明确定义的生命周期。
@@ -267,10 +267,10 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 - **清理阶段（步骤 13）：** 在所有使用完成之后，解绑并销毁端点，释放其 id ，并释放后备内存。
 
 1. **校验 clique 成员资格。** 使用 ``cuDeviceGetCliqueCount`` 和 ``cuDeviceGetCliqueInfo`` 校验参与设备属于同一 clique ，
-   如 :ref:`第 4.18.4 节 <cft-clique-verification>` 所述。
+   如 :ref:`第 4.19.4 节 <cft-clique-verification>` 所述。
 2. **保留 id。** 使用 ``cuLogicalEndpointIdReserve`` 保留一个逻辑端点 id 范围。
    保留以进程为单位。
-   id 的生命周期以及重用和释放的规则在 :ref:`第 4.18.6 节 <cft-logical-endpoint-ids>` 中描述。
+   id 的生命周期以及重用和释放的规则在 :ref:`第 4.19.6 节 <cft-logical-endpoint-ids>` 中描述。
 3. **描述端点。** 填写 ``CUlogicalEndpointProp`` ，包括端点类型（单播或多播）、单播的所有者设备或多播的组大小、大小、
    请求的 IPC 句柄类型（ ``ipcHandleTypes`` ）以及任何标志——例如，
    ``CU_LOGICAL_ENDPOINT_FLAG_COUNTED_OPS`` 用于请求计数操作支持（参见 :ref:`计数操作 <cft-counted-operation>` ）。
@@ -294,7 +294,7 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 10. **绑定内存。** 使用 ``cuLogicalEndpointBindMem`` （按分配句柄）或 ``cuLogicalEndpointBindAddr`` （按已映射地址）将物理内存与端点相关联。
     内存不能绑定到导入的单播端点，但可以绑定到导入的多播端点。
     fabric 操作仅对已绑定的范围有效。
-11. **绑定后同步。** 在任何进程发起 fabric 操作之前，参与进程必须在绑定之后进行同步，如 :ref:`第 4.18.8 节 <cft-binding-memory>` 所述。
+11. **绑定后同步。** 在任何进程发起 fabric 操作之前，参与进程必须在绑定之后进行同步，如 :ref:`第 4.19.8 节 <cft-binding-memory>` 所述。
 12. **使用端点。** 启动针对对等端点 id 发起 fabric 操作的 kernel 。
 13. **清理。** 解绑内存，销毁端点，释放 id 范围，并释放后备内存。
 
@@ -302,7 +302,7 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 .. _verify-clique-membership:
 .. _cft-clique-verification:
 
-4.18.4. 校验 clique 成员资格
+4.19.4. 校验 clique 成员资格
 ----------------------------
 
 在发起任何 CFT 操作之前，我们需要确保所有参与设备都是支持所需 CFT 操作集合的某个 clique 的成员，并且对于特定的 clique 类型，它们都是同一 clique 的成员。
@@ -349,7 +349,7 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 
 .. _creating-an-endpoint:
 
-4.18.5. 创建 Endpoint
+4.19.5. 创建 Endpoint
 ---------------------
 
 创建和导入端点的第一步是确定进程需要多少个逻辑端点 id 。
@@ -379,7 +379,7 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
      endpointProp.flags = useCounted ? CU_LOGICAL_ENDPOINT_FLAG_COUNTED_OPS : CU_LOGICAL_ENDPOINT_FLAG_NONE;
 
 端点大小则在其对齐和最大大小限制已知之后单独设置。
-有关如何查询这些限制以及如何选择大小，参见 :ref:`第 4.18.6.1 节 <cft-limits-alignment>` 。
+有关如何查询这些限制以及如何选择大小，参见 :ref:`第 4.19.6.1 节 <cft-limits-alignment>` 。
 
 通过调用 ``cuLogicalEndpointCreate`` ，将一个保留的 id 与所描述的属性相关联。
 创建本地端点并导入对等端点的进程通常为每个参与者保留一个 id ，从而以基准 id 加上其 rank 来寻址某个对等端。
@@ -390,7 +390,7 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
      cuLogicalEndpointCreate(leId + myRank, &endpointProp);
 
 ``cuLogicalEndpointCreate`` 是非阻塞的，因此端点在它返回的那一刻还不可用。
-在向其绑定内存之前，使用 ``cuLogicalEndpointQuery`` 确认它已完全构造好，如 :ref:`第 4.18.7.1 节 <cft-confirming-readiness>` 所述。
+在向其绑定内存之前，使用 ``cuLogicalEndpointQuery`` 确认它已完全构造好，如 :ref:`第 4.19.7.1 节 <cft-confirming-readiness>` 所述。
 
 **多播端点。** 多播端点遵循相同的步骤，区别在于其描述方式，以及需要添加一组设备。
 它以 ``type = CU_LOGICAL_ENDPOINT_TYPE_MULTICAST`` 描述，并将 ``multicast.numDevices`` 设置为多播组中的设备数量。
@@ -403,7 +403,7 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 .. _logical-endpoint-ids:
 .. _cft-logical-endpoint-ids:
 
-4.18.6. 逻辑端点 id
+4.19.6. 逻辑端点 id
 -------------------
 
 逻辑端点 id 是一个进程本地的名字，其生命周期与它所标识的端点的生命周期相互独立。
@@ -440,7 +440,7 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 .. _limits-and-alignment:
 .. _cft-limits-alignment:
 
-4.18.6.1. 限制与对齐
+4.19.6.1. 限制与对齐
 ^^^^^^^^^^^^^^^^^^^^
 
 端点的对齐和最大大小要求取决于其属性，因此必须针对正在创建的特定配置进行查询，而不能凭空假设。 ``cuLogicalEndpointGetLimits`` 针对给定的 ``CUlogicalEndpointProp`` 返回这两个值：
@@ -461,12 +461,12 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 
 .. _sharing-an-endpoint:
 
-4.18.7. 共享 Endpoint
+4.19.7. 共享 Endpoint
 ---------------------
 
 与对等端共享端点遵循导出—传输—导入的交换流程：所有者将端点导出为 fabric IPC 句柄，将该句柄传输给需要它的对等端，然后每个对等端导入该端点，
 并将其与自己保留的、尚未与任何端点相关联的某个逻辑端点 id 相关联。
-共享使用 fabric IPC 句柄，因此端点必须绑定到可外部共享的内存，并且环境必须满足 :ref:`第 4.18.1 节 <cft-prerequisites-scope>` 中描述的 fabric IPC 要求。
+共享使用 fabric IPC 句柄，因此端点必须绑定到可外部共享的内存，并且环境必须满足 :ref:`第 4.19.1 节 <cft-prerequisites-scope>` 中描述的 fabric IPC 要求。
 
 使用 ``cuLogicalEndpointExport`` 导出端点，请求与描述该端点时相同的 IPC 句柄类型（ ``ipcHandleTypes`` ）。
 这将产生一个 ``CUlogicalEndpointFabricHandle`` ，即表示该逻辑端点的 fabric IPC 句柄。
@@ -496,7 +496,7 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 .. _confirming-readiness:
 .. _cft-confirming-readiness:
 
-4.18.7.1. 确认就绪
+4.19.7.1. 确认就绪
 ^^^^^^^^^^^^^^^^^^
 
 ``cuLogicalEndpointCreate`` 和 ``cuLogicalEndpointImport`` 在请求被接受后就立即返回。
@@ -524,7 +524,7 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 .. _binding-memory:
 .. _cft-binding-memory:
 
-4.18.8. 绑定内存
+4.19.8. 绑定内存
 ----------------
 
 端点不拥有任何内存。
@@ -546,7 +546,7 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 两者都接受端点 id 、绑定所适用的设备、端点偏移空间内的一个偏移、要绑定的分配以及绑定的大小。
 ``cuLogicalEndpointBindMem`` 还额外接受一个进入该分配的 ``memOffset`` ，允许只绑定该句柄的一个子范围。
 端点偏移、大小以及（对于 ``cuLogicalEndpointBindMem`` ） ``memOffset`` 都必须是 ``bindAlignment`` 的倍数，
-并且所绑定的范围必须位于端点的大小之内（参见 :ref:`第 4.18.6.1 节 <cft-limits-alignment>` ）。
+并且所绑定的范围必须位于端点的大小之内（参见 :ref:`第 4.19.6.1 节 <cft-limits-alignment>` ）。
 
 .. code-block:: cpp
 
@@ -568,13 +568,13 @@ get 操作将数据从目标逻辑端点移动到发起方 GPU 。
 
 .. _fabric-operations:
 
-4.18.9. Fabric 操作
+4.19.9. Fabric 操作
 -------------------
 
 线程通过执行 *fabric 操作* 来访问端点资源，这些操作接受一个 CFT 句柄——由逻辑端点 id 和偏移组成的一对值。
 fabric 操作是异步的，也就是说，程序必须显式等待其完成才能观察到它们的效果。
 fabric 操作的名字带有 ``try_`` 前缀，表示它们可能失败。
-也就是说，在等待完成之后，线程必须检查该操作的完成机制（参见 :ref:`第 4.18.10 节 <cft-completion-status>` ），以确定操作是否成功。
+也就是说，在等待完成之后，线程必须检查该操作的完成机制（参见 :ref:`第 4.19.10 节 <cft-completion-status>` ），以确定操作是否成功。
 这一点将 fabric 操作与普通的指针操作区分开来：基于指针的访问所产生的失败，是通过销毁上下文甚至整个应用程序来向应用程序报告的。
 想要处理这些错误的应用程序——例如从指针访问失败中恢复——只能在上下文或进程级别这样做。
 fabric 操作则允许应用程序在程序线程级别处理错误。
@@ -623,7 +623,7 @@ put 接受目标句柄、源缓冲区基地址、字节数，以及将用于跟�
 在操作提交之后发起的一个单独的 ``cuda::ptx::mbarrier_arrive_expect_tx`` 会记录一次到达，并将事务计数增加字节数除以 16 ，因为这正是 put 将会把它减去的数量。
 取数类操作则改用基于字节的事务核算。 ``cuda::ptx::fabric_try_get`` 和 ``cuda::ptx::fabric_try_pullred`` 每交付一个字节就将事务计数减 1 ，
 因此 ``cuda::ptx::mbarrier_arrive_expect_tx`` 要加上完整的字节数。
-:ref:`第 4.18.10 节 <cft-completion-status>` 介绍了 mbarrier 的布局要求以及 fabric 状态如何被读回。
+:ref:`第 4.19.10 节 <cft-completion-status>` 介绍了 mbarrier 的布局要求以及 fabric 状态如何被读回。
 
 **计数的（counted）** put 还会随着数据到达而递增目的地一侧的一个字节计数器，这样接收方就可以在访问本地数据之前对该计数器进行轮询，而不必交换单独的完成消息。
 下面的代码用 ``cuda::ptx::fabric_try_put_counted`` ——普通 put 的 ``.counted::bytes`` 变体——做到这一点，它额外传入第二个目的偏移，即计数器的端点偏移：
@@ -637,10 +637,10 @@ put 接受目标句柄、源缓冲区基地址、字节数，以及将用于跟�
                                          smemBuf, FABRIC_CHUNK_SIZE, &putBar);
 
 计数操作要求在创建端点时启用计数操作支持（ ``CU_LOGICAL_ENDPOINT_FLAG_COUNTED_OPS`` ，
-参见 :ref:`第 4.18.2.2 节 <cft-query-for-support>` ），并且目标计数器必须在端点内存中按 256 字节边界对齐。
+参见 :ref:`第 4.19.2.2 节 <cft-query-for-support>` ），并且目标计数器必须在端点内存中按 256 字节边界对齐。
 应用程序在布局端点的后备内存时即可满足这一点，将计数器保留在一个适当对齐的区域中。
 
-尽管该示例只发起 put ， get 、规约和拉取规约操作使用 :ref:`第 4.18.10 节 <cft-completion-status>` 中描述的相同提交、状态报告和等待序列。
+尽管该示例只发起 put ， get 、规约和拉取规约操作使用 :ref:`第 4.19.10 节 <cft-completion-status>` 中描述的相同提交、状态报告和等待序列。
 如上所述，它们的事务计数单位是随操作而异的。
 
 **内存排序。** 该示例以 ``sys`` 作用域的 ``relaxed`` 排序发起其 fabric put 。
@@ -657,7 +657,7 @@ put 接受目标句柄、源缓冲区基地址、字节数，以及将用于跟�
 在发起 put 之后，线程等待其完成。
 在通过 ``dataPtr`` 经通用代理读取目的地之前，线程必须先以 ``cuda::ptx::sem_release`` 、再以 ``cuda::ptx::sem_acquire`` 发起 ``cuda::ptx::fence_proxy_generic_fabric_alias`` 。
 仅靠完成等待并不会把 fabric 代理的写入排序在通用代理的指针加载之前。
-``waitForSuccessfulCompletion`` 代表 :ref:`第 4.18.10 节 <cft-completion-status>` 中描述的 ``mbarrier`` 等待和状态检查。
+``waitForSuccessfulCompletion`` 代表 :ref:`第 4.19.10 节 <cft-completion-status>` 中描述的 ``mbarrier`` 等待和状态检查。
 初始时目的地为 0 ，而 ``smemSrcData`` 是一个 16 字节的共享内存源，其第一个 ``uint32_t`` 元素存放 42 。
 
 .. list-table::
@@ -765,7 +765,7 @@ mbarrier 等待返回之后， put 已经完成，但 fabric 代理的写入相�
 .. _per-thread-and-warp-collective-operations:
 .. _cft-collective-operations:
 
-4.18.9.1. 每线程与 warp 集合操作
+4.19.9.1. 每线程与 warp 集合操作
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 每条 fabric 指令都定义了自己的执行粒度。
@@ -774,13 +774,13 @@ mbarrier 等待返回之后， put 已经完成，但 fabric 代理的写入相�
 PTX ISA 规定了每条指令所要求的参与方式。
 
 执行粒度只描述线程如何发起 fabric 操作。
-完成跟踪与该粒度无关；参见 :ref:`第 4.18.10.1 节 <cft-configuring-barrier>` 。
+完成跟踪与该粒度无关；参见 :ref:`第 4.19.10.1 节 <cft-configuring-barrier>` 。
 
 
 .. _completion-status-and-error-reporting:
 .. _cft-completion-status:
 
-4.18.10. 完成状态与错误报告
+4.19.10. 完成状态与错误报告
 ---------------------------
 
 fabric 操作通过其完成对象报告自己的状态。
@@ -869,7 +869,7 @@ put 会交付它的字节，但并不告诉屏障应该期待多少字节。
 .. _configuring-barrier-arrivals-and-transaction-counts:
 .. _cft-configuring-barrier:
 
-4.18.10.1. 配置屏障到达与事务计数
+4.19.10.1. 配置屏障到达与事务计数
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 上面的完成序列记录了由发起 put 的线程贡献的到达和预期事务。
@@ -891,7 +891,7 @@ put 会交付它的字节，但并不告诉屏障应该期待多少字节。
 
 .. _cleaning-up:
 
-4.18.11. 清理
+4.19.11. 清理
 -------------
 
 清理要求在任何可能对某个端点发起操作的进程与任何已向该端点绑定资源的进程之间进行同步。

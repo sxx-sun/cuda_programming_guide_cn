@@ -1,6 +1,6 @@
 .. _async-barriers-details:
 
-4.10. 异步屏障
+4.11. 异步屏障
 ==============
 
 异步屏障在 :ref:`advanced-synchronization-primitives` 一节中介绍，它扩展了 CUDA 同步功能，超越了 ``__syncthreads()`` 和 ``__syncwarp()``，实现了细粒度、非阻塞协调以及更好的通信与计算重叠。
@@ -9,7 +9,7 @@
 
 .. _async-barriers-initialization:
 
-4.10.1. 初始化
+4.11.1. 初始化
 --------------
 
 初始化必须在线程开始参与屏障之前完成。
@@ -90,7 +90,7 @@
 
 .. _async-barriers-phase:
 
-4.10.2. 屏障的 phase ：到达、倒计时、完成和重置
+4.11.2. 屏障的 phase ：到达、倒计时、完成和重置
 -------------------------------------------------
 
 异步屏障在参与线程调用 ``bar.arrive()`` 时从预期到达计数倒数到零。
@@ -122,7 +122,7 @@
 
 .. _async-barriers-warp-entanglement:
 
-4.10.2.1. Warp 纠缠
+4.11.2.1. Warp 纠缠
 ~~~~~~~~~~~~~~~~~~~
 
 Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp 完全收敛，则屏障更新一次。
@@ -135,7 +135,7 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 
 .. _async-barriers-explicit-phase-tracking:
 
-4.10.3. 显式 phase 跟踪
+4.11.3. 显式 phase 跟踪
 ----------------------------
 
 异步屏障根据线程和内存操作的同步次数可以有多个 phase 。
@@ -276,7 +276,7 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 
 .. _async-barriers-early-exit:
 
-4.10.4. 提前退出
+4.11.4. 提前退出
 ----------------
 
 当参与同步的线程需要提前退出时，该线程必须调用接口显式退出。
@@ -366,7 +366,7 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 
 .. _async-barriers-completion-function:
 
-4.10.5. 完成函数
+4.11.5. 完成函数
 ----------------
 
 ``cuda::barrier`` API 支持可选的完成函数。
@@ -445,7 +445,7 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 
 .. _async-barriers-tracking-async-mem-ops:
 
-4.10.6. 跟踪异步内存操作
+4.11.6. 跟踪异步内存操作
 ------------------------
 
 异步屏障可用于跟踪 :ref:`异步内存拷贝 <asynchronous-data-copies>`。
@@ -513,7 +513,7 @@ Warp 分歧会影响 arrive 操作更新屏障的次数。如果调用的 warp �
 
 .. _async-barriers-producer-consumer:
 
-4.10.7. 使用屏障的生产者-消费者模式
+4.11.7. 使用屏障的生产者-消费者模式
 -----------------------------------
 
 线程块可以进行空间分区，以允许不同的线程执行独立的操作。这通常通过将线程块内不同 warp 的线程分配给特定任务来完成。这种技术称为 *warp 特化* （warp specialization）。

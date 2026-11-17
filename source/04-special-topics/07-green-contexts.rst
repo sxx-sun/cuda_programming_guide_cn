@@ -1,6 +1,6 @@
 .. _green-contexts-details:
 
-4.6. Green Contexts
+4.7. Green Contexts
 ===================
 
 绿色上下文（Green Context，GC）是一种轻量级上下文，在创建时便与一组特定的 GPU 资源绑定。
@@ -21,18 +21,18 @@ GC 最早是通过 `CUDA 驱动接口 <https://docs.nvidia.com/cuda/cuda-driver-
 
 本节剩余内容的组织结构如下：
 
-- 4.6.1 节提供了一个场景示例，介绍何时使用 GC
-- 4.6.2 节强调了其易用性
-- 4.6.3 节介绍了设备资源与资源描述符结构体
-- 4.6.4 节讲解如何创建 GC
-- 4.6.5 节说明如何启动针对该上下文的工作负载
-- 4.6.6 节则介绍了其他一些相关的 GC 接口
-- 4.6.7 节将通过一个完整的示例进行总结
+- 4.7.1 节提供了一个场景示例，介绍何时使用 GC
+- 4.7.2 节强调了其易用性
+- 4.7.3 节介绍了设备资源与资源描述符结构体
+- 4.7.4 节讲解如何创建 GC
+- 4.7.5 节说明如何启动针对该上下文的工作负载
+- 4.7.6 节则介绍了其他一些相关的 GC 接口
+- 4.7.7 节将通过一个完整的示例进行总结
 
 
 .. _green-contexts-motivation:
 
-4.6.1. 动机/何时使用
+4.7.1. 动机/何时使用
 --------------------
 
 启动 kernel 时，用户无法直接控制该 kernel 将在多少个 SM 上执行。
@@ -124,7 +124,7 @@ MPS 的活动线程百分比意味着，给定的客户端应用程序最多只�
 
 .. _green-contexts-ease-of-use:
 
-4.6.2. GC ：易用性
+4.7.2. GC ：易用性
 -----------------------------
 
 为了说明使用 GC 有多么简便，假设你有以下代码片段：
@@ -223,7 +223,7 @@ MPS 的活动线程百分比意味着，给定的客户端应用程序最多只�
 
 .. _green-contexts-device-resource-and-desc:
 
-4.6.3. GC ：设备资源和资源描述符
+4.7.3. GC ：设备资源和资源描述符
 --------------------------------------------
 
 GC 的核心是绑定特定 GPU 设备的设备资源（ ``cudaDevResource`` ）。
@@ -307,7 +307,7 @@ GC 只能访问创建它时所用描述符中封装的资源。
 
 .. _green-contexts-creation-example:
 
-4.6.4. Green Context 创建示例
+4.7.4. Green Context 创建示例
 -----------------------------
 
 Green Context 创建涉及四个主要步骤：
@@ -323,7 +323,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 
 .. _green-contexts-creation-example-step1:
 
-4.6.4.1. 步骤 1：获取可用的 GPU 资源
+4.7.4.1. 步骤 1：获取可用的 GPU 资源
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 创建 GC 的第一步，通过获取可用的设备资源，初始化 ``cudaDevResource`` 结构体。
@@ -420,7 +420,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 
 .. _green-contexts-creation-example-step2:
 
-4.6.4.2. 步骤 2： SM 资源切分
+4.7.4.2. 步骤 2： SM 资源切分
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 第二步，是将 SM 资源静态切分为一个或多个分区，同时可能会留下部分未分配的 SM 保留在 `剩余分区` （remaining partition）中。
@@ -867,7 +867,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 
 .. _step-2-continued-add-workqueue-resources:
 
-4.6.4.3. 步骤 2（续）：添加工作队列资源
+4.7.4.3. 步骤 2（续）：添加工作队列资源
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 如果还想指定工作队列资源，则需要显式执行。以下示例展示了如何为特定设备创建工作队列配置资源，具有平衡的共享范围和四个并发限制。
@@ -888,7 +888,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 
 .. _green-contexts-creation-example-step3:
 
-4.6.4.4. 步骤 3：创建资源描述符
+4.7.4.4. 步骤 3：创建资源描述符
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 分割 SM 资源后（以及可选地添加工作队列配置资源），下一步是使用 ``cudaDevResourceGenerateDesc`` 接口为预计可供 GC 使用的所有资源生成资源描述符。
@@ -924,7 +924,7 @@ GC 创建完成后，创建归属该 GC 的 CUDA 流，后续在此类流上提�
 
 .. _green-contexts-creation-example-step4:
 
-4.6.4.5. 步骤 4：创建 Green Context
+4.7.4.5. 步骤 4：创建 Green Context
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 最后一步是使用 ``cudaGreenCtxCreate`` 接口从资源描述符创建 GC。
@@ -979,7 +979,7 @@ SM 超额分配应根据具体情况谨慎使用。
 
 .. _green-contexts-launching-work:
 
-4.6.5. Green Contexts：启动工作
+4.7.5. Green Contexts：启动工作
 -------------------------------------
 
 要启动针对前述步骤创建的 GC 的 kernel，首先需要使用 ``cudaExecutionCtxStreamCreate`` 接口为该 GC 创建一个流。
@@ -1106,7 +1106,7 @@ kernel 实际使用的 SM 数量取决于多种因素，包括 kernel 本身（�
 
 .. _green-contexts-apis:
 
-4.6.6. Green Contexts：API
+4.7.6. Green Contexts：API
 --------------------------
 
 本节介绍一些额外的 GC 接口。如需完整列表，请参阅相关的 CUDA Runtime API 文档 `Execution Context Management <https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__EXECUTION__CONTEXT.html>`_ 。
@@ -1146,7 +1146,7 @@ CPU 端的阻塞同步，使用 ``cudaError_t cudaExecutionCtxSynchronize(cudaEx
 
 .. _green-contexts-example:
 
-4.6.7. Green Contexts：示例
+4.7.7. Green Contexts：示例
 ----------------------------
 
 本节通过示例说明 GC 如何使关键工作能够更早启动并完成。
