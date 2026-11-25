@@ -10,8 +10,8 @@ CUDA runtime API 是在 C++ 中使用 CUDA 最常用的方式，它建立在较�
 
 :ref:`cuda-toolkit-and-nvidia-driver` 讨论了这两种 API 之间的区别， :ref:`driver-api` 讨论了混合使用这两种 API 编写代码的方法。
 
-本指南假设已安装 CUDA Toolkit 和 NVIDIA Driver，并且存在支持的 NVIDIA GPU。
-有关安装必要 CUDA 组件的说明，请参阅 `CUDA 快速入门指南 <https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html>`_。
+本指南假设系统中存在支持 CUDA 的 NVIDIA GPU，并已正确安装 CUDA Toolkit 和 NVIDIA Driver。
+有关 CUDA 组件的安装，请参阅 `CUDA 快速入门 <https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html>`_。
 
 
 .. _compilation-with-nvcc:
@@ -19,11 +19,11 @@ CUDA runtime API 是在 C++ 中使用 CUDA 最常用的方式，它建立在较�
 2.1.1. 使用 NVCC 编译
 ----------------------
 
-用 C++ 编写的 GPU 代码使用 NVIDIA Cuda 编译器 ``nvcc`` 进行编译。
+用 C++ 编写的 GPU 代码使用 NVIDIA CUDA 编译器 ``nvcc`` 进行编译。
 ``nvcc`` 是一个编译器驱动程序，它简化了编译 C++ 或 PTX 代码的过程：它提供简单且熟悉的命令行选项，并通过调用实现不同编译阶段的工具集合来执行这些选项。
 
 本指南将展示可以在任何安装了 CUDA Toolkit 的 Linux 系统、Windows 命令行或 PowerShell，以及安装了 CUDA Toolkit 的 Windows Subsystem for Linux 上使用的 ``nvcc`` 命令行。
-本指南的 :ref:`nvcc` 章节涵盖了 ``nvcc`` 的常见用例，完整文档由 `nvcc 用户手册 <https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html>`_ 提供。
+:ref:`nvcc` 涵盖了 ``nvcc`` 的常见用例，完整文档由 `nvcc 用户手册 <https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html>`_ 提供。
 
 .. _kernels:
 
@@ -39,9 +39,9 @@ Kernel 被编写为由许多并行线程同时运行。
 ^^^^^^^^^^^^^^^^^^^^
 
 Kernel 的代码使用 ``__global__`` 声明说明符指定。
-这向编译器表明该函数将被编译为 GPU 代码，并允许从 kernel 启动中调用它。
-``kernel launch`` 是一个启动 kernel 运行的操作，通常从 CPU 发起。
-Kernel 是返回类型为 ``void`` 的函数。
+这向编译器表明该函数将被编译为 GPU 代码，并允许通过核函数启动 (``kernel launch``) 调用它。
+核函数启动是一个触发 kernel 运行的操作，通常从 CPU 发起。
+Kernel 函数的返回类型为 ``void`` 。
 
 .. code-block:: cuda
 
@@ -57,10 +57,11 @@ Kernel 是返回类型为 ``void`` 的函数。
 2.1.2.2. 启动 Kernel
 ^^^^^^^^^^^^^^^^^^^^
 
-并行执行 kernel 的线程数量作为 kernel 启动的一部分指定。这称为执行配置。同一 kernel 的不同调用可以使用不同的执行配置，例如不同数量的线程或线程块。
+并行执行 kernel 的线程数作为 kernel 启动的参数指定，这也被称为执行配置。
+同一 kernel 的不同调用可以使用不同的执行配置，例如不同数量的线程或线程块。
 
 从 CPU 代码启动 kernel 有两种方式：:ref:`intro-cpp-launching-kernels-triple-chevron` 和 ``cudaLaunchKernelEx`` 。
-三重尖括号表示法是最常用的 kernel 启动方式，在此介绍。
+三重尖括号表示法是最常用的 kernel 启动方式，将在下面介绍。
 使用 ``cudaLaunchKernelEx`` 启动 kernel 的示例在 :ref:`cudaLaunchKernelEx` 中详细展示和讨论。
 
 .. _intro-cpp-launching-kernels-triple-chevron:
@@ -90,7 +91,7 @@ Kernel 是返回类型为 ``void`` 的函数。
 三重尖括号表示法的前两个参数分别是 grid 维度和 thread block 维度。当使用一维 thread block 或 grid 时，可以使用整数来指定维度。
 
 上面的代码启动一个包含 256 个线程的单个 thread block。每个线程将执行完全相同的 kernel 代码。
-在 :ref:`intro-cpp-thread-indexing` 中，我们将展示每个线程如何使用其在 thread block 和 grid 中的索引来更改它操作的数据。
+在 :ref:`intro-cpp-thread-indexing` 中，我们将展示每个线程如何使用其在 thread block 和 grid 中的索引来定位它操作的数据。
 
 每个 block 中的线程数量有限制，因为 block 的所有线程都驻留在同一个流式多处理器 (SM) 上，并且必须共享 SM 的资源。
 在当前的 GPU 上，一个 thread block 最多可以包含 1024 个线程。如果资源允许，可以在一个 SM 上同时调度多个 thread block。
@@ -304,7 +305,7 @@ GPU 上的内存使用与前面统一内存示例中相同的 ``cudaFree`` API �
        float* B = nullptr;
        float* C = nullptr;
        float* comparisonResult = (float*)malloc(vectorLength*sizeof(float));
-       
+
        // Pointers for device memory
        float* devA = nullptr;
        float* devB = nullptr;
@@ -517,7 +518,7 @@ CUDA API ``cudaMemcpy`` 用于将数据从驻留在 CPU 上的缓冲区复制到
              {
                  vectorLength = std::atoi(argv[1]);
              }
-             unifiedMemExample(vectorLength);		
+             unifiedMemExample(vectorLength);
              return 0;
          }
 
@@ -579,7 +580,7 @@ CUDA API ``cudaMemcpy`` 用于将数据从驻留在 CPU 上的缓冲区复制到
              float* B = nullptr;
              float* C = nullptr;
              float* comparisonResult = (float*)malloc(vectorLength*sizeof(float));
-             
+
              // Pointers for device memory
              float* devA = nullptr;
              float* devB = nullptr;
@@ -649,7 +650,7 @@ CUDA API ``cudaMemcpy`` 用于将数据从驻留在 CPU 上的缓冲区复制到
              {
                  vectorLength = std::atoi(argv[1]);
              }
-             explicitMemExample(vectorLength);		
+             explicitMemExample(vectorLength);
              return 0;
          }
 
@@ -792,7 +793,7 @@ CUDA 错误状态在发生错误时被设置和覆盖。这意味着在异步操
        // wait for kernel execution to complete
        // The CUDA_CHECK will report errors that occurred during execution of the kernel
        CUDA_CHECK(cudaDeviceSynchronize());
-       
+
 
 .. note::
 
