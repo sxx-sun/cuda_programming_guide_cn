@@ -313,7 +313,7 @@ GPU 和 CPU 都有直接连接的 DRAM 芯片。在有多个 GPU 的系统中，
 
 在只有一个局部性域的 GPU 上，所有 GPU 的 SM 和内存都是该唯一局部性域的一部分。
 
-:ref:`第 4.8 节 <locality-domains>` 介绍了在特定局部性域内局部化 GPU 内存和计算的机制。
+:ref:`locality-domains` 介绍了在特定局部性域内局部化 GPU 内存和计算的机制。
 局部性域是一种性能特性：不对内存或计算进行局部化的 CUDA 代码仍然会正确执行。
 
 .. _on-chip-memory-in-gpus:

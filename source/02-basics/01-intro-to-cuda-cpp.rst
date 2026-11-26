@@ -285,7 +285,8 @@ NVIDIA Driver 将确保无论 GPU 还是 CPU 尝试访问内存，内存都是�
 
 统一内存在 CUDA 支持的所有操作系统和 GPU 上都受支持，尽管底层机制和性能可能因系统架构而异。
 :ref:`memory-unified-memory` 提供了更多详细信息。
-在某些 Linux 系统上（例如具有 :ref:`memory-unified-address-translation-services` 或 :ref:`memory-heterogeneous-memory-management` 的系统），所有系统内存都会自动成为统一内存，不需要使用 ``cudaMallocManaged`` 或 ``__managed__`` 说明符。
+在某些 Linux 系统上（例如具有 :ref:`memory-unified-address-translation-services` 或 :ref:`memory-heterogeneous-memory-management` 的系统），
+所有系统内存都会自动成为统一内存，不需要使用 ``cudaMallocManaged`` 或 ``__managed__`` 说明符。
 
 .. _intro-cpp-explicit-memory-management:
 
@@ -369,13 +370,15 @@ GPU 上的内存使用与前面统一内存示例中相同的 ``cudaFree`` API �
 
 CUDA API ``cudaMemcpy`` 用于将数据从驻留在 CPU 上的缓冲区复制到驻留在 GPU 上的缓冲区。
 除了目标指针、源指针和大小（以字节为单位）之外， ``cudaMemcpy`` 的最后一个参数是 ``cudaMemcpyKind_t`` 。
-它可以具有诸如 ``cudaMemcpyHostToDevice`` （用于从 CPU 到 GPU 的复制）、 ``cudaMemcpyDeviceToHost`` （用于从 GPU 到 CPU 的复制）或 ``cudaMemcpyDeviceToDevice`` （用于 GPU 内部或 GPU 之间的复制）等值。
+它可以具有诸如 ``cudaMemcpyHostToDevice`` （用于从 CPU 到 GPU 的复制）、
+``cudaMemcpyDeviceToHost`` （用于从 GPU 到 CPU 的复制）或 ``cudaMemcpyDeviceToDevice`` （用于 GPU 内部或 GPU 之间的复制）等值。
 
 在此示例中， ``cudaMemcpyDefault`` 作为最后一个参数传递给 ``cudaMemcpy`` 。这使 CUDA 使用源指针和目标指针的值来确定要执行的复制类型。
 
 ``cudaMemcpy`` API 是同步的。也就是说，它在复制完成之前不会返回。异步复制在 :ref:`async-execution-memory-transfers` 中介绍。
 
-代码使用 ``cudaMallocHost`` 在 CPU 上分配内存。这在主机上分配 :ref:`memory-page-locked-host-memory` ，这可以提高复制性能，并且对于 :ref:`async-execution-memory-transfers` 是必需的。
+代码使用 ``cudaMallocHost`` 在 CPU 上分配内存。
+这在主机上分配 :ref:`memory-page-locked-host-memory` ，这可以提高复制性能，并且对于 :ref:`async-execution-memory-transfers` 是必需的。
 一般来说，对于将用于与 GPU 进行数据传输的 CPU 缓冲区，使用页锁定内存是良好的实践。如果在某些系统上锁定了太多主机内存，性能可能会下降。
 最佳实践是仅锁定用于向 GPU 发送数据或从 GPU 接收数据的缓冲区。
 
@@ -384,9 +387,11 @@ CUDA API ``cudaMemcpy`` 用于将数据从驻留在 CPU 上的缓冲区复制到
 2.1.3.3. 内存管理和应用程序性能
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-从上面的示例可以看出，显式内存管理更加冗长，需要程序员指定主机和设备之间的复制。这是显式内存管理的优点和缺点：它提供了更多控制何时在主机和设备之间复制数据、内存驻留在哪里以及确切分配什么内存的机会。显式内存管理可以提供控制内存传输并将其与其他计算重叠的性能机会。
+从上面的示例可以看出，显式内存管理代码更加冗长。
+这是显式内存管理的缺点也是优点：它使开发者可以控制分配什么内存、内存驻留在哪里以及何时在主机和设备之间复制数据。
+这提供了管理内存传输并与其他计算任务重叠的机会。
 
-当使用统一内存时，有 CUDA API（将在 :ref:`memory-mem-advise-prefetch` 中介绍）向管理内存的 NVIDIA driver 提供提示，这可以在使用统一内存时实现使用显式内存管理的一些性能优势。
+使用统一内存时，可以通过 CUDA API（详见 :ref:`memory-mem-advise-prefetch` ）向内存管理模块提供提示，从而让统一内存也能获得一部分显式内存管理所带来的性能收益。
 
 .. _intro-synchronizing-the-gpu:
 
@@ -408,7 +413,8 @@ CUDA API ``cudaMemcpy`` 用于将数据从驻留在 CPU 上的缓冲区复制到
 2.1.5. 完整示例
 ---------------
 
-以下清单显示了本章介绍的简单向量加法 kernel 的完整代码，以及所有主机代码和用于检查验证获得的答案是否正确的实用函数。这些示例默认使用 1024 的向量长度，但也接受可执行文件的命令行参数来指定不同的向量长度。
+以下清单显示了本章介绍的简单向量加法 kernel 的完整代码，以及所有主机代码和用于检查结果是否正确的实用函数。
+这些示例默认使用 1024 的向量长度，但也接受可执行文件的命令行参数来指定不同的向量长度。
 
 .. tab-set::
 
@@ -694,28 +700,28 @@ CUDA 编程模型不支持 block 之间的同步。:ref:`cooperative-groups` 提
 2.1.6. Runtime 初始化
 ----------------------
 
-CUDA runtime 为系统中的每个设备创建一个 :ref:`driver-api-context` 。
-此 context 是此设备的主要 context （ primary context ），在需要在此设备上激活 context 的第一个 runtime 函数时初始化。
-此 context 在应用程序的所有主机线程之间共享。
-作为 context 创建的一部分，设备代码会根据需要 :ref:`just-in-time-compilation` 并加载到设备内存中。这一切都是透明发生的。
-CUDA runtime 创建的主要 context 可以从 driver API 访问以实现互操作性，如 :ref:`driver-api-interop-with-runtime` 中所述。
+CUDA runtime 为系统中的每个设备创建一个 :ref:`Context<driver-api-context>` ，当执行需要使用 context 的第一个 Runtime 接口时初始化。
+这是该设备的主 context （ primary context ），此后该 context 在应用程序的所有主机线程之间共享。
+在主 context 的创建过程中，设备代码会根据需要使用 :ref:`JIT编译 <just-in-time-compilation>` 并加载到设备内存中。这一切都是透明发生的。
+CUDA runtime 创建的主 context 可以从 driver API 访问以实现互操作性，如 :ref:`driver-api-interop-with-runtime` 中所述。
 
-从 CUDA 12.0 开始， ``cudaInitDevice`` 和 ``cudaSetDevice`` 调用会初始化 runtime 以及与指定设备关联的主要 :ref:`driver-api-context`。
-如果在这些调用之前发生 runtime API 请求，runtime 将隐式使用设备 0 并根据需要自行初始化来处理这些请求。
-在对 runtime 函数调用进行计时以及解释第一次调用 runtime 的错误代码时，这很重要。在 CUDA 12.0 之前， ``cudaSetDevice`` 不会初始化 runtime。
+从 CUDA 12.0 开始， ``cudaInitDevice`` 和 ``cudaSetDevice`` 接口会初始化 runtime 并创建与指定设备关联的主 Context 。
+如果在调用这些接口之前发生 runtime API 请求，runtime 将隐式使用设备 0 初始化并创建 Context 。
+当需要对 runtime 函数调用进行计时以及解释第一次调用 runtime 的错误代码时，这很重要（第一次调用需要初始化 runtime 影响接口计时，或者 runtime 初始化失败）。
+在 CUDA 12.0 之前， ``cudaSetDevice`` 不会初始化 runtime。
 
-``cudaDeviceReset`` 销毁当前设备的主要 context。如果在主要 context 被销毁后调用 CUDA runtime API，将为该设备创建一个新的主要 context。
+``cudaDeviceReset`` 销毁当前设备的主 context。如果在主 context 销毁后调用 CUDA runtime API，将为该设备创建一个新的主 context。
 
 .. note::
 
-   CUDA 接口使用在主机程序启动期间初始化并在主机程序终止期间销毁的全局状态。
-   在程序启动或终止期间（main 之后）使用任何这些接口（隐式或显式）将导致未定义的行为。
+   CUDA Runtime 使用的全局状态在主机程序启动期间初始化并在主机程序终止期间销毁。
+   因此在程序启动或终止期间（main 之后）使用任何 Runtime 接口（隐式或显式）将导致未定义的行为。
 
    从 CUDA 12.0 开始， ``cudaSetDevice`` 在更改主机线程的当前设备后，会显式初始化 runtime（如果尚未初始化）。
-   以前版本的 CUDA 将新设备上的 runtime 初始化延迟到 ``cudaSetDevice`` 之后的第一个 runtime 调用。
+   以前版本的 CUDA 将 Runtime 初始化延迟到 ``cudaSetDevice`` 之后的第一个 runtime 调用。
    因此，检查 ``cudaSetDevice`` 的返回值以获取初始化错误非常重要。
 
-   参考手册的错误处理和版本管理部分中的 runtime 函数不会初始化 runtime。
+   错误处理和 Runtime 版本管理模块中的 runtime 接口不会触发 runtime 初始化。
 
 .. _intro-cpp-error-checking:
 
@@ -885,7 +891,7 @@ CUDA 的 :ref:`error-log-management` 功能还允许向 driver 注册一个回�
 
 当函数使用 ``__host__`` ``__device__`` 指定时，编译器被指示为该函数生成 GPU 和 CPU 代码。
 在此类函数中，可能需要使用预处理器指定仅用于函数的 GPU 或 CPU 副本的代码。
-检查 ``__CUDA_ARCH_`` 是否已定义是执行此操作的最常用方法，如下例所示。
+检查 ``__CUDA_ARCH__`` 是否已定义是执行此操作的最常用方法，如下例所示。
 
 .. code-block:: cuda
 
